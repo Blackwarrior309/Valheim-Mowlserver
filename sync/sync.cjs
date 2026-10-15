@@ -74,9 +74,11 @@ class FTP {
       }
     });
     s.on('error', (e) => this.deliver({ code: 0, text: e.message }));
+    // Server trennt (z. B. Leerlauf-Zeitlimit): wartende Befehle sofort mit Fehler beenden statt ewig zu warten
+    s.on('close', () => { this.closed = true; while (this.waiters.length) this.waiters.shift()({ code: 0, text: 'FTP-Verbindung vom Server getrennt' }); });
   }
   deliver(r) { const w = this.waiters.shift(); if (w) w(r); else this.queue.push(r); }
-  read() { if (this.queue.length) return Promise.resolve(this.queue.shift()); return new Promise((r) => this.waiters.push(r)); }
+  read() { if (this.queue.length) return Promise.resolve(this.queue.shift()); if (this.closed) return Promise.resolve({ code: 0, text: 'FTP-Verbindung vom Server getrennt' }); return new Promise((r) => this.waiters.push(r)); }
   async expect(code) { const r = await this.read(); if (code && r.code !== code) throw new Error(`FTP: erwartet ${code}, erhalten ${r.code} ${r.text}`); return r; }
   async cmd(c, code) { this.sock.write(c + '\r\n'); const r = await this.read(); if (code && r.code !== code) throw new Error(`FTP „${c.startsWith('PASS') ? 'PASS ***' : c}“: ${r.code} ${r.text}`); return r; }
   async dataCmd(c) {
@@ -407,6 +409,7 @@ function envConfig() {
       process.exit(1);
     };
     process.on('uncaughtException', fatal); process.on('unhandledRejection', fatal);
+    process.on('beforeExit', () => fatal(new Error('Programm endete unerwartet (Warten auf eine Antwort, die nie kam)')));
     try { await runOnce(cfg); } catch (e) { log('FEHLER:', e.message); code = 1; }
     if (cfg.historyDir && !fs.existsSync(path.join(cfg.historyDir, 'scan.txt'))) { try { await scanWorldDir(cfg); historyChanged = true; } catch (e) { log('Scan:', e.message); } }
     let impErr = false;
