@@ -1,0 +1,48 @@
+VALHEIM-SYNC  (inoffiziell)
+===========================
+Holt eure Welt per FTP vom Server (z. B. Nitrado), wandelt sie um und lädt sie
+auf eure GitHub-Seite. Freunde sehen dann unter
+   https://<name>.github.io/<repo>/
+oben den Kasten „Live-Welt“ mit dem aktuellen Stand.
+
+EINMALIG EINRICHTEN
+1. Node.js (LTS) installieren: https://nodejs.org   (oder: winget install OpenJS.NodeJS.LTS)
+2. Diesen Ordner irgendwo hinlegen, z. B. auf den Desktop.
+3. "Valheim-Sync.bat" doppelklicken. Beim ersten Mal wird
+   "valheim-sync.config.json" angelegt und im Editor geöffnet.
+4. Eintragen:
+   ftp.host / port / user / password   → aus dem Nitrado-Webinterface (FTP-Zugangsdaten)
+   ftp.remoteDir   "auto" lassen – der Weltordner wird gesucht. Klappt das nicht,
+                   den Ordner mit der .fwl2-Datei eintragen.
+   world           leer = größte Welt auf dem Server, sonst der Name (ohne .fwl2)
+   github.repo     z. B. "alexander/valheim-welt"
+   github.token    Fine-grained Token: github.com → Settings → Developer settings →
+                   Personal access tokens → Fine-grained → Repository access: nur dieses Repo →
+                   Permissions: Contents = Read and write
+   github.path     "live/welt.vwelt" lassen
+   stripSteamIds   true lassen (GitHub-Pages-Seiten sind öffentlich erreichbar!)
+   intervalMinutes Abstand im Dauerbetrieb
+5. Speichern, "Valheim-Sync.bat" erneut starten.
+
+BENUTZEN
+- Valheim-Sync.bat               einmal abgleichen
+- Valheim-Sync-Dauerbetrieb.bat  läuft weiter und gleicht alle X Minuten ab (Fenster offen lassen)
+- Ordner "ausgabe": <Welt>.html = Teilen-Datei (per Doppelklick öffnen, verschickbar)
+                    <Welt>.vwelt = Datendatei
+- Automatisch im Hintergrund: Windows-Aufgabenplanung → Einfache Aufgabe →
+  Programm: Valheim-Sync.bat  → Trigger täglich, dann in den Eigenschaften
+  „Wiederholen alle 15 Minuten“.
+
+WAS PASSIERT
+- Es werden nur geänderte Dateien geladen (Cache im Ordner "welt-cache").
+- Ist auf dem Server der Mod "Valheim Welt Live" mit WriteDumpFile=true installiert,
+  wird dessen Datei welt.vwdump genommen (aktueller als der Spielstand, mit Spielerpositionen).
+- Der Server speichert die Welt sonst nur alle ~30 Minuten – öfter abzugleichen bringt dann nichts.
+- Hochladen = ein Commit pro Abgleich mit Änderungen in eurem GitHub-Repo.
+
+PROBLEME
+- "FTP-Login abgelehnt": Benutzer/Passwort prüfen.
+- "Kein Weltordner gefunden": remoteDir von Hand eintragen.
+- "GitHub: Token ungültig": Token-Rechte prüfen (Contents: Read and write, richtiges Repo).
+- Neu anfangen: Datei ".valheim-sync-state.json" löschen.
+macOS/Linux: valheim-sync.command statt der .bat-Dateien.

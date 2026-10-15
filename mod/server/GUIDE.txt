@@ -1,0 +1,39 @@
+Valheim Welt Live – installing the mod on a dedicated server (e.g. Nitrado)
+===========================================================================
+
+What the mod does on the server
+- Every 5 minutes it reads the whole world (in many small steps, so the server doesn't hitch)
+  and writes it to  BepInEx/config/ValheimWeltLive/welt.vwdump  (one file, overwritten each time).
+- A live map (GitHub Actions or the PC sync script) fetches this file via FTP instead of the save files:
+  more up to date, no waiting for the server to save. Players do NOT need the mod.
+- No web page on the server (Web.Enabled = false), no Steam IDs in the file.
+
+Before you start: make sure you have a recent backup of the world.
+
+1. Enable BepInEx on the server
+- Look for a BepInEx / mod option for Valheim in your host's web interface and enable it, then restart once.
+- Afterwards the server must have a folder  BepInEx  with the subfolders  core  and  plugins
+  (file browser or FTP).
+- No such option? Install "BepInExPack Valheim" (Thunderstore) on the server via FTP.
+
+2. Upload the files (stop the server first)
+- The  BepInEx  folder in this zip already has the right structure. Easiest: drag it via FTP
+  (e.g. FileZilla) into the server folder that already contains  BepInEx  – merge, don't replace.
+- Or one by one:
+  ValheimWeltLive.dll  →  BepInEx/plugins/ValheimWeltLive/ValheimWeltLive.dll  (create the folder if needed)
+  de.valheimweltviewer.live.cfg  →  BepInEx/config/de.valheimweltviewer.live.cfg
+
+3. Start the server and wait about 6 minutes
+- Now  BepInEx/config/ValheimWeltLive/welt.vwdump  must exist (a few MB).
+- The server log should contain:
+  "Valheim Welt Live 0.2.0 loaded. Web: off, dump file: on"
+  "Biome grid computed"
+  "World dump written: … objects"
+
+4. Live map
+- The GitHub Actions live map (docs/LIVE-MAP.md) and the PC sync script find the file automatically.
+  If the file stops changing for more than 45 minutes, they fall back to the save files.
+
+Turning it off
+- Stop the server, delete BepInEx/plugins/ValheimWeltLive, start the server.
+  (Or disable BepInEx in your host's settings.)

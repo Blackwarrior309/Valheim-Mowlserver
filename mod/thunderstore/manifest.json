@@ -1,0 +1,9 @@
+{
+  "name": "ValheimWeltLive",
+  "version_number": "0.2.0",
+  "website_url": "https://github.com/Blackwarrior309/Valheim-welt",
+  "description": "Live 3D map of your world in the browser: buildings, chest contents, portals, explored areas and players in real time. Also writes a world file for server live maps. Unofficial.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2202"
+  ]
+}

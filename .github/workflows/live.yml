@@ -1,0 +1,95 @@
+# Live-Karte: holt die Welt alle ~10 Minuten per FTP vom Server (z. B. Nitrado),
+# wandelt sie um und veröffentlicht die Seite samt live/welt.vwelt auf GitHub Pages.
+# Einrichtung: Settings → Secrets and variables → Actions → Secrets:
+#   VS_FTP_HOST, VS_FTP_USER, VS_FTP_PASSWORD  (Pflicht)
+#   VS_FTP_PORT, VS_FTP_DIR, VS_WORLD          (optional; Standard: 21, Ordner automatisch, größte Welt)
+# und Settings → Pages → Source: „GitHub Actions“.
+# Ohne FTP-Secrets wird nur die Webseite (ohne Live-Welt) veröffentlicht.
+# Anleitung: docs/LIVE-MAP.md
+name: Live-Karte
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: live-karte
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      HAS_FTP: ${{ secrets.VS_FTP_HOST != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Zwischenspeicher (Weltdateien, letzter Stand) – liegt außerhalb der Seite, wird nie veröffentlicht
+      - uses: actions/cache/restore@v4
+        if: ${{ env.HAS_FTP == 'true' }}
+        with:
+          path: ${{ runner.temp }}/sync-data
+          key: sync-${{ github.run_id }}
+          restore-keys: sync-
+
+      - name: Welt vom Server holen und umwandeln
+        id: sync
+        if: ${{ env.HAS_FTP == 'true' }}
+        continue-on-error: true
+        env:
+          VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
+          VS_FTP_PORT: ${{ secrets.VS_FTP_PORT }}
+          VS_FTP_USER: ${{ secrets.VS_FTP_USER }}
+          VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
+          VS_FTP_DIR: ${{ secrets.VS_FTP_DIR }}
+          VS_WORLD: ${{ secrets.VS_WORLD }}
+          VS_DUMP_PATH: 'auto'      # Server-Mod-Datei (welt.vwdump) nehmen, falls vorhanden – sonst Spielstände
+          VS_STRIP_IDS: 'true'      # Repo ist öffentlich → keine Steam-IDs
+          VS_DATA: ${{ runner.temp }}/sync-data
+          VS_OUT: ${{ runner.temp }}/sync-data/letzter-stand.vwelt
+        # bei Änderungen am Repo/manuellem Start neu umwandeln (neue Viewer-/Konverter-Version), sonst nur bei neuem Spielstand
+        run: node sync/sync.cjs ${{ github.event_name != 'schedule' && '--force' || '' }}
+
+      - name: Letzten Stand in die Seite legen
+        if: ${{ env.HAS_FTP == 'true' }}
+        run: |
+          if [ -f "$RUNNER_TEMP/sync-data/letzter-stand.vwelt" ]; then
+            mkdir -p live && cp "$RUNNER_TEMP/sync-data/letzter-stand.vwelt" live/welt.vwelt
+            ls -la live
+          else
+            echo "Noch kein Stand vorhanden."
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        if: ${{ steps.sync.outputs.changed == 'true' || github.event_name != 'schedule' }}
+        with:
+          path: .
+
+      - id: deploy
+        if: ${{ steps.sync.outputs.changed == 'true' || github.event_name != 'schedule' }}
+        uses: actions/deploy-pages@v4
+        with:
+          timeout: 600000           # Maximum, das GitHub erlaubt
+
+      # Zwischenspeicher erst nach erfolgreicher Veröffentlichung sichern –
+      # schlägt sie fehl, holt der nächste Lauf die Welt neu und versucht es wieder.
+      - uses: actions/cache/save@v4
+        if: ${{ always() && steps.sync.outputs.changed == 'true' && steps.deploy.outcome == 'success' }}
+        with:
+          path: ${{ runner.temp }}/sync-data
+          key: sync-${{ github.run_id }}
