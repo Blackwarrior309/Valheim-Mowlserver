@@ -246,7 +246,7 @@
     [/^Snapshot vom (.*)$/, (m) => 'Snapshot from ' + m[1]],
     [/^Format v(\d+)$/, (m) => 'format v' + m[1]],
     [/^Hinweise: (.*)$/, (m) => 'Notes: ' + m[1].split(' · ').map(tr).join(' · ')],
-    [/^Stand (.*)$/, (m) => 'as of ' + m[1]],
+    [/^Stand ([^·]*)$/, (m) => 'as of ' + m[1]],
     [/^geprüft (.*)$/, (m) => 'checked ' + m[1]],
     [/^aktualisiert (.*)$/, (m) => 'updated ' + m[1]],
     [/^Welt (\d.*)$/, (m) => 'world ' + m[1]],
