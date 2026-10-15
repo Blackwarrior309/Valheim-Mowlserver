@@ -37,6 +37,12 @@
   function checkSnap(s) { if (!s || s.format !== 'vwelt') throw new Error('Das ist keine gültige .vwelt-Datei.'); if (s.version > 1) console.warn('Neuere Formatversion', s.version); return s; }
 
   // ---------- Viewer ----------
+  let liveRefresh = null; // wird im Live-Modus gesetzt (manuelles Aktualisieren)
+  function actionsUrl() {
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i); if (!m) return null;
+    const repo = location.pathname.split('/').filter(Boolean)[0] || (m[1] + '.github.io');
+    return 'https://github.com/' + m[1] + '/' + repo + '/actions/workflows/live.yml';
+  }
   function show(snap, gz, status) {
     current = snap; currentGz = gz;
     start.hidden = true; app.hidden = false;
@@ -44,6 +50,8 @@
     viewer = VWViewer.mount(app, snap, {
       status, plans: planList, history: historyBase, mod: modBase,
       actions: [
+        ...(liveRefresh ? [{ label: '⟳ Aktualisieren', title: 'Live-Welt jetzt neu laden', onClick: liveRefresh }] : []),
+        ...(liveRefresh && actionsUrl() ? [{ label: '▶ Server abfragen', title: 'Öffnet GitHub Actions: dort „Run workflow“ klicken (nur für Repo-Besitzer), holt sofort den neuesten Server-Stand', onClick: () => window.open(actionsUrl(), '_blank', 'noopener') }] : []),
         { label: '⬇ Teilen-Datei (.html)', primary: true, title: 'Eine Datei, öffnet sich in jedem Browser – zum Verschicken', onClick: exportHtml },
         { label: '⬇ .vwelt', title: 'Kompakte Datendatei (für diese Seite, Live-Karten, Server)', onClick: () => download(packCurrent(), safe(current.world.name) + '_' + stamp() + '.vwelt', 'application/gzip') },
         { label: 'Neue Welt', onClick: () => { location.href = location.pathname; } }
@@ -225,17 +233,19 @@
   if (src) {
     const refresh = Math.max(10, +P.get('refresh') || 0);
     let lastCreated = '';
-    async function pull(first) {
+    async function pull(first, manual) {
       try {
         await plansReady;
         const r = await fetch(src + (src.includes('?') ? '&' : '?') + '_=' + Date.now(), { cache: 'no-store' });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const { snap, gz } = decodeSnapshot(new Uint8Array(await r.arrayBuffer())); checkSnap(snap);
         const t = new Date().toLocaleTimeString(window.VW_I18N?VW_I18N.locale():'de-DE');
-        if (snap.created !== lastCreated) { lastCreated = snap.created; show(snap, gz, (P.get('refresh') ? 'Live · ' : '') + updText(snap.created)); }
-        else if (viewer) viewer.setStatus((P.get('refresh') ? 'Live · ' : '') + updText(snap.created) + ' · geprüft ' + t);
+        if (snap.created !== lastCreated) { const neu = !!lastCreated; lastCreated = snap.created; show(snap, gz, (P.get('refresh') ? 'Live · ' : '') + updText(snap.created) + (neu && manual ? ' · neu geladen' : '')); }
+        else if (viewer) viewer.setStatus((P.get('refresh') ? 'Live · ' : '') + updText(snap.created) + (manual ? ' · nichts Neues, geprüft ' : ' · geprüft ') + t);
       } catch (e) { if (first) { prog.hidden = true; showErr('Quelle nicht ladbar (' + src + '): ' + e.message); } else if (viewer) viewer.setStatus('Live · Verbindung fehlgeschlagen, neuer Versuch …'); }
     }
+    let pulling = false;
+    liveRefresh = async () => { if (pulling) return; pulling = true; viewer && viewer.setStatus('Prüfe auf neue Daten …'); try { await pull(false, true); } finally { pulling = false; } };
     setProg('Lade Welt …', 0.3); pull(true).then(() => (prog.hidden = true));
     setInterval(() => { if (viewer && lastCreated) viewer.setStatus((P.get('refresh') ? 'Live · ' : '') + updText(lastCreated)); }, 60000);
     if (P.get('refresh')) setInterval(pull, refresh * 1000);
