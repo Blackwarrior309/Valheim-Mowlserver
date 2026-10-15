@@ -1,4 +1,4 @@
-# Live-Karte: holt die Welt alle ~10 Minuten per FTP vom Server (z. B. Nitrado),
+# Live-Karte: holt die Welt alle ~5 Minuten per FTP vom Server (z. B. Nitrado),
 # wandelt sie um und veröffentlicht die Seite samt live/welt.vwelt auf GitHub Pages.
 # Einrichtung: Settings → Secrets and variables → Actions → Secrets:
 #   VS_FTP_HOST, VS_FTP_USER, VS_FTP_PASSWORD  (Pflicht)
@@ -10,7 +10,7 @@ name: Live-Karte
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'     # kürzester Abstand, den GitHub erlaubt (Läufe können sich etwas verspäten)
   workflow_dispatch:
   push:
     branches: [main]

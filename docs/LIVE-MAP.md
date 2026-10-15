@@ -3,7 +3,7 @@
 [Deutsch weiter unten](#deutsch)
 
 A copy of this repository turns into a website that shows your dedicated server's world (e.g. Nitrado) as a live 3D map,
-including a **time-lapse** of everything that gets built. GitHub Actions fetches the world via FTP about every 10 minutes,
+including a **time-lapse** of everything that gets built. GitHub Actions fetches the world via FTP about every 5 minutes,
 converts it and publishes it on GitHub Pages. Free, no PC has to keep running, and the server needs no mod
 (the mod makes the map more up to date, see step 6).
 
@@ -46,9 +46,9 @@ Secrets are encrypted and never end up on the website.
 ## 5. Open your map
 
 `https://<your-name>.github.io/<repo-name>/` – the start page shows a **Live world** card.
-Direct link that reloads every 5 minutes: `https://<your-name>.github.io/<repo-name>/?src=live/welt.vwelt&refresh=300`
+Direct link that checks every minute: `https://<your-name>.github.io/<repo-name>/?src=live/welt.vwelt&refresh=60`
 
-From then on the workflow runs every ~10 minutes and publishes whenever the server has saved a new state
+From then on the workflow runs every ~5 minutes and publishes whenever the server has saved a new state
 (Valheim saves about every 30 minutes).
 
 **Time-lapse:** every change to the buildings is recorded in the branch `verlauf` of your repository (a few KB each,
@@ -78,7 +78,7 @@ New viewer versions appear in the template. To update your copy, copy the change
 # Eigene Live-Karte für deinen Server
 
 Eine Kopie dieses Repos wird zur Webseite, die die Welt deines dedizierten Servers (z. B. Nitrado) als Live-3D-Karte zeigt –
-mit **Zeitraffer** von allem, was gebaut wird. GitHub Actions holt die Welt etwa alle 10 Minuten per FTP, wandelt sie um
+mit **Zeitraffer** von allem, was gebaut wird. GitHub Actions holt die Welt etwa alle 5 Minuten per FTP, wandelt sie um
 und veröffentlicht sie auf GitHub Pages. Kostenlos, kein PC muss laufen, auf dem Server ist kein Mod nötig.
 
 > **Datenschutz:** kostenlose GitHub-Pages-Seiten sind öffentlich. Jeder mit dem Link sieht Basen, Kisteninhalte, Portale
@@ -94,7 +94,7 @@ und veröffentlicht sie auf GitHub Pages. Kostenlos, kein PC muss laufen, auf de
 4. **Starten:** Actions → Live-Karte → **Run workflow**. Der allererste Lauf direkt nach dem Erstellen scheitert,
    weil Pages da noch aus war – das ist normal.
 5. **Karte öffnen:** `https://<dein-name>.github.io/<repo-name>/` (Live-Kachel auf der Startseite).
-   Danach aktualisiert sie sich etwa alle 10 Minuten, sobald der Server neu gespeichert hat.
+   Danach aktualisiert sie sich etwa alle 5 Minuten, sobald der Server neu gespeichert hat.
    **Zeitraffer:** jede Bau-Änderung landet im Branch `verlauf` deines Repos (nicht auf dem Server).
    In der Live-Karte unter **3D → Zeitraffer** Schieberegler ziehen oder ▶ drücken, neue Teile leuchten gelb.
 6. **Optional Server-Mod:** schreibt die Welt alle 5 Minuten, unabhängig vom Speichern. Anleitung: [SERVER.md](SERVER.md#deutsch).

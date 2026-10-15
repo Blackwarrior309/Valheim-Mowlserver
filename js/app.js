@@ -219,7 +219,7 @@
       const box = $('#live'); box.hidden = false;
       $('#liveName').textContent = snap.world.name || 'Live-Welt';
       const li = () => ($('#liveInfo').textContent = updText(snap.created) + ' · ' + (snap.bases || []).length + ' Basen · ' + ((snap.stats && snap.stats.playerPieces) || 0).toLocaleString(window.VW_I18N?VW_I18N.locale():'de-DE') + ' Bauteile'); li(); setInterval(li, 60000);
-      box.href = '?src=live/welt.vwelt&refresh=300';
+      box.href = '?src=live/welt.vwelt&refresh=60';
     }).catch(() => {});
   }
   if (src) {

@@ -2,7 +2,7 @@
 
 **➜ Karte: https://blackwarrior309.github.io/Valheim-Mowlserver/**
 
-Live-3D-Karte unseres Valheim-Servers. GitHub Actions holt die Welt etwa alle 10 Minuten per FTP vom Server,
+Live-3D-Karte unseres Valheim-Servers. GitHub Actions holt die Welt etwa alle 5 Minuten per FTP vom Server,
 wandelt sie um und veröffentlicht sie hier (Steam-IDs werden weggelassen).
 
 Erstellt aus dem Template [Valheim Welt-Viewer](https://github.com/Blackwarrior309/Valheim-welt).
