@@ -1,0 +1,82 @@
+Weltordner: /valheim/savedata/worlds_local/Mowlserver
+    00_00__0_46.chunk  1484  Oct 15 04:05
+    00_01__0_90.chunk  3556  Oct 13 21:45
+    16_20__1_1.chunk  23663  Sep 22 15:36
+    16_22__1_11.chunk  284517  Sep 27 11:36
+    16_24__1_13.chunk  661190  Sep 27 12:06
+    18_1e__1_6.chunk  183778  Oct 10 13:06
+    18_20__1_37.chunk  847759  Oct 12 20:06
+    18_22__1_13.chunk  566810  Sep 27 11:36
+    18_24__1_11.chunk  170084  Sep 27 11:36
+    1a_1e__1_23.chunk  427095  Oct 12 14:06
+    1a_20__1_58.chunk  1317354  Oct 12 20:06
+    1a_22__1_5.chunk  94689  Sep 24 16:06
+    1c_18__1_1.chunk  10081  Sep 14 20:02
+    1c_1a__1_2.chunk  41398  Sep 17 19:20
+    1c_1c__1_2.chunk  155564  Sep 17 19:20
+    1c_1e__1_34.chunk  1131614  Oct 10 17:11
+    1c_20__1_30.chunk  655809  Oct 12 18:36
+    1c_22__1_8.chunk  198003  Sep 17 13:50
+    1e_18__1_1.chunk  66236  Sep 14 20:02
+    1e_1a__1_6.chunk  276746  Sep 17 19:50
+    1e_1c__1_14.chunk  345277  Oct 12 15:36
+    1e_1e__1_513.chunk  1529342  Oct 14 14:36
+    1e_20__1_315.chunk  1316708  Oct 14 14:06
+    1e_22__1_9.chunk  771285  Oct 10 14:36
+    1e_24__1_1.chunk  108460  Sep 10 15:36
+    20_1c__1_13.chunk  295606  Oct 12 15:36
+    20_1e__1_287.chunk  1455494  Oct 14 14:06
+    20_20__1_262.chunk  1240208  Oct 14 14:06
+    20_22__1_6.chunk  358578  Oct 10 14:36
+    20_24__1_1.chunk  7840  Sep 10 15:36
+    22_1c__1_7.chunk  415302  Oct 12 15:36
+    22_1e__1_19.chunk  1195341  Oct 12 15:36
+    22_20__1_12.chunk  153656  Sep 23 16:04
+    22_22__1_5.chunk  294576  Sep 20 14:35
+    22_24__1_3.chunk  68082  Sep 20 14:35
+    22_26__1_2.chunk  58189  Sep 20 14:35
+    22_28__1_3.chunk  26357  Sep 20 14:35
+    24_1c__1_4.chunk  502553  Oct 12 15:36
+    24_1e__1_1.chunk  393958  Sep 20 10:24
+    24_20__1_1.chunk  8640  Sep 20 10:24
+    24_22__1_3.chunk  51070  Sep 20 14:35
+    24_24__1_3.chunk  75609  Sep 20 14:35
+    24_26__1_9.chunk  119243  Sep 26 13:06
+    24_28__1_16.chunk  432261  Sep 26 13:06
+    24_2a__1_1.chunk  25696  Sep 20 14:05
+    26_1a__1_13.chunk  147016  Oct  6 17:54
+    26_1c__1_60.chunk  483110  Oct 13 20:15
+    26_1e__1_1.chunk  13806  Oct 12 15:36
+    26_26__1_18.chunk  368766  Oct 13 15:36
+    26_28__1_16.chunk  393209  Oct  8 18:36
+    26_2a__1_1.chunk  46  Sep 20 14:05
+    28_1a__1_8.chunk  215984  Sep 26 13:36
+    28_1c__1_66.chunk  354584  Oct 13 20:15
+    28_1e__1_1.chunk  136  Oct 12 15:36
+    28_26__1_12.chunk  250555  Oct 11 19:03
+    28_28__1_47.chunk  399207  Oct 13 21:15
+    28_2a__1_32.chunk  487329  Oct 13 22:15
+    2a_1a__1_9.chunk  332132  Sep 28 18:36
+    2a_1c__1_46.chunk  700097  Oct 13 17:15
+    2a_1e__1_2.chunk  293303  Oct 13 16:52
+    2a_26__1_5.chunk  3263  Oct 11 17:35
+    2a_28__1_20.chunk  492974  Oct 13 19:45
+    2a_2a__1_18.chunk  307852  Oct 13 21:15
+    2c_1c__1_3.chunk  106859  Oct 13 17:15
+    2c_1e__1_4.chunk  224271  Oct 13 17:45
+    2e_1c__1_3.chunk  75184  Oct 13 17:45
+    2e_1e__1_3.chunk  117559  Oct 13 17:45
+    30_1c__1_3.chunk  177119  Oct 13 17:45
+    30_1e__1_3.chunk  104665  Oct 13 17:45
+    _main.1716.chunks  769  Oct 15 05:35
+    _main.1716.db2  165734  Oct 15 05:35
+    _main.1716.fwl2  851  Oct 15 05:35
+    _main.1716.ok  4  Oct 15 05:35
+
+Darüber: /valheim/savedata/worlds_local
+[D] Dedicated  Sep 10 09:53
+[D] Mowlserver  Oct 15 05:35
+[D] Mowlserver_backup_auto-20261013-231547  Oct 13 21:15
+[D] Mowlserver_backup_auto-20261014-093603  Oct 14 07:36
+[D] Mowlserver_backup_auto-20261014-193610  Oct 14 17:36
+[D] Mowlserver_backup_auto-20261015-060550  Oct 15 04:05
