@@ -234,6 +234,7 @@ namespace ValheimWeltLive
                     foreach (var rq in h.recipe.m_resources)
                     {
                         if (rq == null || rq.m_resItem == null || rq.m_amount <= 0) continue;
+                        if (rq.m_resItem.gameObject.name.StartsWith("Upgrader")) continue; // Götzen = optionale Verstärkung, keine Pflicht-Zutat
                         string tok = rq.m_resItem.m_itemData.m_shared.m_name; int have = CountAll(rq.m_resItem.gameObject.name, tok);
                         GUILayout.BeginHorizontal();
                         GUILayout.Label("    " + (have >= rq.m_amount ? "[ok]  " : "[fehlt]  ") + rq.m_amount + " × " + L(tok) + "   (" + have + " da)");

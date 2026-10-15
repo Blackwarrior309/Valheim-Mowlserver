@@ -56,7 +56,8 @@ for c in rows(os.path.join(D, 'objects/recipe-list.md')):
         cand = name.replace('Recipe_', '')
         out = cand if cand in items else None
     if not out: continue
-    rq = [(H(en), n) for n, en in reqs(res)]
+    # Götzen (Upgrader*, „… Idol“) sind optionale Verstärkungen, keine Pflicht-Zutat
+    rq = [(H(en), n) for n, en in reqs(res) if not (prefab_of(en) or '').startswith('Upgrader')]
     if not rq or any(h is None for h, _ in rq): continue
     recipes.append([stable(out), int(amt or 1), [[h, n] for h, n in rq]])
 
