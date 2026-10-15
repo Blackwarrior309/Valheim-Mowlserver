@@ -11,7 +11,13 @@ name: Live-Karte
 on:
   schedule:
     - cron: '*/5 * * * *'     # kürzester Abstand, den GitHub erlaubt (Läufe können sich etwas verspäten)
+  # Auch von außen startbar (z. B. cron-job.org alle 5 Min. – GitHubs eigener Zeitplan wird oft stark verzögert, siehe docs/LIVE-MAP.md)
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Neu umwandeln und veröffentlichen, auch ohne neuen Spielstand'
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -78,7 +84,7 @@ jobs:
           VS_OUT: ${{ runner.temp }}/sync-data/letzter-stand.vwelt
           VS_HISTORY: ${{ runner.temp }}/verlauf
         # bei Änderungen am Repo/manuellem Start neu umwandeln (neue Viewer-/Konverter-Version), sonst nur bei neuem Spielstand
-        run: node sync/sync.cjs ${{ github.event_name != 'schedule' && '--force' || '' }}
+        run: node sync/sync.cjs ${{ (github.event_name == 'push' || inputs.force) && '--force' || '' }}
 
       - name: Verlauf speichern
         if: ${{ env.HAS_FTP == 'true' && steps.sync.outputs.history == 'true' }}
@@ -104,12 +110,12 @@ jobs:
           fi
 
       - uses: actions/upload-pages-artifact@v3
-        if: ${{ steps.sync.outputs.changed == 'true' || steps.sync.outputs.history == 'true' || github.event_name != 'schedule' }}
+        if: ${{ steps.sync.outputs.changed == 'true' || steps.sync.outputs.history == 'true' || (github.event_name == 'push' || inputs.force) }}
         with:
           path: .
 
       - id: deploy
-        if: ${{ steps.sync.outputs.changed == 'true' || steps.sync.outputs.history == 'true' || github.event_name != 'schedule' }}
+        if: ${{ steps.sync.outputs.changed == 'true' || steps.sync.outputs.history == 'true' || (github.event_name == 'push' || inputs.force) }}
         uses: actions/deploy-pages@v4
         with:
           timeout: 600000           # Maximum, das GitHub erlaubt

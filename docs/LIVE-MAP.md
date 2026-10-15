@@ -54,6 +54,20 @@ From then on the workflow runs every ~5 minutes and publishes whenever the serve
 **Time-lapse:** every change to the buildings is recorded in the branch `verlauf` of your repository (a few KB each,
 nothing is stored on the server). In the live map: **3D → Time-lapse** – drag the slider or press ▶, new pieces light up.
 
+## Faster, reliable updates (recommended)
+
+GitHub's own schedule is unreliable for small repositories: runs are often delayed by 30–60 minutes or skipped.
+A free external timer fixes that – it starts the workflow every 5 minutes:
+
+1. GitHub → your avatar → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+   Repository access: only your live map repository. Permissions: **Actions: Read and write**. Copy the token.
+2. Create a free account on **https://cron-job.org** → **Create cronjob**:
+   - URL: `https://api.github.com/repos/<your-name>/<repo-name>/actions/workflows/live.yml/dispatches`
+   - Schedule: every 5 minutes
+   - Advanced → Request method **POST**, headers `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
+     request body `{"ref":"main"}`
+3. Save. Runs started this way only publish when the server has saved something new.
+
 ## 6. Optional: the server mod (more up to date)
 
 With the mod on the server, the world is written every 5 minutes, independent of the server's save interval.
@@ -97,6 +111,16 @@ und veröffentlicht sie auf GitHub Pages. Kostenlos, kein PC muss laufen, auf de
    Danach aktualisiert sie sich etwa alle 5 Minuten, sobald der Server neu gespeichert hat.
    **Zeitraffer:** jede Bau-Änderung landet im Branch `verlauf` deines Repos (nicht auf dem Server).
    In der Live-Karte unter **3D → Zeitraffer** Schieberegler ziehen oder ▶ drücken, neue Teile leuchten gelb.
+**Schneller und zuverlässiger (empfohlen):** GitHubs eigener Zeitplan wird bei kleinen Repos oft um 30–60 Minuten verzögert
+oder ausgelassen. Ein kostenloser externer Wecker startet den Workflow zuverlässig alle 5 Minuten:
+1. GitHub → Profilbild → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:
+   nur dein Live-Karten-Repo, Berechtigung **Actions: Read and write**. Token kopieren.
+2. Auf **https://cron-job.org** kostenlos anmelden → **Create cronjob**: URL
+   `https://api.github.com/repos/<dein-name>/<repo-name>/actions/workflows/live.yml/dispatches`, alle 5 Minuten,
+   unter „Advanced“ Methode **POST**, Header `Authorization: Bearer <Token>` und `Accept: application/vnd.github+json`,
+   Body `{"ref":"main"}`.
+3. Speichern. So gestartete Läufe veröffentlichen nur, wenn der Server etwas Neues gespeichert hat.
+
 6. **Optional Server-Mod:** schreibt die Welt alle 5 Minuten, unabhängig vom Speichern. Anleitung: [SERVER.md](SERVER.md#deutsch).
 
 **Probleme:** Lauf scheitert → Secrets prüfen; bei Fehlern liegt im Branch `verlauf` eine `fehler.txt` (ohne Zugangsdaten).
