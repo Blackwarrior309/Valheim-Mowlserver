@@ -1018,7 +1018,7 @@ ${board()}
 <table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
 ${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
 ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc(d.n)}</td><td class="sub">${new Date(d.t || d.seen).toLocaleString(LOC(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}${d.t ? '' : ' (gefunden)'}</td><td class="n sub">x ${Math.round(d.x)} / z ${Math.round(d.z)}</td></tr>`).join('')}</table>` : ''}
-<div class="sub" style="margin-top:8px">Tode werden über Grabsteine erfasst: mit Server-Mod jeder, sonst nur die, die beim Speichern noch liegen.${hasT ? '' : ' Spielzeit und Strecke kommen mit dem Server-Mod (Laufwege).'} Kills lassen sich aus den Server-Daten nicht ablesen.</div></div>`;
+<div class="sub" style="margin-top:8px">Tode werden über Grabsteine erfasst, die beim Speichern des Servers noch liegen.</div></div>`;
     }
 
     function apply(newSnap, keep) {
