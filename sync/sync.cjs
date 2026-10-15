@@ -37,7 +37,8 @@ const TEMPLATE = {
   intervalMinutes: 10
 };
 
-const log = (...a) => console.log(new Date().toLocaleTimeString('de-DE'), ...a);
+const LOGBUF = [];
+const log = (...a) => { const l = [new Date().toISOString().slice(11, 19), ...a].join(' '); LOGBUF.push(l); console.log(new Date().toLocaleTimeString('de-DE'), ...a); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ======================= FTP-Client (passiv, optional TLS) =======================
@@ -399,7 +400,13 @@ function envConfig() {
     const cfg = envConfig(); let code = 0;
     try { await runOnce(cfg); } catch (e) { log('FEHLER:', e.message); code = 1; }
     if (cfg.historyDir && !fs.existsSync(path.join(cfg.historyDir, 'scan.txt'))) { try { await scanWorldDir(cfg); historyChanged = true; } catch (e) { log('Scan:', e.message); } }
-    if (cfg.historyDir) { try { if (await importBackups(cfg)) historyChanged = true; } catch (e) { log('Backups:', e.message); } }
+    let impErr = false;
+    if (cfg.historyDir) { try { if (await importBackups(cfg)) historyChanged = true; } catch (e) { impErr = true; log('Backups: FEHLER', e.message); } }
+    // Fehler für die Fehlersuche in den Verlauf-Branch schreiben (ohne Zugangsdaten)
+    if (cfg.historyDir && (code || impErr)) {
+      const red = (x) => [cfg.ftp.host, cfg.ftp.user, cfg.ftp.password].filter(Boolean).reduce((t, v) => t.split(v).join('***'), x);
+      fs.mkdirSync(cfg.historyDir, { recursive: true }); fs.writeFileSync(path.join(cfg.historyDir, 'fehler.txt'), red(new Date().toISOString() + '\n' + LOGBUF.join('\n')) + '\n'); historyChanged = true;
+    }
     if (ENV.GITHUB_OUTPUT) fs.appendFileSync(ENV.GITHUB_OUTPUT, 'changed=' + changedOut + '\nhistory=' + historyChanged + '\n');
     process.exit(code);
   }
