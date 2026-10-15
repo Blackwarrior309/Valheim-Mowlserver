@@ -64,7 +64,7 @@
 .vw-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .vw-maplist .b{display:flex;justify-content:space-between;gap:8px;padding:6px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:6px}.vw-maplist .b:hover{background:var(--chip)}
 .vw-legend{position:absolute;right:12px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;z-index:3}
-.vw-mob{display:none}.vw details.perf{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}.vw details.perf summary{cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--acc)}.vw .qrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}.vw .qrow label{font-size:12.5px}.vw .qrow select{flex:0 1 190px}.vw .vw-btnlike{display:inline-block;font-size:13px;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.vw .kcraft a.cr{color:var(--acc);text-decoration:none;border-bottom:1px dotted currentColor}.vw-mob{display:none}.vw details.perf{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}.vw details.perf summary{cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--acc)}.vw .qrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}.vw .qrow label{font-size:12.5px}.vw .qrow select{flex:0 1 190px}.vw .vw-btnlike{display:inline-block;font-size:13px;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
 @media (max-width:760px){.vw-grid{grid-template-columns:minmax(0,1fr)}.vw-side{top:auto;bottom:12px;left:16px;right:16px;width:auto;max-height:45%}.vw-mob{display:inline-block}
  .vw-joy{left:16px;bottom:80px;width:120px;height:120px}.vw-ud{bottom:80px;right:16px}.vw-hud{left:16px;right:84px;transform:none;max-width:none;font-size:11px}.vw-hud .k{display:none}.vw-title{max-width:60vw}.vw-legend{display:none}}
 @media (min-width:761px){.vw-hud .m{display:none}}
@@ -135,7 +135,7 @@
   </div>
   <div class="vw-pane" data-p="chests" hidden><div class="vw-scroll"><div class="vw-wrap">
     <div class="vw-bar"><input type="search" class="kq" placeholder="Item suchen, z. B. Eisen, Met, Kernholz …" autocomplete="off"><select class="ka"></select><button class="klab">Nur beschriftete</button></div>
-    <div class="vw-stats kstats"></div>
+    <div class="vw-stats kstats"></div><div class="kcraft"></div>
     <div class="vw-grid"><div class="vw-panel"><h2 style="margin-top:0">Summe</h2><table class="ktot"></table><div class="sub" style="margin-top:8px">Klick auf ein Item filtert die Kisten. „★2“ = Ausrüstungsstufe.</div></div><div class="klist"></div></div>
   </div></div></div>
   <div class="vw-pane" data-p="info" hidden><div class="vw-scroll"><div class="vw-wrap info"></div></div></div>
@@ -738,7 +738,8 @@
         if (h && h.instanceId != null) {
           const p = arrAt(h), t = reg.types[p[4]];
           TIP.hidden = false; TIP.style.left = (e.clientX - r.left + 14) + 'px'; TIP.style.top = (e.clientY - r.top + 12) + 'px';
-          TIP.innerHTML = `<b>${esc(pieceName(t[0]))}</b>${h.object.userData.cat === 'chest' ? ' · <span style="color:var(--acc)">klicken für Inhalt</span>' : ''}<br>${esc(reg.owners[p[5]])}<br><span class="sub">x ${p[0].toFixed(0)} · z ${p[2].toFixed(0)} · ${(p[1] - WL).toFixed(1)} m ü. M.</span>`;
+          const pc = pieceCost(t[0]);
+          TIP.innerHTML = `<b>${esc(pieceName(t[0]))}</b>${h.object.userData.cat === 'chest' ? ' · <span style="color:var(--acc)">klicken für Inhalt</span>' : ''}${pc ? '<br><span class="sub">' + pc.map(([hh, n]) => fmt(n) + ' ' + esc(itemName(hh))).join(' · ') + '</span>' : ''}<br>${esc(reg.owners[p[5]])}<br><span class="sub">x ${p[0].toFixed(0)} · z ${p[2].toFixed(0)} · ${(p[1] - WL).toFixed(1)} m ü. M.</span>`;
         } else TIP.hidden = true;
       }
 
@@ -822,11 +823,18 @@
         }
         function refresh() {
           const n = count(); exp.hidden = !n;
-          info.innerHTML = n ? `<b>${fmt(n)} Teile gewählt</b>` + (unknown().length ? ` · ${fmt(unknown().length)} unbekannte werden ausgelassen` : '') : 'Klick = hinzufügen, Shift+Klick = entfernen.';
+          info.innerHTML = n ? `<b>${fmt(n)} Teile gewählt</b>` + (unknown().length ? ` · ${fmt(unknown().length)} unbekannte werden ausgelassen` : '') + materials() : 'Klick = hinzufügen, Shift+Klick = entfernen.';
           recolor(colorMode);
         }
         function reset() { sel = new Map(); if (exp) { exp.hidden = true; info.innerHTML = 'Klick = hinzufügen, Shift+Klick = entfernen.'; } }
         function rec(im, k) { const a = im.userData.arr, o = k * 6; return { im, k, x: a[o], y: a[o + 1], z: a[o + 2], r: a[o + 3], t: reg.types[a[o + 4]], own: reg.owners[a[o + 5]] }; }
+        function materials() { // Materialliste zum Nachbauen + Bestand in allen Kisten
+          if (!RC) return ''; const need = {}; let noCost = 0;
+          sel.forEach((set, im) => set.forEach((k) => { const c = pieceCost(rec(im, k).t[0]); if (!c) { noCost++; return; } c.forEach(([h, n]) => (need[h] = (need[h] || 0) + n)); }));
+          const st = stock(), rows = Object.entries(need).sort((a, b) => b[1] - a[1]);
+          if (!rows.length) return '';
+          return `<div style="margin-top:6px"><b>Materialliste</b></div><table style="width:100%">${rows.map(([h, n]) => { const have = st[h] || 0; return `<tr><td>${have >= n ? '✔' : '✘'} ${esc(itemName(h))}</td><td class="n">${fmt(n)}</td><td class="n sub">${fmt(have)} da</td></tr>`; }).join('')}</table>` + (noCost ? `<div class="sub">${fmt(noCost)} Teile ohne bekannte Kosten</div>` : '');
+        }
         function unknown() { const u = []; sel.forEach((set, im) => set.forEach((k) => { const r = rec(im, k); if (/^0x/.test(r.t[0])) u.push(r); })); return u; }
         function add(im, k) { (sel.get(im) || sel.set(im, new Set()).get(im)).add(k); }
         function has(im, k) { const s = sel.get(im); return !!(s && s.has(k)); }
@@ -952,6 +960,32 @@
     function open3d(i) { setTab('3d'); three.selectRegion(i + (S.world3d ? 1 : 0)); }
 
     // ================= Kisten-Liste =================
+    // ================= Rezepte & Baukosten (js/recipes.js, aus den Jötunn-Datenlisten) =================
+    const RC = g.VW_RECIPES || null;
+    const IT = () => (g.VW_DATA && g.VW_DATA.items) || {};
+    const itemName = (h) => IT()[h] || (RC && RC.items[h] && RC.items[h][1]) || '?';
+    const itemNames = (h) => { const de = IT()[h], en = RC && RC.items[h] && RC.items[h][1]; return [de, en, de && T(de)].filter(Boolean); };
+    let STOCK = null;
+    function stock() { // Bestand aller Kisten: Item-Hash → Anzahl (Qualitätsstufen zusammengezählt)
+      if (STOCK) return STOCK; const byName = {}; const add = (c) => c.i.forEach(([n, k]) => { const b = n.replace(/ ★\d+$/, ''); byName[b] = (byName[b] || 0) + k; });
+      S.regions.forEach((r) => r.chests.forEach(add)); (S.looseChests || []).forEach(add);
+      // Kisten tragen Namen (aus data.js) – Bestand je Hash über denselben Namen nachschlagen
+      STOCK = new Proxy({}, { get: (o, h) => byName[itemName(h)] || 0 });
+      return STOCK;
+    }
+    function recipesFor(q) {
+      if (!RC || !q || q.length < 3) return [];
+      const out = RC.recipes.filter((r) => itemNames(r[0]).some((n) => n.toLowerCase().includes(q)));
+      out.sort((a, b) => (itemNames(a[0]).some((n) => n.toLowerCase() === q) ? 0 : 1) - (itemNames(b[0]).some((n) => n.toLowerCase() === q) ? 0 : 1) || itemName(a[0]).length - itemName(b[0]).length);
+      return out.slice(0, 6);
+    }
+    function craftHtml(r) {
+      const st = stock(); let can = Infinity;
+      const rows = r[2].map(([h, n]) => { const have = st[h] || 0; can = Math.min(can, Math.floor(have / n)); const sub = have < n && RC.recipes.some((x) => String(x[0]) === String(h)); return `<li class="${have >= n ? 'ok' : 'no'}"><span>${have >= n ? '✔' : '✘'} ${fmt(n)} × <a href="#" class="cr" data-n="${esc(itemName(h))}">${esc(itemName(h))}</a>${sub ? ' <span class="sub">(herstellbar)</span>' : ''}</span><span class="sub">${fmt(have)} da</span></li>`; }).join('');
+      return `<div class="vw-card ${can > 0 ? 'hit' : ''}"><div class="lab">${esc(itemName(r[0]))}${r[1] > 1 ? ' ×' + r[1] : ''}</div><div class="meta">${can > 0 ? 'Herstellbar: ' + fmt(can) + '×' : 'Zutaten fehlen'}</div><ul class="it">${rows}</ul></div>`;
+    }
+    function pieceCost(name) { return RC && RC.pieces[name] ? RC.pieces[name][2] : null; }
+
     const kisten = (function () {
       const q = $('.kq'), sel = $('.ka'), lab = $('.klab'); let only = false; const open = new Set();
       lab.onclick = () => { only = !only; lab.classList.toggle('on', only); render(); };
@@ -967,6 +1001,9 @@
         let found = 0; cs.forEach((c) => c.i.forEach((it) => { if (match(it)) found += it[1]; }));
         const items = cs.reduce((n, c) => n + c.i.reduce((m, i) => m + i[1], 0), 0);
         $('.kstats').innerHTML = `<div class="vw-stat"><b>${fmt(cs.length)}</b><span>Kisten</span></div><div class="vw-stat"><b>${fmt(items)}</b><span>Items</span></div>` + (s ? `<div class="vw-stat"><b>${fmt(found)}</b><span>× „${esc(q.value)}“</span></div>` : `<div class="vw-stat"><b>${fmt(all.filter((c) => !c.i.length).length)}</b><span>leere Kisten</span></div>`);
+        const R = recipesFor(s);
+        $('.kcraft').innerHTML = R.length ? `<h3 style="margin:14px 0 8px">Herstellen${found ? '' : ' – nichts davon in den Kisten'}</h3><div class="vw-cards">${R.map(craftHtml).join('')}</div>` : '';
+        $$('.kcraft a.cr').forEach((a) => (a.onclick = (e) => { e.preventDefault(); q.value = a.dataset.n; render(); }));
         const tot = {}; all.forEach((c) => c.i.forEach((it) => (tot[it[0]] = (tot[it[0]] || 0) + it[1])));
         let tl = Object.entries(tot).sort((x, y) => y[1] - x[1]); if (s) tl = tl.filter((t) => (g.VW_I18N ? g.VW_I18N.names(t[0]) : [t[0]]).some((n) => n.toLowerCase().includes(s)));
         $('.ktot').innerHTML = tl.slice(0, s ? 400 : 60).map((t) => `<tr class="click" data-i="${esc(t[0])}" style="cursor:pointer"><td>${esc(t[0])}</td><td class="n">${fmt(t[1])}</td></tr>`).join('') + (tl.length > 60 && !s ? `<tr><td colspan="2" class="sub">… ${tl.length - 60} weitere – Suche nutzen</td></tr>` : '') || '<tr><td class="sub">Nichts gefunden</td></tr>';
@@ -1023,7 +1060,7 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
 
     function apply(newSnap, keep) {
       const prevTab = tab, prevReg = three.regionId, cam = keep ? three.state : null;
-      S = newSnap; $('.vw-title').textContent = S.world.name + (S.world.seed ? ' · ' + S.world.seed : '');
+      S = newSnap; STOCK = null; $('.vw-title').textContent = S.world.name + (S.world.seed ? ' · ' + S.world.seed : '');
       map.build(); map.layersChanged(); three.fillSelect(); kisten.fill();
       if (keep && prevReg) { const i = areas().findIndex((r) => r.id === prevReg); if (i >= 0) { three.selectRegion(i, true); three.state = cam; } }
       setTab(prevTab);

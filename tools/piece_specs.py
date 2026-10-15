@@ -43,3 +43,11 @@ t('sign','wood',1,.5,.1); t('VikingShip','ship',4,2,18); t('Karve','ship',3,1.5,
 t('piece_table piece_table_round piece_bench01 piece_logbench01 piece_chair piece_chair02','wood',1.2,.8,1)
 t('piece_throne01 piece_throne02','dark',1.2,1.8,1); t('piece_beehive','wood',.8,1,.8)
 t('itemstand itemstandh ArmorStand','wood',.6,1.2,.2)
+
+# Valheim 1.0 (aus den Jötunn-Listen nachgetragen, Maße geschätzt)
+t('wood_roof_67 wood_roof_ocorner_67','roof',2,.2,2.2,67); t('wood_roof_top_67','roof',2,1,1,0); t('darkwood_roof_top_67','droof',2,1,1,0); t('darkwood_roof_icorner_67','droof',2,.2,2.2,67)
+t('wood_log_67','core',4.47,.4,.4,63.4)
+t('wood_wall_roof_a wood_wall_roof_67_a wood_wall_roof_top_67','wood',2,2,.2); t('wood_fence_gate','wood',2,1.2,.2)
+t('jute_carpet rug_wolf rug_fur rug_deer','misc',2,.05,1.5); t('piece_FairylightGarland piece_CelebrationGarland','misc',2,.3,.1)
+t('piece_sapcollector piece_wisplure piece_barber piece_ArcheryTarget','misc',1,1.5,1); t('blackforge blackforge_ext1 blackforge_ext2_vise piece_magetable_ext2','craft',2,2,1.5)
+t('placeable_bigrock_01','stone',2,2,2)

@@ -1,6 +1,12 @@
 import sys,json,re;import os;sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from hash import stable;from names import names;from items import NAMES
 NAMES.update({'WolfHairBundle':'Wolfshaarbündel','FishingBaitForest':'Köder (Wald)','Bloodbag':'Blutbeutel','SerpentScale':'Seeschlangenschuppe'})
+# englische Namen für Items, die (noch) keinen deutschen Namen haben – aus tools/gen_recipes.py (Jötunn-Liste)
+try:
+    _EN=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'items_en.json'),encoding='utf-8'))
+    for _k,_v in _EN.items():
+        if _k not in NAMES and not _k.startswith('$'): NAMES[_k]=_v
+except FileNotFoundError: pass
 from piece_specs import T
 NAT={'tree_beech':'Beech1','tree_beech_s':'Beech_small1 Beech_small2','tree_birch':'Birch1 Birch2 Birch1_aut Birch2_aut','tree_oak':'Oak1','tree_fir':'FirTree Pinetree_01','tree_fir_s':'FirTree_small FirTree_small_dead','tree_swamp':'SwampTree1 SwampTree2','tree_ygg':'YggaShoot1 YggaShoot2 YggaShoot3 YggaShoot_small1','bush':'Bush01 Bush02_en shrub_2 Bush01_heath shrub_2_heath RaspberryBush BlueberryBush CloudberryBush','rock':'Rock_4 Rock_3 Rock_7 rock4_coast rock4_forest rock4_heath Rock_4_plains rock1_mountain rock2_mountain rock3_mountain rock2_heath','log':'FirTree_oldLog Beech_log Oak_log SwampTree1_log SwampTree2_log'}
 # ground-ish objects used for terrain estimation
