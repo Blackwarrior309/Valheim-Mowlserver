@@ -116,3 +116,9 @@ Die Seite bekommt ihn unter `live/verlauf/`.
 - Valheims eigene Server-Sicherungen (`<Welt>_backup_auto-…`) holt die Live-Karte nur, wenn die Umgebungsvariable `VS_IMPORT_BACKUPS=true` gesetzt ist (z. B. einmalig im Workflow), um Lücken zu füllen.
 - Ältere Stände (Backups) lassen sich nachträglich einsortieren: `node tools/history-add.cjs <ordner> <backup.zip|weltordner|.vwelt> [--time "JJJJ-MM-TT hh:mm"]`.
 - Fehlen in einem neuen Stand plötzlich über 30 % der Teile, wird er als unvollständig verworfen.
+
+### Tode und Laufwege (Branch `verlauf`)
+
+- `tode.json`: `[{ n, x, y, z, t, items, seen }]` – aus Grabsteinen (Spielstand) und `tode.csv` des Server-Mods (`unixzeit;name;x;y;z`).
+- `spuren/index.json`: Liste der Tage, `spuren/<JJJJ-MM-TT>.json`: `{ date, cell: 16, players: { Name: { n, dist, from, to, cells: { "i,j": Anzahl } } } }`
+  – aus `spuren-JJJJMMTT.csv` des Server-Mods (`unixzeit;name;x;z`, alle 10 s). `n` × 10 s ≈ Spielzeit, `dist` in m.

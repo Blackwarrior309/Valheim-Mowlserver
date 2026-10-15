@@ -85,6 +85,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/verlauf"
           git add -A
+          if git diff --cached --quiet; then echo "Verlauf unverändert."; exit 0; fi
           git -c user.name="valheim-sync" -c user.email="valheim-sync@users.noreply.github.com" commit -q -m "Verlauf $(date -u +'%Y-%m-%d %H:%M')"
           git push -q origin verlauf
 
@@ -93,6 +94,7 @@ jobs:
         run: |
           if [ -f "$RUNNER_TEMP/verlauf/index.json" ]; then
             mkdir -p live/verlauf && cp -r "$RUNNER_TEMP/verlauf/index.json" "$RUNNER_TEMP/verlauf/e" live/verlauf/
+            for f in tode.json spuren; do [ -e "$RUNNER_TEMP/verlauf/$f" ] && cp -r "$RUNNER_TEMP/verlauf/$f" live/verlauf/; done
           fi
           if [ -f "$RUNNER_TEMP/sync-data/letzter-stand.vwelt" ]; then
             mkdir -p live && cp "$RUNNER_TEMP/sync-data/letzter-stand.vwelt" live/welt.vwelt
@@ -115,7 +117,7 @@ jobs:
       # Zwischenspeicher erst nach erfolgreicher Veröffentlichung sichern –
       # schlägt sie fehl, holt der nächste Lauf die Welt neu und versucht es wieder.
       - uses: actions/cache/save@v4
-        if: ${{ always() && steps.sync.outputs.changed == 'true' && steps.deploy.outcome == 'success' }}
+        if: ${{ always() && (steps.sync.outputs.changed == 'true' || steps.sync.outputs.history == 'true') && steps.deploy.outcome == 'success' }}
         with:
           path: ${{ runner.temp }}/sync-data
           key: sync-${{ github.run_id }}

@@ -179,6 +179,44 @@ async function scanWorldDir(cfg) {
   log('Scan des Weltordners gespeichert (' + lines.length + ' Zeilen).');
 }
 
+// Spuren (spuren-JJJJMMTT.csv) und Tode (tode.csv) vom Server-Mod in den Verlauf übernehmen.
+// Spuren werden je Tag zu einem 16-m-Raster pro Spieler zusammengefasst (spuren/<Tag>.json), die Rohdaten bleiben nur auf dem Server.
+async function importTracks(cfg) {
+  const state = loadJson(STATE, {}); if (!state.dumpPath) return false;
+  const dir = path.posix.dirname(state.dumpPath); const store = require('./history-store.cjs');
+  const ftp = new FTP(cfg.ftp); await ftp.connect(); let any = false;
+  try {
+    const items = (await ftp.list(dir)).filter((i) => !i.dir && (/^spuren-\d{8}\.csv$/.test(i.name) || i.name === 'tode.csv'));
+    state.trackSigs = state.trackSigs || {};
+    for (const it of items) {
+      const sig = it.size + '|' + it.mod; if (state.trackSigs[it.name] === sig) continue;
+      const txt = (await ftp.get(join(dir, it.name))).toString('utf8');
+      if (it.name === 'tode.csv') {
+        const tombs = txt.split('\n').map((l) => l.split(';')).filter((a) => a.length >= 5).map((a) => ({ t: +a[0] * 1000, n: a[1], x: +a[2], y: +a[3], z: +a[4], items: 0 }));
+        const n = store.recordDeaths(cfg.historyDir, { tombs }); if (n) { any = true; log('Tode: ' + n + ' neue'); }
+      } else {
+        const day = it.name.slice(7, 15), C = 16, P = {}, last = {};
+        for (const l of txt.split('\n')) {
+          const a = l.split(';'); if (a.length < 4) continue; const t = +a[0], n = a[1], x = +a[2], z = +a[3]; if (!n || isNaN(x)) continue;
+          const p = P[n] || (P[n] = { n: 0, dist: 0, from: t, to: t, cells: {} }); p.n++; p.to = Math.max(p.to, t); p.from = Math.min(p.from, t);
+          const k = Math.floor(x / C) + ',' + Math.floor(z / C); p.cells[k] = (p.cells[k] || 0) + 1;
+          const q = last[n]; if (q && t - q.t < 120) { const d = Math.hypot(x - q.x, z - q.z); if (d < 400) p.dist += d; } last[n] = { t, x, z };
+        }
+        Object.values(P).forEach((p) => (p.dist = Math.round(p.dist)));
+        const out = path.join(cfg.historyDir, 'spuren'); fs.mkdirSync(out, { recursive: true });
+        const date = day.slice(0, 4) + '-' + day.slice(4, 6) + '-' + day.slice(6, 8);
+        fs.writeFileSync(path.join(out, date + '.json'), JSON.stringify({ date, cell: C, players: P }));
+        const idxF = path.join(out, 'index.json'); let idx = []; try { idx = JSON.parse(fs.readFileSync(idxF, 'utf8')); } catch (e) { }
+        if (!idx.includes(date)) { idx.push(date); idx.sort(); } fs.writeFileSync(idxF, JSON.stringify(idx));
+        any = true; log('Spuren ' + date + ': ' + Object.keys(P).length + ' Spieler');
+      }
+      state.trackSigs[it.name] = sig;
+    }
+  } finally { ftp.close(); }
+  fs.writeFileSync(STATE, JSON.stringify(state, null, 1));
+  return any;
+}
+
 // Valheims eigene Sicherungen (<Welt>_backup_auto-JJJJMMTT-hhmmss neben dem Weltordner) in den Bau-Verlauf einsortieren.
 // Jede Sicherung wird nur einmal geholt (Liste „imported“ in index.json).
 async function importBackups(cfg) {
@@ -207,8 +245,8 @@ async function importBackups(cfg) {
       const use = gens.length > 1 ? files.filter((f) => !/(?:^|\/)_main\.\d+\./.test(f.name) || f.name.includes(gens[0] + '.')) : files;
       let r;
       try {
-        const snap = convert(use, { gunzip: (u) => new Uint8Array(zlib.gunzipSync(u)), stripIds: true });
-        r = store.insertSnapshot(cfg.historyDir, snap, t, { log, label: 'backup' });
+        const snap = convert(use, { gunzip: (u) => new Uint8Array(zlib.gunzipSync(u)), stripIds: true, saveTime: t });
+        r = store.insertSnapshot(cfg.historyDir, snap, t, { log, label: 'backup' }); store.recordDeaths(cfg.historyDir, snap, t);
       } catch (e) { r = { changed: false, reason: e.message }; }
       log('  →', r.changed ? `+${r.add} / −${r.del} Teile` : 'übersprungen (' + r.reason + ')');
       const idx = store.loadIndex(cfg.historyDir); idx.imported = [...new Set([...(idx.imported || []), it.name])];
@@ -371,6 +409,7 @@ async function publish(cfg, state, list, world) {
       try {
         const r = require('./history-store.cjs').insertSnapshot(cfg.historyDir, snap, new Date(snap.created).getTime(), { log, label: 'live' });
         if (r.changed) historyChanged = true; else log('Verlauf: nichts Neues (' + r.reason + ')');
+        const nd = require('./history-store.cjs').recordDeaths(cfg.historyDir, snap); if (nd) { historyChanged = true; log('Tode: ' + nd + ' neue Grabsteine'); }
       } catch (e) { log('Verlauf: Fehler –', e.message); }
     }
     const g = cfg.github || {};
@@ -412,6 +451,7 @@ function envConfig() {
     process.on('beforeExit', () => fatal(new Error('Programm endete unerwartet (Warten auf eine Antwort, die nie kam)')));
     try { await runOnce(cfg); } catch (e) { log('FEHLER:', e.message); code = 1; }
     if (cfg.historyDir && !fs.existsSync(path.join(cfg.historyDir, 'scan.txt'))) { try { await scanWorldDir(cfg); historyChanged = true; } catch (e) { log('Scan:', e.message); } }
+    if (cfg.historyDir) { try { if (await importTracks(cfg)) historyChanged = true; } catch (e) { log('Spuren/Tode: FEHLER', e.message); } }
     let impErr = false;
     // Server-Sicherungen nur auf Wunsch einsortieren (VS_IMPORT_BACKUPS=true) – der laufende Abgleich erfasst ohnehin jede Änderung
     if (cfg.historyDir && /^(1|true|ja|yes)$/i.test(ENV.VS_IMPORT_BACKUPS || '')) { try { if (await importBackups(cfg)) historyChanged = true; } catch (e) { impErr = true; log('Backups: FEHLER', e.message); } }

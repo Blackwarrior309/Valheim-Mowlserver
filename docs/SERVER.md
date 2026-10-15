@@ -34,13 +34,18 @@ Before you start: make sure you have a recent backup of the world.
 3. Start the server and wait about 6 minutes
 - Now  BepInEx/config/ValheimWeltLive/welt.vwdump  must exist (a few MB).
 - The server log should contain:
-  "Valheim Welt Live 0.2.0 loaded. Web: off, dump file: on"
+  "Valheim Welt Live 0.3.0 loaded. Web: off, dump file: on"
   "Biome grid computed"
   "World dump written: … objects"
 
 4. Live map
 - The GitHub Actions live map (docs/LIVE-MAP.md) and the PC sync script find the file automatically.
   If the file stops changing for more than 45 minutes, they fall back to the save files.
+
+Deaths & walking paths
+- The mod writes every death to  BepInEx/config/ValheimWeltLive/tode.csv  (on).
+- Walking heatmap: set  RecordPositions = true  under [Spuren] in the .cfg – only if all players agree.
+  Positions are written per day to  spuren-YYYYMMDD.csv ; the server keeps only the last 3 days.
 
 Turning it off
 - Stop the server, delete BepInEx/plugins/ValheimWeltLive, start the server.
@@ -83,13 +88,18 @@ Vorher: ein aktuelles Backup der Welt sicherstellen (Nitrado-Webinterface → Ba
 3. Server starten und ca. 6 Minuten warten
 - Dann muss es  BepInEx/config/ValheimWeltLive/welt.vwdump  geben (einige MB groß).
 - Im Server-Log sollte stehen:
-  „Valheim Welt Live 0.2.0 loaded. Web: off, dump file: on“
+  „Valheim Welt Live 0.3.0 loaded. Web: off, dump file: on“
   „Biome grid computed“
   „World dump written: … objects“
 
 4. Live-Karte
 - Die Live-Karte per GitHub Actions (docs/LIVE-MAP.md) und Valheim-Sync finden die Datei automatisch.
   Ändert sie sich länger als 45 Minuten nicht, nehmen sie wieder die Spielstände.
+
+Tode & Laufwege
+- Der Mod schreibt jeden Tod nach  BepInEx/config/ValheimWeltLive/tode.csv  (an).
+- Laufwege für die Heatmap: in der .cfg unter [Spuren]  RecordPositions = true  setzen – nur, wenn alle Spieler einverstanden sind.
+  Die Positionen landen tageweise in  spuren-JJJJMMTT.csv , auf dem Server bleiben nur die letzten 3 Tage.
 
 Wieder ausschalten
 - Server stoppen, BepInEx/plugins/ValheimWeltLive löschen, Server starten.

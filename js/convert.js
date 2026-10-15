@@ -17,7 +17,7 @@
     return (h1 + Math.imul(h2, 1566083941)) | 0;
   }
   const K = {};
-  ['creator', 'owner', 'ownerName', 'text', 'tag', 'tagauthor', 'author', 'items', 'scale'].forEach((n) => (K[n] = stable(n)));
+  ['creator', 'owner', 'ownerName', 'text', 'tag', 'tagauthor', 'author', 'items', 'scale', 'timeOfDeath'].forEach((n) => (K[n] = stable(n)));
   const K_AUTHOR_NAME = -1847800717;
 
   // ---------- Binär-Leser ----------
@@ -61,7 +61,7 @@
 
   // ---------- .db2 ----------
   function parseDb(u8, gunzip) {
-    const r0 = new R(u8); const ver = r0.i32(); r0.f64(); const len = r0.i32();
+    const r0 = new R(u8); const ver = r0.i32(); const netTime = r0.f64(); const len = r0.i32();
     const data = gunzip(u8.subarray(r0.p, r0.p + len));
     const r = new R(data);
     const nz = r.i32(); r.skip(nz * 4);
@@ -75,7 +75,7 @@
       const h = r.i32(), x = r.f32(), y = r.f32(), z = r.f32(), gen = r.u8();
       const l = L[h]; if (l) locs.push({ k: l[0], n: l[1], x: Math.round(x), z: Math.round(z), v: gen });
     }
-    return { version: ver, keys, locations: locs };
+    return { version: ver, keys, locations: locs, netTime };
   }
 
   // ---------- Inventar ----------
@@ -245,7 +245,7 @@
           if (H_PORTAL.has(prefab)) portals.push({ tag: (S && S[K.tag]) || '', x, y, z });
           else if (prefab === H_SIGN && S && S[K.text]) signs.push({ x, y, z, t: clean(S[K.text]), a: S[K.author] || '', an: S[K_AUTHOR_NAME] || '', c: cr !== undefined ? cr.toString() : '' });
           else if (H_BED.has(prefab) && S && S[K.ownerName]) beds.push({ x, y, z, n: S[K.ownerName], o: L && L[K.owner] !== undefined ? L[K.owner].toString() : '' });
-          else if (prefab === H_TOMB) tombs.push({ x, y, z, n: (S && S[K.ownerName]) || '' });
+          else if (prefab === H_TOMB) { let items = 0; try { if (B && B[K.items]) parseInv(B[K.items]).forEach((it) => (items += it[1])); } catch (e) { } tombs.push({ x, y, z, n: (S && S[K.ownerName]) || '', tod: L && L[K.timeOfDeath] !== undefined ? Number(L[K.timeOfDeath]) : null, items }); }
           if (CONT[prefab] && B && B[K.items]) { try { conts.push({ x, y, z, t: CONT[prefab], c: cr !== undefined ? cr.toString() : '', inv: parseInv(B[K.items]) }); } catch (e) { } }
     };
     let live = null, EXP = null, BIO = null;
@@ -483,6 +483,8 @@
       bosses: dbi.keys.filter((k) => k.startsWith('defeated_')).map((k) => k.slice(9)),
       globalKeys: dbi.keys, locations: dbi.locations,
       portals: portals.map((p) => ({ tag: p.tag, x: Math.round(p.x), z: Math.round(p.z) })),
+      // Grabsteine: Todeszeit = Spielstand-Zeit minus (Weltzeit jetzt − Weltzeit beim Tod); Weltzeit in .NET-Ticks (100 ns)
+      tombs: tombs.map((b) => { const ref = opts.saveTime || Date.now(); const t = b.tod && dbi.netTime ? Math.round(ref - (dbi.netTime - b.tod / 1e7) * 1000) : null; return { n: b.n, x: Math.round(b.x), y: Math.round(b.y), z: Math.round(b.z), t: t && t > 1.5e12 && t <= ref + 6e4 ? t : null, items: b.items }; }),
       bases: regions.map((r) => ({ id: r.id, name: r.name, center: r.center, pieces: r.pieceCount, chests: r.chests.length, builders: r.builders.slice(0, 3) })),
       overview: { x0: ox0, z0: oz0, res: OR, nx: onx, nz: onz, h: b64(ou) },
       biomes,

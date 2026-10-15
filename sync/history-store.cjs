@@ -60,4 +60,23 @@ function insertSnapshot(dir, snap, t, opts) {
   return { changed: true, add: d.add.length, del: d.del.length };
 }
 
-module.exports = { insertSnapshot, loadIndex, readEvent };
+// Tode (Grabsteine) sammeln: tode.json = [{ n, x, y, z, t, items, seen }] – ein Grabstein bleibt bis zum Plündern liegen,
+// jeder Abgleich trägt neue ein. t = Todeszeit (aus der Weltzeit berechnet), seen = erstmals gesehen.
+function recordDeaths(dir, snap, seenAt) {
+  const tombs = snap.tombs || []; if (!tombs.length) return 0;
+  const f = path.join(dir, 'tode.json'); let list = [];
+  try { list = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { }
+  const key = (d) => d.n + '|' + Math.round(d.x) + '|' + Math.round(d.z);
+  const have = new Map(list.map((d) => [key(d), d]));
+  let n = 0;
+  for (const b of tombs) {
+    const k = key(b), old = have.get(k);
+    if (old) { if (!old.t && b.t) old.t = b.t; continue; }
+    const d = { n: b.n, x: b.x, y: b.y, z: b.z, t: b.t || null, items: b.items || 0, seen: seenAt || Date.now() };
+    list.push(d); have.set(k, d); n++;
+  }
+  if (n) { list.sort((a, b) => (a.t || a.seen) - (b.t || b.seen)); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(f, JSON.stringify(list)); }
+  return n;
+}
+
+module.exports = { insertSnapshot, loadIndex, readEvent, recordDeaths };

@@ -93,6 +93,9 @@
 <div class="vw-main">
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
     <div class="vw-side"><button class="vw-mob" data-min>Menü</button><button class="pri w3d" style="width:100%;margin-top:4px">🌍 Ganze Welt in 3D ansehen</button><h2>Basen</h2><div class="vw-maplist"></div>
+      <h2 data-en="Map layers">Karten-Ebenen</h2><div class="row mlay"><button data-ml="portals">⛩ Portal-Netz</button><button data-ml="deaths">✝ Tode</button><button data-ml="heat" hidden>👣 Laufwege</button></div>
+      <div class="heatCtl" hidden><div class="row" style="margin-top:6px"><select class="hPl" style="flex:1;min-width:0"></select><select class="hDays"><option value="0">Alle Tage</option><option value="1">Heute</option><option value="7">7 Tage</option><option value="30">30 Tage</option></select></div></div>
+      <div class="sub mlInfo" style="margin-top:6px"></div>
       <h2>Legende</h2><div class="sub">● Basis (anklicken = 3D) · ◆ Portal · ▲ Boss/Ort (grau = noch nicht erkundet)<br>Ziehen = verschieben · Mausrad/Pinch = Zoom</div><div class="sub biolg" style="margin-top:6px"></div></div>
   </div>
   <div class="vw-pane" data-p="3d" hidden><canvas class="gl"></canvas><div class="vw-labels"></div>
@@ -159,6 +162,28 @@
     }
     $$('.vw-tabs button').forEach((b) => (b.onclick = () => setTab(b.dataset.t)));
 
+    // ================= Zusatzdaten der Live-Karte: Tode, Laufwege (live/verlauf/) =================
+    const EX = { deaths: null, days: [], heat: {}, base: opts.history || null };
+    async function loadExtra() {
+      if (!EX.base) return;
+      try { const r = await fetch(EX.base + 'tode.json', { cache: 'no-store' }); if (r.ok) EX.deaths = await r.json(); } catch (e) { }
+      try { const r = await fetch(EX.base + 'spuren/index.json', { cache: 'no-store' }); if (r.ok) EX.days = await r.json(); } catch (e) { }
+      map.layersChanged(); if (tab === 'info') info();
+    }
+    async function heatDays(n) {
+      const days = n ? EX.days.slice(-n) : EX.days;
+      for (const d of days) if (!EX.heat[d]) { try { const r = await fetch(EX.base + 'spuren/' + d + '.json', { cache: 'no-store' }); if (r.ok) EX.heat[d] = await r.json(); } catch (e) { } }
+      return days.map((d) => EX.heat[d]).filter(Boolean);
+    }
+    // Tode: aufgezeichnete (Live-Karte) + aktuelle Grabsteine aus dem Stand
+    function allDeaths() {
+      const out = (EX.deaths || []).map((d) => Object.assign({}, d)); const key = (d) => d.n + '|' + Math.round(d.x) + '|' + Math.round(d.z);
+      const have = new Set(out.map(key)); const now = new Set((S.tombs || []).map(key));
+      (S.tombs || []).forEach((b) => { if (!have.has(key(b))) out.push(Object.assign({}, b)); });
+      out.forEach((d) => (d.open = now.has(key(d))));
+      return out;
+    }
+
     // ================= Karte (2D) =================
     const map = (function () {
       const cv = $('canvas.map'), ctx = cv.getContext('2d');
@@ -192,6 +217,7 @@
         ctx.imageSmoothingEnabled = view.s < 0.5; ctx.drawImage(img, ax, ay, o.nx * o.res * view.s, o.nz * o.res * view.s);
         // Weltrand
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
+        drawLayers();
         ctx.font = '12px system-ui,sans-serif'; ctx.textAlign = 'center';
         S.locations.forEach((l) => { const [x, y] = toS(l.x, l.z); ctx.fillStyle = l.v ? '#e8584a' : 'rgba(200,200,200,.55)'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.fill(); if (view.s > 0.12 || l.k === 'StartTemple') { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
         S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
@@ -211,9 +237,61 @@
       const up = (e) => { ptr.delete(e.pointerId); pd = 0; if (moved < 5 && e.type === 'pointerup') { const r = cv.getBoundingClientRect(); const hit = pick(e.clientX - r.left, e.clientY - r.top); if (hit != null) open3d(hit); } };
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
+      // ---- Ebenen: Portal-Netz, Tode, Laufwege
+      let ML = { portals: true, deaths: false, heat: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
+      function portalNet() {
+        const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
+        const pairs = [], single = [], multi = [];
+        Object.entries(g).forEach(([t, l]) => { if (l.length === 1) single.push(t); else { if (l.length > 2) multi.push(t); for (let i = 1; i < l.length; i++) pairs.push([l[0], l[i], l.length > 2]); } });
+        const untagged = (S.portals || []).filter((p) => !p.tag).length;
+        return { pairs, single, multi, untagged };
+      }
+      function drawLayers() {
+        if (ML.heat && heatCells) {
+          const cs = heatCell * view.s, lm = Math.log(heatMax + 1);
+          heatCells.forEach((c, k) => { const [i, j] = k.split(',').map(Number); const [x, y] = toS(i * heatCell, (j + 1) * heatCell); const t = Math.log(c + 1) / lm; ctx.fillStyle = `hsla(${Math.round(55 - 55 * t)},100%,${Math.round(60 - 15 * t)}%,${(0.25 + 0.6 * t).toFixed(2)})`; ctx.fillRect(x, y, Math.max(1.5, cs), Math.max(1.5, cs)); });
+        }
+        if (ML.portals) {
+          const N = portalNet(); ctx.lineWidth = 2;
+          N.pairs.forEach(([a, b, m]) => { const [x1, y1] = toS(a.x, a.z), [x2, y2] = toS(b.x, b.z); ctx.strokeStyle = m ? 'rgba(255,170,60,.85)' : 'rgba(190,150,255,.75)'; ctx.setLineDash(m ? [6, 4] : []); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); });
+          ctx.setLineDash([]);
+          (S.portals || []).forEach((p) => { if (!p.tag || N.single.includes(p.tag)) { const [x, y] = toS(p.x, p.z); ctx.strokeStyle = '#ff5a4a'; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke(); } });
+        }
+        if (ML.deaths) {
+          ctx.font = 'bold 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          allDeaths().forEach((d) => { const [x, y] = toS(d.x, d.z); ctx.fillStyle = d.open ? '#ff6b5a' : 'rgba(235,225,215,.8)'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 3; ctx.strokeText('✝', x, y); ctx.fillText('✝', x, y); if (view.s > 0.5) { ctx.font = '11px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(d.n, x, y + 12); ctx.fillText(d.n, x, y + 12); ctx.font = 'bold 13px system-ui,sans-serif'; } });
+          ctx.textBaseline = 'alphabetic';
+        }
+      }
+      async function refreshHeat() {
+        heatCells = null; if (!ML.heat || !EX.days.length) return;
+        const pl = $('.hPl').value, n = +$('.hDays').value; const days = await heatDays(n);
+        const m = new Map(); let tot = 0, cell = 16;
+        days.forEach((d) => { cell = d.cell || 16; Object.entries(d.players || {}).forEach(([name, p]) => { if (pl && pl !== name) return; Object.entries(p.cells).forEach(([k, c]) => { m.set(k, (m.get(k) || 0) + c); tot += c; }); }); });
+        heatCells = m; heatCell = cell; heatMax = Math.max(1, ...m.values());
+        $('.mlInfo').innerHTML = (baseInfo ? baseInfo + '<br>' : '') + (days.length ? `Laufwege: ${fmt(days.length)} Tag(e), ${fmt(m.size)} Felder à ${cell} m` : 'Noch keine Laufwege aufgezeichnet.');
+        draw();
+      }
+      function layersChanged() {
+        $$('[data-ml]').forEach((b) => b.classList.toggle('on', !!ML[b.dataset.ml]));
+        const hb = $('[data-ml="heat"]'); hb.hidden = !EX.days.length;
+        $('.heatCtl').hidden = !(ML.heat && EX.days.length);
+        if (EX.days.length && !$('.hPl').options.length) {
+          const names = new Set(); Promise.resolve(heatDays(7)).then((ds) => { ds.forEach((d) => Object.keys(d.players || {}).forEach((n) => names.add(n))); $('.hPl').innerHTML = '<option value="">Alle Spieler</option>' + [...names].sort().map((n) => `<option>${esc(n)}</option>`).join(''); });
+        }
+        const info = [];
+        if (ML.portals) { const N = portalNet(); info.push(`Portal-Netz: ${fmt(N.pairs.length)} Verbindungen` + (N.single.length ? ` · ohne Partner: ${N.single.map(esc).join(', ')}` : '') + (N.multi.length ? ` · mehr als 2 gleiche Namen: ${N.multi.map(esc).join(', ')}` : '') + (N.untagged ? ` · ${N.untagged} ohne Namen` : '')); }
+        if (ML.deaths) { const D = allDeaths(); info.push(`Tode: ${fmt(D.length)} erfasst` + (D.some((d) => d.open) ? ` · rot = Grabstein liegt noch` : '')); }
+        baseInfo = info.join('<br>'); $('.mlInfo').innerHTML = baseInfo;
+        if (ML.heat) refreshHeat(); else draw();
+      }
+      $$('[data-ml]').forEach((b) => (b.onclick = () => { ML[b.dataset.ml] = !ML[b.dataset.ml]; try { localStorage.setItem('vw-maplayers', JSON.stringify(ML)); } catch (e) { } layersChanged(); }));
+      $('.hPl').onchange = refreshHeat; $('.hDays').onchange = refreshHeat;
+
       function pick(sx, sy) { let best = null, bd = 16; S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = i; } }); return best; }
       addEventListener('resize', draw);
-      return { build, draw };
+      return { build, draw, layersChanged };
     })();
 
     // ================= 3D =================
@@ -917,17 +995,41 @@
 <h2>Welt-Einstellungen</h2><div class="sub">${mods}</div></div>
 <div class="vw-panel"><h2 style="margin-top:0">Charaktere (wer hat gebaut)</h2><table>${S.characters.map((c) => `<tr><td>${esc(c.name || '?')}${c.account ? ' <span class="sub">· ' + esc(c.account) + '</span>' : ''}${c.steam ? '<br><span class="sub">' + esc(c.steam) + '</span>' : ''}</td><td class="n">${fmt(c.pieces)}</td></tr>`).join('')}</table>
 <h2>Spieler auf dem Server</h2><table>${S.players.map((p) => `<tr><td>${esc(p.name)}${p.platform ? '<br><span class="sub">' + esc(p.platform) + '</span>' : ''}</td></tr>`).join('') || '<tr><td class="sub">–</td></tr>'}</table></div></div>
+${board()}
 <div class="sub" style="margin-top:16px">Snapshot vom ${new Date(S.created).toLocaleString(LOC())} · Format v${S.version}${(S.warnings || []).length ? '<br>Hinweise: ' + S.warnings.map(esc).join(' · ') : ''}<br>Inoffizieller Fan-Viewer, nicht mit Iron Gate verbunden.</div>`;
+    }
+
+    // Bestenliste: Tode (Grabsteine), gebaute Teile, Spielzeit und Strecke (Laufwege, nur mit Server-Mod)
+    let boardDays = null;
+    function board() {
+      const P = {}; const get = (n) => P[n] || (P[n] = { n, deaths: 0, pieces: 0, secs: 0, dist: 0 });
+      (S.characters || []).forEach((c) => { if (c.name) get(c.name).pieces += c.pieces || 0; });
+      const D = allDeaths(); D.forEach((d) => { if (d.n) get(d.n).deaths++; });
+      if (EX.days.length && !boardDays) { heatDays(0).then((ds) => { boardDays = ds; if (tab === 'info') info(); }); }
+      (boardDays || []).forEach((d) => Object.entries(d.players || {}).forEach(([n, p]) => { const q = get(n); q.secs += (p.n || 0) * (d.iv || 10); q.dist += p.dist || 0; }));
+      const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs).sort((a, b) => b.pieces - a.pieces);
+      if (!rows.length) return '';
+      const hasT = !!(boardDays && boardDays.length);
+      const hm = (s) => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; };
+      const top = (k) => Math.max(0, ...rows.map((r) => r[k]));
+      const cell = (r, k, v) => `<td class="n">${r[k] && r[k] === top(k) ? '👑 ' : ''}${v}</td>`;
+      const last = D.filter((d) => d.t || d.seen).sort((a, b) => (b.t || b.seen) - (a.t || a.seen)).slice(0, 8);
+      return `<div class="vw-panel" style="margin-top:18px"><h2 style="margin-top:0">Bestenliste</h2>
+<table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
+${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
+${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc(d.n)}</td><td class="sub">${new Date(d.t || d.seen).toLocaleString(LOC(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}${d.t ? '' : ' (gefunden)'}</td><td class="n sub">x ${Math.round(d.x)} / z ${Math.round(d.z)}</td></tr>`).join('')}</table>` : ''}
+<div class="sub" style="margin-top:8px">Tode werden über Grabsteine erfasst: mit Server-Mod jeder, sonst nur die, die beim Speichern noch liegen.${hasT ? '' : ' Spielzeit und Strecke kommen mit dem Server-Mod (Laufwege).'} Kills lassen sich aus den Server-Daten nicht ablesen.</div></div>`;
     }
 
     function apply(newSnap, keep) {
       const prevTab = tab, prevReg = three.regionId, cam = keep ? three.state : null;
       S = newSnap; $('.vw-title').textContent = S.world.name + (S.world.seed ? ' · ' + S.world.seed : '');
-      map.build(); three.fillSelect(); kisten.fill();
+      map.build(); map.layersChanged(); three.fillSelect(); kisten.fill();
       if (keep && prevReg) { const i = areas().findIndex((r) => r.id === prevReg); if (i >= 0) { three.selectRegion(i, true); three.state = cam; } }
       setTab(prevTab);
     }
     apply(snap, false);
+    loadExtra();
     if (g.VW_I18N) g.VW_I18N.onChange(() => { try { info(); if (tab === 'map') map.draw(); } catch (e) { } });
     if (snap.plans && snap.plans.length) three.setPlans(snap.plans);
     requestAnimationFrame(() => { map.build(); map.draw(); });

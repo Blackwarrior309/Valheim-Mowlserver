@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -23,11 +24,11 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
         static bool loggedFile;
 
-        ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip;
-        ConfigEntry<int> cfgPort, cfgWorldSeconds;
+        ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths;
+        ConfigEntry<int> cfgPort, cfgWorldSeconds, cfgTrackSeconds, cfgTrackDays;
         ConfigEntry<float> cfgPlayerSeconds;
         ConfigEntry<string> cfgFilePath;
 
@@ -58,6 +59,10 @@ namespace ValheimWeltLive
             cfgWriteFile = Config.Bind("Datei", "WriteDumpFile", false, "Also write the world dump to a file (for FTP sync, e.g. Nitrado). Set to true on servers.");
             cfgFilePath = Config.Bind("Datei", "DumpPath", "", "Empty = BepInEx/config/ValheimWeltLive/welt.vwdump");
             cfgStrip = Config.Bind("Datenschutz", "StripSteamIds", true, "Do not output Steam IDs (authors of signs/portals).");
+            cfgTracks = Config.Bind("Spuren", "RecordPositions", false, "Server: record player positions for the walking heatmap (spuren-YYYYMMDD.csv next to the dump file). Only with the consent of your players.");
+            cfgTrackSeconds = Config.Bind("Spuren", "PositionIntervalSeconds", 10, "Seconds between recorded positions.");
+            cfgTrackDays = Config.Bind("Spuren", "KeepDays", 3, "Days of position files kept on the server (the live map copies them to GitHub).");
+            cfgDeaths = Config.Bind("Spuren", "RecordDeaths", true, "Server: record every new tombstone (tode.csv next to the dump file) – also deaths whose tombstone is looted before the next save.");
             webRoot = Path.Combine(Path.GetDirectoryName(Info.Location) ?? ".", "web");
             if (cfgHttp.Value) StartHttp();
             Logger.LogInfo($"{Name} {Version} loaded. Web: {(cfgHttp.Value ? "http://localhost:" + cfgPort.Value + "/" : "off")}, dump file: {(cfgWriteFile.Value ? "on" : "off")}");
@@ -75,6 +80,60 @@ namespace ValheimWeltLive
             if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } }
             if (!biomeBusy && WorldGenerator.instance != null && ZNet.instance != null && (biomeGrid == null || biomeWorld != ZNet.instance.GetWorldName())) StartCoroutine(BuildBiomes());
             if (t >= nextWorld && !building) { nextWorld = t + Mathf.Max(10, cfgWorldSeconds.Value); StartCoroutine(BuildDump()); }
+            if (cfgWriteFile.Value && ZNet.instance.IsServer())
+            {
+                if (cfgTracks.Value && t >= nextTrack) { nextTrack = t + Mathf.Max(2, cfgTrackSeconds.Value); try { SampleTracks(); } catch (Exception e) { Logger.LogDebug(e); } }
+                if (cfgDeaths.Value && !tombBusy && t >= nextTomb) { nextTomb = t + 15f; StartCoroutine(ScanTombs()); }
+            }
+        }
+
+        // ---------------- Spuren & Tode (nur Server, Dateien neben dem Dump) ----------------
+        float nextTrack, nextTomb, lastFlush; bool tombBusy;
+        readonly StringBuilder trackBuf = new StringBuilder();
+        readonly HashSet<ZDOID> seenTombs = new HashSet<ZDOID>();
+        string DataDir() { string p = string.IsNullOrEmpty(cfgFilePath.Value) ? Path.Combine(Paths.ConfigPath, "ValheimWeltLive", "welt.vwdump") : cfgFilePath.Value; return Path.GetDirectoryName(p); }
+        static long Unix() { return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds; }
+        void SampleTracks()
+        {
+            long now = Unix();
+            foreach (var peer in ZNet.instance.GetPeers())
+            {
+                if (peer == null || string.IsNullOrEmpty(peer.m_playerName) || peer.m_refPos == Vector3.zero) continue;
+                trackBuf.Append(now).Append(';').Append(peer.m_playerName.Replace(";", ",")).Append(';').Append(Mathf.RoundToInt(peer.m_refPos.x)).Append(';').Append(Mathf.RoundToInt(peer.m_refPos.z)).Append('\n');
+            }
+            if (Time.realtimeSinceStartup - lastFlush < 60f || trackBuf.Length == 0) return;
+            lastFlush = Time.realtimeSinceStartup;
+            string dir = DataDir(); Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "spuren-" + DateTime.UtcNow.ToString("yyyyMMdd") + ".csv"), trackBuf.ToString()); trackBuf.Length = 0;
+            // alte Tage löschen, damit der Server nicht vollläuft
+            foreach (var f in Directory.GetFiles(dir, "spuren-*.csv"))
+            {
+                DateTime d; if (DateTime.TryParseExact(Path.GetFileNameWithoutExtension(f).Substring(7), "yyyyMMdd", null, System.Globalization.DateTimeStyles.AssumeUniversal, out d) && (DateTime.UtcNow - d).TotalDays > Math.Max(1, cfgTrackDays.Value)) try { File.Delete(f); } catch { }
+            }
+        }
+        IEnumerator ScanTombs()
+        {
+            tombBusy = true; var list = new List<ZDO>(); int idx = 0; bool done = false; int guard = 0;
+            while (!done && guard++ < 2000) { try { done = ZDOMan.instance.GetAllZDOsWithPrefabIterative("Player_tombstone", list, ref idx); } catch (Exception e) { Logger.LogDebug(e); break; } if (!done) yield return null; if (ZNet.instance == null) { tombBusy = false; yield break; } }
+            try
+            {
+                var sb = new StringBuilder(); long now = Unix(); long ticks = ZNet.instance.GetTime().Ticks;
+                foreach (var z in list)
+                {
+                    if (z == null || !seenTombs.Add(z.m_uid)) continue;
+                    long tod = z.GetLong("timeOfDeath", 0L); long when = tod > 0 ? now - Math.Max(0L, (ticks - tod) / 10000000L) : now;
+                    Vector3 p = z.GetPosition();
+                    sb.Append(when).Append(';').Append(z.GetString("ownerName", "").Replace(";", ",")).Append(';').Append(Mathf.RoundToInt(p.x)).Append(';').Append(Mathf.RoundToInt(p.y)).Append(';').Append(Mathf.RoundToInt(p.z)).Append('\n');
+                }
+                if (sb.Length > 0)
+                {
+                    string dir = DataDir(); Directory.CreateDirectory(dir); string f = Path.Combine(dir, "tode.csv");
+                    File.AppendAllText(f, sb.ToString());
+                    var lines = File.ReadAllLines(f); if (lines.Length > 2000) File.WriteAllLines(f, lines.Skip(lines.Length - 1500).ToArray());
+                }
+            }
+            catch (Exception e) { Logger.LogDebug(e); }
+            tombBusy = false;
         }
 
         // ---------------- Biome ----------------

@@ -44,7 +44,7 @@ for (const src of inputs) {
     const { snap, mtime } = load(src);
     const t = timeArg ? new Date(timeArg).getTime() : (timeFromName(src) || mtime);
     if (!t || isNaN(t)) { console.log('kein Zeitpunkt erkennbar – bitte --time angeben.'); continue; }
-    const r = insertSnapshot(dir, snap, t, { label: 'backup', log: () => {} });
+    const r = insertSnapshot(dir, snap, t, { label: 'backup', log: () => {} }); require(path.join(root, 'sync/history-store.cjs')).recordDeaths(dir, snap, t);
     console.log(new Date(t).toLocaleString('de-DE') + ': ' + (r.changed ? `+${r.add} / −${r.del} Teile` : 'übersprungen (' + r.reason + ')'));
     if (r.changed) n++;
   } catch (e) { console.log('Fehler: ' + e.message); }
