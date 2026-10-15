@@ -31,7 +31,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     env:
-      HAS_FTP: ${{ secrets.VS_FTP_HOST != '' }}
+      # Das Original-Repo (Template) veröffentlicht nie eine Live-Welt – nur Kopien davon
+      HAS_FTP: ${{ secrets.VS_FTP_HOST != '' && github.repository != 'Blackwarrior309/Valheim-welt' }}
     steps:
       - uses: actions/checkout@v4
 
