@@ -413,7 +413,8 @@ function envConfig() {
     try { await runOnce(cfg); } catch (e) { log('FEHLER:', e.message); code = 1; }
     if (cfg.historyDir && !fs.existsSync(path.join(cfg.historyDir, 'scan.txt'))) { try { await scanWorldDir(cfg); historyChanged = true; } catch (e) { log('Scan:', e.message); } }
     let impErr = false;
-    if (cfg.historyDir) { try { if (await importBackups(cfg)) historyChanged = true; } catch (e) { impErr = true; log('Backups: FEHLER', e.message); } }
+    // Server-Sicherungen nur auf Wunsch einsortieren (VS_IMPORT_BACKUPS=true) – der laufende Abgleich erfasst ohnehin jede Änderung
+    if (cfg.historyDir && /^(1|true|ja|yes)$/i.test(ENV.VS_IMPORT_BACKUPS || '')) { try { if (await importBackups(cfg)) historyChanged = true; } catch (e) { impErr = true; log('Backups: FEHLER', e.message); } }
     // Fehler für die Fehlersuche in den Verlauf-Branch schreiben (ohne Zugangsdaten)
     if (cfg.historyDir && (code || impErr)) {
       const red = (x) => [cfg.ftp.host, cfg.ftp.user, cfg.ftp.password].filter(Boolean).reduce((t, v) => t.split(v).join('***'), x);

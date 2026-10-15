@@ -113,5 +113,6 @@ Die Seite bekommt ihn unter `live/verlauf/`.
 - `e/<ISO-Zeit>.json.gz`: `{ v:1, t, types:[Name…], owners:[Erbauer…], add:[[typ,x,y,z,rot,erbauer]…], del:[…] }`
   – Unterschied zum vorherigen Eintrag. Der erste Eintrag enthält alle Teile.
 - Ein Teil wird über `Name|x|y|z|rot` erkannt (Werte wie in `.vwelt`, auf 2 Nachkommastellen).
+- Valheims eigene Server-Sicherungen (`<Welt>_backup_auto-…`) holt die Live-Karte nur, wenn die Umgebungsvariable `VS_IMPORT_BACKUPS=true` gesetzt ist (z. B. einmalig im Workflow), um Lücken zu füllen.
 - Ältere Stände (Backups) lassen sich nachträglich einsortieren: `node tools/history-add.cjs <ordner> <backup.zip|weltordner|.vwelt> [--time "JJJJ-MM-TT hh:mm"]`.
 - Fehlen in einem neuen Stand plötzlich über 30 % der Teile, wird er als unvollständig verworfen.
