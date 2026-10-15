@@ -365,8 +365,9 @@
       let lab = '', bd = 2.2;
       signs.forEach((s) => { const d = Math.hypot(s.x - c.x, s.z - c.z); if (d < bd && Math.abs(s.y - c.y) < 2.5) { bd = d; lab = s.t; } });
       const items = {};
-      c.inv.forEach(([h, st, q]) => { const nm = (D.items[h] || 'Unbekannt (0x' + (h >>> 0).toString(16) + ')') + (q > 1 ? ' ★' + q : ''); items[nm] = (items[nm] || 0) + st; });
-      return { t: c.t, s: lab, o: c.c ? (ownerLabel[c.c] || 'Unbekannt') : '', x: r2(c.x), y: r2(c.y), z: r2(c.z), i: Object.entries(items).sort((a, b) => b[1] - a[1]) };
+      // [Name, Anzahl, Item-Hash] – der Hash erlaubt dem Spiel-Mod die Zuordnung unabhängig von der Sprache
+      const hs = {}; c.inv.forEach(([h, st, q]) => { const nm = (D.items[h] || 'Unbekannt (0x' + (h >>> 0).toString(16) + ')') + (q > 1 ? ' ★' + q : ''); items[nm] = (items[nm] || 0) + st; hs[nm] = h; });
+      return { t: c.t, s: lab, o: c.c ? (ownerLabel[c.c] || 'Unbekannt') : '', x: r2(c.x), y: r2(c.y), z: r2(c.z), i: Object.entries(items).sort((a, b) => b[1] - a[1]).map(([n, k]) => [n, k, hs[n]]) };
     }
     function regionFor(cl, idx, W) {
       const M = 140;

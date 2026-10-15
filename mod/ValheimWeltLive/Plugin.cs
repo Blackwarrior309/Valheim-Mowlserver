@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths;
@@ -64,6 +64,15 @@ namespace ValheimWeltLive
             cfgTrackDays = Config.Bind("Spuren", "KeepDays", 3, "Days of position files kept on the server (the live map copies them to GitHub).");
             cfgDeaths = Config.Bind("Spuren", "RecordDeaths", true, "Server: record every new tombstone (tode.csv next to the dump file) – also deaths whose tombstone is looted before the next save.");
             webRoot = Path.Combine(Path.GetDirectoryName(Info.Location) ?? ".", "web");
+            // Kisten-Suche im Spiel (nur auf Spieler-Rechnern, nicht auf dedizierten Servern)
+            if (!Application.isBatchMode)
+            {
+                var ws = gameObject.AddComponent<WeltSuche>(); WeltSuche.Instance = ws; ws.Log = Logger;
+                ws.cfgKey = Config.Bind("Suche", "Hotkey", new KeyboardShortcut(KeyCode.F7), "Opens/closes the chest search window in game.");
+                ws.cfgUrl = Config.Bind("Suche", "LiveMapUrl", "", "Optional: your live map's world file, e.g. https://NAME.github.io/REPO/live/welt.vwelt – then far away chests are found too (as map pins).");
+                ws.cfgPins = Config.Bind("Suche", "MaxPins", 30, "Maximum map pins per search.");
+                try { SuchePatches.Apply(new HarmonyLib.Harmony(Guid), Logger); } catch (Exception e) { Logger.LogWarning("Suche: " + e.Message); }
+            }
             if (cfgHttp.Value) StartHttp();
             Logger.LogInfo($"{Name} {Version} loaded. Web: {(cfgHttp.Value ? "http://localhost:" + cfgPort.Value + "/" : "off")}, dump file: {(cfgWriteFile.Value ? "on" : "off")}");
         }
@@ -361,6 +370,7 @@ namespace ValheimWeltLive
                 string p = ctx.Request.Url.AbsolutePath;
                 if (p == "/api/info") { Send(res, infoJson, "application/json"); return; }
                 if (p == "/api/players") { Send(res, playersJson, "application/json"); return; }
+                if (p == "/api/find") { var q = ctx.Request.QueryString["q"]; if (!string.IsNullOrEmpty(q)) WeltSuche.PendingQuery = q; Send(res, "{\"ok\":true}", "application/json"); return; }
                 if (p == "/api/world.vwdump")
                 {
                     var gz = dumpGz; if (gz == null) { res.StatusCode = 503; Send(res, "{\"error\":\"Welt wird noch gelesen\"}", "application/json"); return; }

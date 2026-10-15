@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+- In-game chest search (F7): type an item name – nearby chests get a label with the amount, all chests appear as map pins, the recipe shows every ingredient with how much is stored.
+- Optional `LiveMapUrl`: also finds chests far away, using your live map's world file.
+- Web page: “Search in game” button in the chest view when connected to the mod.
+
 ## 0.3.0
 - Server: records every death (tode.csv) – including tombstones looted before the next save.
 - Server: optional walking heatmap – player positions every 10 s (spuren-YYYYMMDD.csv, kept 3 days on the server). Off by default, only with your players' consent.

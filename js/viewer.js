@@ -134,7 +134,7 @@
     <div class="vw-hud" hidden></div><div class="vw-cross" hidden></div>
   </div>
   <div class="vw-pane" data-p="chests" hidden><div class="vw-scroll"><div class="vw-wrap">
-    <div class="vw-bar"><input type="search" class="kq" placeholder="Item suchen, z. B. Eisen, Met, Kernholz …" autocomplete="off"><select class="ka"></select><button class="klab">Nur beschriftete</button></div>
+    <div class="vw-bar"><input type="search" class="kq" placeholder="Item suchen, z. B. Eisen, Met, Kernholz …" autocomplete="off"><select class="ka"></select><button class="klab">Nur beschriftete</button><button class="kgame" hidden title="Öffnet die Kisten-Suche im laufenden Spiel und setzt Pins auf der Karte">🎯 Im Spiel suchen</button></div>
     <div class="vw-stats kstats"></div><div class="kcraft"></div>
     <div class="vw-grid"><div class="vw-panel"><h2 style="margin-top:0">Summe</h2><table class="ktot"></table><div class="sub" style="margin-top:8px">Klick auf ein Item filtert die Kisten. „★2“ = Ausrüstungsstufe.</div></div><div class="klist"></div></div>
   </div></div></div>
@@ -989,6 +989,8 @@
     const kisten = (function () {
       const q = $('.kq'), sel = $('.ka'), lab = $('.klab'); let only = false; const open = new Set();
       lab.onclick = () => { only = !only; lab.classList.toggle('on', only); render(); };
+      const kg = $('.kgame'); kg.hidden = opts.mod == null;
+      kg.onclick = () => { const v = q.value.trim(); if (!v) return; fetch((opts.mod || '') + '/api/find?q=' + encodeURIComponent(v)).then(() => { kg.textContent = '✔ Im Spiel geöffnet'; setTimeout(() => (kg.textContent = '🎯 Im Spiel suchen'), 2500); }).catch(() => { kg.textContent = 'Spiel nicht erreichbar'; setTimeout(() => (kg.textContent = '🎯 Im Spiel suchen'), 2500); }); };
       q.oninput = render; sel.onchange = render;
       function fill() { sel.innerHTML = `<option value="">Alle Orte</option>` + S.regions.map((r, i) => `<option value="${i}">${esc(r.name)}</option>`).join('') + ((S.looseChests || []).length ? `<option value="loose">Außenposten, Karren, Schiffe</option>` : ''); }
       function render() {

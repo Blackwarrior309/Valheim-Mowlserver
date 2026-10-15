@@ -42,7 +42,7 @@
     start.hidden = true; app.hidden = false;
     if (viewer) { viewer.update(snap); if (status) viewer.setStatus(status); return; }
     viewer = VWViewer.mount(app, snap, {
-      status, plans: planList, history: historyBase,
+      status, plans: planList, history: historyBase, mod: modBase,
       actions: [
         { label: '⬇ Teilen-Datei (.html)', primary: true, title: 'Eine Datei, öffnet sich in jedem Browser – zum Verschicken', onClick: exportHtml },
         { label: '⬇ .vwelt', title: 'Kompakte Datendatei (für diese Seite, Live-Karten, Server)', onClick: () => download(packCurrent(), safe(current.world.name) + '_' + stamp() + '.vwelt', 'application/gzip') },
@@ -86,6 +86,7 @@
     } catch (e) { alert('Export fehlgeschlagen: ' + e.message); }
   }
 
+  let modBase = null; // gesetzt, wenn mit dem Spiel-Mod verbunden (für „Im Spiel suchen“)
   // ---------- Umwandeln (Worker) ----------
   function convert(files, status) {
     return new Promise((resolve, reject) => {
@@ -173,7 +174,7 @@
 
   // ---------- Live mit dem Mod (Valheim Welt Live) ----------
   async function connectMod(base) {
-    base = base.replace(/\/+$/, '');
+    base = base.replace(/\/+$/, ''); modBase = base;
     let lastDump = 0, busy = false, fails = 0;
     setProg('Verbinde mit dem Mod (' + (base || location.host) + ') …', 0.05); showErr('');
     async function world() {
