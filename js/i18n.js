@@ -60,7 +60,7 @@
     'Wenig': 'Little', 'Mittel': 'Medium', 'Alles': 'All', 'Auflösung': 'Resolution', 'Sichtweite': 'View distance', 'Weit': 'Far',
     'Gezeichnet wird nur, wenn sich etwas bewegt. Schatten werden erst berechnet, wenn die Kamera kurz stillsteht, und sind im Flugmodus immer aus.': 'The scene is only redrawn when something moves. Shadows are computed once the camera rests briefly and are always off in fly mode.',
     'Bauteile': 'Building pieces', 'Dächer': 'Roofs', 'Vegetation': 'Vegetation', 'Wasser': 'Water', 'Namen': 'Names',
-    'Spieler online': 'Players online', 'Zeitraffer': 'Time-lapse', 'Beginn der Aufzeichnung': 'Start of recording', 'aktueller Stand': 'current state', 'Abspielen': 'Play',
+    'Spieler online': 'Players online', 'Gebäude exportieren': 'Export buildings', '☝ Auswählen': '☝ Select', 'Zusammenhängendes Gebäude': 'Connected building', 'Einzelnes Teil': 'Single piece', 'Alles im Gebiet': 'Everything in this area', 'Leeren': 'Clear', 'Klick = hinzufügen, Shift+Klick = entfernen.': 'Click = add, Shift+click = remove.', 'Name des Bauplans': 'Blueprint name', '⬇ PlanBuild (.blueprint)': '⬇ PlanBuild (.blueprint)', 'Zeitraffer': 'Time-lapse', 'Beginn der Aufzeichnung': 'Start of recording', 'aktueller Stand': 'current state', 'Abspielen': 'Play',
     'Bauplan einblenden': 'Show a building plan', 'Plan wählen …': 'Choose plan …', 'Datei …': 'File …',
     'Höher': 'Up', 'Tiefer': 'Down', 'Entfernen': 'Remove', 'N': 'N', 'S': 'S', 'W': 'W', 'O': 'E',
     'Keine gültige Bauplan-Datei (.vwplan).': 'Not a valid building plan file (.vwplan).',
@@ -225,6 +225,9 @@
   const nf = (s) => s.replace(/\d{1,3}(?:\.\d{3})+(?!\d)/g, (m) => m.replace(/\./g, ','));
   const RULES = [
     [/^\+([\d.,]+) Teile(?:, −([\d.,]+) abgerissen)?$/, (m) => '+' + nf(m[1]) + ' pieces' + (m[2] ? ', −' + nf(m[2]) + ' removed' : '')],
+    [/^([\d.,]+) Teile gewählt$/, (m) => nf(m[1]) + ' pieces selected'],
+    [/^([\d.,]+) unbekannte werden ausgelassen$/, (m) => nf(m[1]) + ' unknown ones are left out'],
+    [/^Umkreis (\d+) m$/, (m) => 'Radius ' + m[1] + ' m'],
     [/^([\d.,]+) Teile$/, (m) => nf(m[1]) + ' pieces'],
     [/^([\d.,]+) Kisten$/, (m) => nf(m[1]) + (m[1] === '1' ? ' chest' : ' chests')],
     [/^([\d.,]+) Stück$/, (m) => nf(m[1]) + ' items'],

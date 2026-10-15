@@ -100,6 +100,11 @@
       <h2>Gebiet</h2><select class="reg" style="width:100%"></select>
       <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button></div>
       <div class="tl" hidden><h2>Zeitraffer</h2><div class="row" style="flex-wrap:nowrap;align-items:center"><button class="tlPlay" aria-label="Abspielen">▶</button><input type="range" class="tlR" min="0" max="0" value="0" style="flex:1;min-width:0"></div><div class="sub tlInfo" style="margin-top:4px"></div><div class="tlList" style="max-height:170px;overflow:auto;margin-top:6px"></div></div>
+      <h2>Gebäude exportieren</h2>
+      <div class="row"><button class="selMode">☝ Auswählen</button><select class="selHow" style="flex:1"><option value="0">Zusammenhängendes Gebäude</option><option value="6">Umkreis 6 m</option><option value="12">Umkreis 12 m</option><option value="25">Umkreis 25 m</option><option value="1">Einzelnes Teil</option></select></div>
+      <div class="row" style="margin-top:6px"><button class="selAll">Alles im Gebiet</button><button class="selClr">Leeren</button></div>
+      <div class="sub selInfo" style="margin-top:4px">Klick = hinzufügen, Shift+Klick = entfernen.</div>
+      <div class="selExp" hidden><input class="selName" type="text" placeholder="Name des Bauplans" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"><div class="row" style="margin-top:6px"><button class="pri selBp">⬇ PlanBuild (.blueprint)</button></div><div class="sub selHint" style="margin-top:4px" data-en="For the PlanBuild mod: put the file into <code>BepInEx/config/PlanBuild/blueprints</code>, place it in game with the blueprint rune as a hologram and build it.">Für den Mod PlanBuild: Datei nach <code>BepInEx/config/PlanBuild/blueprints</code> legen, im Spiel mit der Bauplan-Rune als Hologramm platzieren und nachbauen.</div></div>
       <h2>Grafik</h2><div class="row gstyle"><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
       <details class="perf"><summary>Leistung &amp; Grafik</summary>
         <div class="qrow"><label for="vwq-sh">Schatten</label><select id="vwq-sh" data-q="shadows"><option value="0">Aus (schnell)</option><option value="1">An – berechnet im Stillstand</option></select></div>
@@ -450,7 +455,7 @@
         $('.top').innerHTML = r.topTypes.slice(0, 15).map((t) => `<tr><td>${esc(pieceName(t[0]))}</td><td class="n">${fmt(t[1])}</td></tr>`).join('');
         chestSearch(); placePlans(); drawPlayers(); shadowFresh = false; shadowPasses = 2; invalidate();
         if (!keepCam) views('obl');
-        TL.onLoad();
+        SEL.reset(); TL.onLoad();
       }
       function recolor(mode) {
         colorMode = mode;
@@ -460,6 +465,7 @@
           for (let k = 0; k < n; k++) { const o = k * 6; tmp.setHex(mode === 'own' ? OWNC[arr[o + 5] % OWNC.length] : curMode === 'natur' ? (NAT_TINT[cat] || 0xffffff) : CAT[cat] ? CAT[cat][0] : 0xb4a58a); if (mode !== 'own') { const j = ((arr[o] * 7.3 + arr[o + 2] * 3.1 + arr[o + 1] * 5.7) % 1 + 1) % 1; tmp.offsetHSL(0, 0, (j - 0.5) * 0.07); } im.setColorAt(k, tmp); }
           im.instanceColor.needsUpdate = true;
         }
+        SEL.paint();
         invalidate();
         const L = $('.legend');
         if (!reg) return;
@@ -624,11 +630,13 @@
       // ---- Eingabe (Orbit)
       const ptrs = new Map(); let drag = null, pd = 0, downAt = null;
       cv.addEventListener('contextmenu', (e) => e.preventDefault());
-      cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY }; });
+      cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
       const pUp = (e) => {
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
-          const h = rayHit(e); if (h && h.object.userData.cat === 'chest') { const k = chestAt(arrAt(h)); if (k >= 0) openChest(k, false); }
+          const h = rayHit(e);
+          if (SEL.active) { if (h && h.instanceId != null) SEL.click(h.object, h.instanceId, e.shiftKey || downAt.shift); }
+          else if (h && h.object.userData.cat === 'chest') { const k = chestAt(arrAt(h)); if (k >= 0) openChest(k, false); }
         }
       };
       cv.addEventListener('pointerup', pUp); cv.addEventListener('pointercancel', pUp);
@@ -722,6 +730,81 @@
         }
         requestAnimationFrame(frame);
       }
+      // ---- Auswahl & Export (PlanBuild .blueprint)
+      const SEL = (function () {
+        let active = false, sel = new Map(); // mesh → Set(instanceId)
+        const btn = $('.selMode'), info = $('.selInfo'), exp = $('.selExp'), nameIn = $('.selName');
+        const NONE = 'ohne Erbauer';
+        const count = () => { let n = 0; sel.forEach((s) => (n += s.size)); return n; };
+        const all = () => Object.values(meshes).flat();
+        function paint() {
+          if (!sel.size) return;
+          tmp.setHex(0x3fd0ff);
+          sel.forEach((set, im) => { set.forEach((k) => im.setColorAt(k, tmp)); if (im.instanceColor) im.instanceColor.needsUpdate = true; });
+        }
+        function refresh() {
+          const n = count(); exp.hidden = !n;
+          info.innerHTML = n ? `<b>${fmt(n)} Teile gewählt</b>` + (unknown().length ? ` · ${fmt(unknown().length)} unbekannte werden ausgelassen` : '') : 'Klick = hinzufügen, Shift+Klick = entfernen.';
+          recolor(colorMode);
+        }
+        function reset() { sel = new Map(); if (exp) { exp.hidden = true; info.innerHTML = 'Klick = hinzufügen, Shift+Klick = entfernen.'; } }
+        function rec(im, k) { const a = im.userData.arr, o = k * 6; return { im, k, x: a[o], y: a[o + 1], z: a[o + 2], r: a[o + 3], t: reg.types[a[o + 4]], own: reg.owners[a[o + 5]] }; }
+        function unknown() { const u = []; sel.forEach((set, im) => set.forEach((k) => { const r = rec(im, k); if (/^0x/.test(r.t[0])) u.push(r); })); return u; }
+        function add(im, k) { (sel.get(im) || sel.set(im, new Set()).get(im)).add(k); }
+        function has(im, k) { const s = sel.get(im); return !!(s && s.has(k)); }
+        function flood(im0, k0) {
+          // zusammenhängende Spieler-Bauteile: Abstand der Mittelpunkte ≤ halbe Größen + 0,4 m
+          const P = []; all().forEach((im) => { const n = im.userData.arr.length / 6; for (let k = 0; k < n; k++) { const r = rec(im, k); if (r.own === NONE) continue; r.h = Math.max(r.t[1], r.t[2], r.t[3]) / 2; P.push(r); } });
+          const C = 4, grid = new Map(), key = (x, y, z) => x + ',' + y + ',' + z;
+          P.forEach((p, i) => { const g = key(Math.floor(p.x / C), Math.floor(p.y / C), Math.floor(p.z / C)); (grid.get(g) || grid.set(g, []).get(g)).push(i); });
+          const start = P.findIndex((p) => p.im === im0 && p.k === k0); if (start < 0) return 0;
+          const seen = new Uint8Array(P.length), q = [start]; seen[start] = 1; let n = 0;
+          while (q.length && n < 30000) {
+            const p = P[q.pop()]; add(p.im, p.k); n++;
+            const cx = Math.floor(p.x / C), cy = Math.floor(p.y / C), cz = Math.floor(p.z / C);
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+              const l = grid.get(key(cx + dx, cy + dy, cz + dz)); if (!l) continue;
+              for (const j of l) { if (seen[j]) continue; const o = P[j]; if (Math.hypot(o.x - p.x, o.y - p.y, o.z - p.z) <= p.h + o.h + 0.4) { seen[j] = 1; q.push(j); } }
+            }
+          }
+          return n;
+        }
+        function radius(im0, k0, R) {
+          const c = rec(im0, k0); let n = 0;
+          all().forEach((im) => { const a = im.userData.arr, m = a.length / 6; for (let k = 0; k < m; k++) { const o = k * 6; if (reg.owners[a[o + 5]] === NONE) continue; if (Math.hypot(a[o] - c.x, a[o + 2] - c.z) <= R && Math.abs(a[o + 1] - c.y) < 40) { add(im, k); n++; } } });
+          return n;
+        }
+        function click(im, k, shift) {
+          const how = +$('.selHow').value;
+          // gewünschte Teile in eine eigene Auswahl sammeln, dann hinzufügen (Klick) oder entfernen (Shift+Klick)
+          const keep = sel; sel = new Map();
+          if (how === 1) add(im, k); else if (how > 1) radius(im, k, how); else flood(im, k);
+          const pick = sel; sel = keep;
+          pick.forEach((set, m) => set.forEach((x) => { if (shift) { const s = sel.get(m); if (s) s.delete(x); } else add(m, x); }));
+          if (!nameIn.value) nameIn.value = (reg.name || 'Bauwerk').replace(/\s*\(.*$/, '');
+          refresh();
+        }
+        function toBlueprint(name) {
+          const R = []; sel.forEach((set, im) => set.forEach((k) => { const r = rec(im, k); if (!/^0x/.test(r.t[0])) R.push(r); }));
+          if (!R.length) return null;
+          const mx = Math.min(...R.map((r) => r.x)), my = Math.min(...R.map((r) => r.y)), mz = Math.min(...R.map((r) => r.z));
+          R.sort((a, b) => a.y - b.y || a.x - b.x || a.z - b.z);
+          const f = (v) => String(Math.round(v * 10000) / 10000);
+          const L = ['#Name:' + name, '#Creator:Valheim Welt-Viewer', '#Description:' + JSON.stringify('Exportiert aus ' + (S.world.name || 'Valheim') + ' · ' + reg.name + ' · ' + R.length + ' Teile'), '#Category:', '#Pieces'];
+          R.forEach((r) => { const h = r.r * Math.PI / 360; L.push([r.t[0], 'Building', f(r.x - mx), f(r.y - my), f(r.z - mz), 0, f(Math.sin(h)), 0, f(Math.cos(h)), '""', 1, 1, 1].join(';')); });
+          return L.join('\n') + '\n';
+        }
+        btn.onclick = () => { active = !active; btn.classList.toggle('on', active); cv.style.cursor = active ? 'crosshair' : ''; };
+        $('.selClr').onclick = () => { sel = new Map(); refresh(); };
+        $('.selAll').onclick = () => { sel = new Map(); all().forEach((im) => { const n = im.userData.arr.length / 6; for (let k = 0; k < n; k++) if (reg.owners[im.userData.arr[k * 6 + 5]] !== NONE) add(im, k); }); if (!nameIn.value) nameIn.value = (reg.name || 'Bauwerk').replace(/\s*\(.*$/, ''); refresh(); };
+        $('.selBp').onclick = () => {
+          const name = (nameIn.value || 'Bauwerk').trim(); const txt = toBlueprint(name); if (!txt) return;
+          const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
+          a.download = name.replace(/[\\/:*?"<>|]+/g, '_') + '.blueprint'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        };
+        return { get active() { return active; }, click, paint, reset, toBlueprint, count };
+      })();
+
       // ---- Zeitraffer (Bau-Verlauf aus live/verlauf/)
       const TL = (function () {
         let entries = [], times = null, cur = -1, timer = 0, ready = false;
