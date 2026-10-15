@@ -176,6 +176,45 @@ async function scanWorldDir(cfg) {
   log('Scan des Weltordners gespeichert (' + lines.length + ' Zeilen).');
 }
 
+// Valheims eigene Sicherungen (<Welt>_backup_auto-JJJJMMTT-hhmmss neben dem Weltordner) in den Bau-Verlauf einsortieren.
+// Jede Sicherung wird nur einmal geholt (Liste „imported“ in index.json).
+async function importBackups(cfg) {
+  const state = loadJson(STATE, {});
+  const store = require('./history-store.cjs');
+  const idxPath = path.join(cfg.historyDir, 'index.json');
+  const done = new Set((store.loadIndex(cfg.historyDir).imported) || []);
+  const ftp = new FTP(cfg.ftp); await ftp.connect(); let any = false;
+  try {
+    const wdir = state.remoteDir || (await findWorldDir(ftp, cfg.world)).dir;
+    const parent = wdir.replace(/\/[^/]*$/, '') || '/';
+    const items = await ftp.list(parent);
+    const MON = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+    const cands = items.map((it) => ({ it, m: /_backup_auto-(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$/.exec(it.name) })).filter((x) => x.m && !done.has(x.it.name));
+    for (const { it, m } of cands.slice(0, 6)) {
+      // Name = Ortszeit des Servers; Zeitzone über das (UTC-)Änderungsdatum des Ordners bestimmen
+      let t = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+      const mm = /^(\w{3})\s+(\d+)\s+(\d\d):(\d\d)$/.exec(String(it.mod).trim()) || /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)/.exec(String(it.mod));
+      if (mm) { const tm = mm[1].length === 4 ? Date.UTC(+mm[1], +mm[2] - 1, +mm[3], +mm[4], +mm[5]) : Date.UTC(+m[1], MON[mm[1]], +mm[2], +mm[3], +mm[4]); const h = Math.round((t - tm) / 3600e3); if (Math.abs(h) <= 14) t -= h * 3600e3; }
+      log('Sicherung', it.name, '…');
+      const files = [];
+      async function walk(d, depth) { for (const x of await ftp.list(d)) { const p = join(d, x.name); if (x.dir) { if (depth < 3) await walk(p, depth + 1); } else files.push({ name: p.slice(join(parent, it.name).length + 1), data: new Uint8Array(await ftp.get(p)) }); } }
+      if (it.dir) await walk(join(parent, it.name), 0); else continue;
+      // nur den neuesten Spielstand der Sicherung behalten
+      const gens = [...new Set(files.map((f) => (/(?:^|\/)(_main\.\d+)\./.exec(f.name) || [])[1]).filter(Boolean))].sort((a, b) => +b.split('.')[1] - +a.split('.')[1]);
+      const use = gens.length > 1 ? files.filter((f) => !/(?:^|\/)_main\.\d+\./.test(f.name) || f.name.includes(gens[0] + '.')) : files;
+      let r;
+      try {
+        const snap = convert(use, { gunzip: (u) => new Uint8Array(zlib.gunzipSync(u)), stripIds: true });
+        r = store.insertSnapshot(cfg.historyDir, snap, t, { log, label: 'backup' });
+      } catch (e) { r = { changed: false, reason: e.message }; }
+      log('  →', r.changed ? `+${r.add} / −${r.del} Teile` : 'übersprungen (' + r.reason + ')');
+      const idx = store.loadIndex(cfg.historyDir); idx.imported = [...new Set([...(idx.imported || []), it.name])];
+      fs.mkdirSync(cfg.historyDir, { recursive: true }); fs.writeFileSync(idxPath, JSON.stringify(idx)); any = true;
+    }
+  } finally { ftp.close(); }
+  return any;
+}
+
 // Live-Dump des Mods (welt.vwdump) auf dem Server suchen
 async function findDump(ftp) {
   const queue = [['/', 0]], seen = new Set(); let visited = 0;
@@ -360,6 +399,7 @@ function envConfig() {
     const cfg = envConfig(); let code = 0;
     try { await runOnce(cfg); } catch (e) { log('FEHLER:', e.message); code = 1; }
     if (cfg.historyDir && !fs.existsSync(path.join(cfg.historyDir, 'scan.txt'))) { try { await scanWorldDir(cfg); historyChanged = true; } catch (e) { log('Scan:', e.message); } }
+    if (cfg.historyDir) { try { if (await importBackups(cfg)) historyChanged = true; } catch (e) { log('Backups:', e.message); } }
     if (ENV.GITHUB_OUTPUT) fs.appendFileSync(ENV.GITHUB_OUTPUT, 'changed=' + changedOut + '\nhistory=' + historyChanged + '\n');
     process.exit(code);
   }

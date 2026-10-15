@@ -102,12 +102,12 @@ jobs:
           fi
 
       - uses: actions/upload-pages-artifact@v3
-        if: ${{ steps.sync.outputs.changed == 'true' || github.event_name != 'schedule' }}
+        if: ${{ steps.sync.outputs.changed == 'true' || steps.sync.outputs.history == 'true' || github.event_name != 'schedule' }}
         with:
           path: .
 
       - id: deploy
-        if: ${{ steps.sync.outputs.changed == 'true' || github.event_name != 'schedule' }}
+        if: ${{ steps.sync.outputs.changed == 'true' || steps.sync.outputs.history == 'true' || github.event_name != 'schedule' }}
         uses: actions/deploy-pages@v4
         with:
           timeout: 600000           # Maximum, das GitHub erlaubt
