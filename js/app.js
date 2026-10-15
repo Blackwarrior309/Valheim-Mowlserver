@@ -86,6 +86,9 @@
     } catch (e) { alert('Export fehlgeschlagen: ' + e.message); }
   }
 
+  // „Letztes Update“ mit relativer Zeit (vor 5 Min., vor 2 Std. …)
+  function ago(ts) { const m = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 60000)); if (m < 1) return 'gerade eben'; if (m < 60) return 'vor ' + m + ' Min.'; const h = Math.round(m / 60); if (h < 48) return 'vor ' + h + ' Std.'; return 'vor ' + Math.round(h / 24) + ' Tagen'; }
+  const updText = (ts) => 'Letztes Update: ' + new Date(ts).toLocaleString((window.VW_I18N?VW_I18N.locale():'de-DE'), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' (' + ago(ts) + ')';
   let modBase = null; // gesetzt, wenn mit dem Spiel-Mod verbunden (für „Im Spiel suchen“)
   // ---------- Umwandeln (Worker) ----------
   function convert(files, status) {
@@ -215,7 +218,7 @@
       const { snap } = decodeSnapshot(new Uint8Array(buf)); if (!snap || snap.format !== 'vwelt') return;
       const box = $('#live'); box.hidden = false;
       $('#liveName').textContent = snap.world.name || 'Live-Welt';
-      $('#liveInfo').textContent = 'Stand ' + new Date(snap.created).toLocaleString(window.VW_I18N?VW_I18N.locale():'de-DE') + ' · ' + (snap.bases || []).length + ' Basen · ' + ((snap.stats && snap.stats.playerPieces) || 0).toLocaleString(window.VW_I18N?VW_I18N.locale():'de-DE') + ' Bauteile';
+      const li = () => ($('#liveInfo').textContent = updText(snap.created) + ' · ' + (snap.bases || []).length + ' Basen · ' + ((snap.stats && snap.stats.playerPieces) || 0).toLocaleString(window.VW_I18N?VW_I18N.locale():'de-DE') + ' Bauteile'); li(); setInterval(li, 60000);
       box.href = '?src=live/welt.vwelt&refresh=300';
     }).catch(() => {});
   }
@@ -229,11 +232,12 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const { snap, gz } = decodeSnapshot(new Uint8Array(await r.arrayBuffer())); checkSnap(snap);
         const t = new Date().toLocaleTimeString(window.VW_I18N?VW_I18N.locale():'de-DE');
-        if (snap.created !== lastCreated) { lastCreated = snap.created; show(snap, gz, (P.get('refresh') ? 'Live · ' : '') + 'Stand ' + new Date(snap.created).toLocaleString(window.VW_I18N?VW_I18N.locale():'de-DE')); }
-        else if (viewer) viewer.setStatus('Live · Stand ' + new Date(snap.created).toLocaleString(window.VW_I18N?VW_I18N.locale():'de-DE') + ' · geprüft ' + t);
+        if (snap.created !== lastCreated) { lastCreated = snap.created; show(snap, gz, (P.get('refresh') ? 'Live · ' : '') + updText(snap.created)); }
+        else if (viewer) viewer.setStatus((P.get('refresh') ? 'Live · ' : '') + updText(snap.created) + ' · geprüft ' + t);
       } catch (e) { if (first) { prog.hidden = true; showErr('Quelle nicht ladbar (' + src + '): ' + e.message); } else if (viewer) viewer.setStatus('Live · Verbindung fehlgeschlagen, neuer Versuch …'); }
     }
     setProg('Lade Welt …', 0.3); pull(true).then(() => (prog.hidden = true));
+    setInterval(() => { if (viewer && lastCreated) viewer.setStatus((P.get('refresh') ? 'Live · ' : '') + updText(lastCreated)); }, 60000);
     if (P.get('refresh')) setInterval(pull, refresh * 1000);
   }
 })();
