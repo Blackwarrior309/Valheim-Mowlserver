@@ -398,6 +398,15 @@ function envConfig() {
   if (CI) {
     fs.mkdirSync(DATA, { recursive: true });
     const cfg = envConfig(); let code = 0;
+    const fatal = (e) => {
+      log('ABBRUCH:', (e && e.stack) || e);
+      try {
+        if (cfg.historyDir) { const red = (x) => [cfg.ftp.host, cfg.ftp.user, cfg.ftp.password].filter(Boolean).reduce((t, v) => t.split(v).join('***'), x); fs.mkdirSync(cfg.historyDir, { recursive: true }); fs.writeFileSync(path.join(cfg.historyDir, 'fehler.txt'), red(new Date().toISOString() + '\n' + LOGBUF.join('\n')) + '\n'); }
+        if (ENV.GITHUB_OUTPUT) fs.appendFileSync(ENV.GITHUB_OUTPUT, 'changed=' + changedOut + '\nhistory=' + (historyChanged || !!cfg.historyDir) + '\n');
+      } catch (x) { }
+      process.exit(1);
+    };
+    process.on('uncaughtException', fatal); process.on('unhandledRejection', fatal);
     try { await runOnce(cfg); } catch (e) { log('FEHLER:', e.message); code = 1; }
     if (cfg.historyDir && !fs.existsSync(path.join(cfg.historyDir, 'scan.txt'))) { try { await scanWorldDir(cfg); historyChanged = true; } catch (e) { log('Scan:', e.message); } }
     let impErr = false;
