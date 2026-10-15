@@ -103,3 +103,15 @@ Neue Felder dürfen jederzeit ergänzt werden; ältere Viewer ignorieren sie. In
 
 gzip-JSON: `{ "format": "vwplan", "version": 1, "name", "size": [breite, höhe, tiefe], "groups": [ { "c": "rrggbb", "o": deckkraft%, "p": "<base64 Int16 cm, Dreiecke>", "n": "<base64 Int8 Normalen>" } ] }`.
 Beispiel: `plans/grasland-halle.vwplan`, Liste der mitgelieferten Pläne: `plans/index.json`.
+
+## Bau-Verlauf (Zeitraffer)
+
+Die Live-Karte schreibt bei jeder Bau-Änderung einen Eintrag in den Branch `verlauf` (nicht auf den Server).
+Die Seite bekommt ihn unter `live/verlauf/`.
+
+- `index.json`: `{ v:1, world, updated, entries: [{ t, f, add, del, by: { Erbauer: Anzahl }, src? }] }`, `t` = Zeit in ms
+- `e/<ISO-Zeit>.json.gz`: `{ v:1, t, types:[Name…], owners:[Erbauer…], add:[[typ,x,y,z,rot,erbauer]…], del:[…] }`
+  – Unterschied zum vorherigen Eintrag. Der erste Eintrag enthält alle Teile.
+- Ein Teil wird über `Name|x|y|z|rot` erkannt (Werte wie in `.vwelt`, auf 2 Nachkommastellen).
+- Ältere Stände (Backups) lassen sich nachträglich einsortieren: `node tools/history-add.cjs <ordner> <backup.zip|weltordner|.vwelt> [--time "JJJJ-MM-TT hh:mm"]`.
+- Fehlen in einem neuen Stand plötzlich über 30 % der Teile, wird er als unvollständig verworfen.

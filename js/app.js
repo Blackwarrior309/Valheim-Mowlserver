@@ -42,7 +42,7 @@
     start.hidden = true; app.hidden = false;
     if (viewer) { viewer.update(snap); if (status) viewer.setStatus(status); return; }
     viewer = VWViewer.mount(app, snap, {
-      status, plans: planList,
+      status, plans: planList, history: historyBase,
       actions: [
         { label: '⬇ Teilen-Datei (.html)', primary: true, title: 'Eine Datei, öffnet sich in jedem Browser – zum Verschicken', onClick: exportHtml },
         { label: '⬇ .vwelt', title: 'Kompakte Datendatei (für diese Seite, Live-Karten, Server)', onClick: () => download(packCurrent(), safe(current.world.name) + '_' + stamp() + '.vwelt', 'application/gzip') },
@@ -201,6 +201,8 @@
   // ---------- Live-/Fernquelle: ?src=URL&refresh=Sekunden ----------
   const P = new URLSearchParams(location.search);
   const src = P.get('src');
+  // Bau-Verlauf liegt neben der Live-Welt: live/welt.vwelt → live/verlauf/
+  const historyBase = src && !/^[a-z]+:/i.test(src) ? src.replace(/[?#].*$/, '').replace(/[^/]*$/, '') + 'verlauf/' : null;
   // Liegt eine Live-Welt im Repo (live/welt.vwelt)? Dann auf der Startseite anbieten.
   const modParam = P.get('mod');
   if (modParam !== null) connectMod(modParam || 'http://localhost:8686');

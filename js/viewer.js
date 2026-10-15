@@ -99,6 +99,7 @@
     <div class="vw-side s3"><button class="vw-mob" data-min>Menü</button>
       <h2>Gebiet</h2><select class="reg" style="width:100%"></select>
       <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button></div>
+      <div class="tl" hidden><h2>Zeitraffer</h2><div class="row" style="flex-wrap:nowrap;align-items:center"><button class="tlPlay" aria-label="Abspielen">▶</button><input type="range" class="tlR" min="0" max="0" value="0" style="flex:1;min-width:0"></div><div class="sub tlInfo" style="margin-top:4px"></div><div class="tlList" style="max-height:170px;overflow:auto;margin-top:6px"></div></div>
       <h2>Grafik</h2><div class="row gstyle"><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
       <details class="perf"><summary>Leistung &amp; Grafik</summary>
         <div class="qrow"><label for="vwq-sh">Schatten</label><select id="vwq-sh" data-q="shadows"><option value="0">Aus (schnell)</option><option value="1">An – berechnet im Stillstand</option></select></div>
@@ -449,6 +450,7 @@
         $('.top').innerHTML = r.topTypes.slice(0, 15).map((t) => `<tr><td>${esc(pieceName(t[0]))}</td><td class="n">${fmt(t[1])}</td></tr>`).join('');
         chestSearch(); placePlans(); drawPlayers(); shadowFresh = false; shadowPasses = 2; invalidate();
         if (!keepCam) views('obl');
+        TL.onLoad();
       }
       function recolor(mode) {
         colorMode = mode;
@@ -720,6 +722,61 @@
         }
         requestAnimationFrame(frame);
       }
+      // ---- Zeitraffer (Bau-Verlauf aus live/verlauf/)
+      const TL = (function () {
+        let entries = [], times = null, cur = -1, timer = 0, ready = false;
+        const box = $('.tl'), R = $('.tlR'), info = $('.tlInfo'), list = $('.tlList'), play = $('.tlPlay');
+        const dfmt = (t) => new Date(t).toLocaleString(LOC(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        async function init(base) {
+          if (!base || !g.VW_HISTORY || !g.fflate) return;
+          try {
+            const r = await fetch(base + 'index.json', { cache: 'no-store' }); if (!r.ok) return;
+            const idx = await r.json(); entries = (idx.entries || []).slice().sort((a, b) => a.t - b.t); if (!entries.length) return;
+            const evs = [];
+            for (const e of entries) { const b = await fetch(base + e.f).then((x) => x.arrayBuffer()); evs.push(VW_HISTORY.decodeEvent(JSON.parse(fflate.strFromU8(fflate.gunzipSync(new Uint8Array(b)))))); }
+            times = VW_HISTORY.keyTimes(evs); ready = true;
+            R.max = entries.length - 1; R.value = entries.length - 1; cur = entries.length - 1; box.hidden = false;
+            list.innerHTML = entries.map((e, i) => ({ e, i })).reverse().slice(0, 80).map(({ e, i }) => `<div class="tle" data-i="${i}" style="cursor:pointer;display:block;padding:5px 6px;border-bottom:1px solid var(--line);font-size:12.5px;border-radius:6px"><b>${dfmt(e.t)}</b> · ${i === 0 ? 'Beginn der Aufzeichnung' : '+' + fmt(e.add) + (e.del ? ' / −' + fmt(e.del) : '')}<br><span class="sub">${Object.entries(e.by || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([o, n]) => esc(o.split(' (')[0]) + ' ' + fmt(n)).join(' · ')}</span></div>`).join('');
+            list.onclick = (ev) => { const d = ev.target.closest('[data-i]'); if (d) { stopPlay(); set(+d.dataset.i); } };
+            showInfo();
+          } catch (e) { box.hidden = true; }
+        }
+        function showInfo() {
+          const e = entries[cur]; if (!e) return;
+          info.innerHTML = `<b>${dfmt(e.t)}</b>${cur === entries.length - 1 ? ' · aktueller Stand' : ''}<br>${cur === 0 ? 'Beginn der Aufzeichnung' : '+' + fmt(e.add) + ' Teile' + (e.del ? ', −' + fmt(e.del) + ' abgerissen' : '')}`;
+          $$('.tle', list).forEach((d) => (d.style.background = +d.dataset.i === cur ? 'var(--chip)' : ''));
+        }
+        function apply() {
+          if (!ready || !reg) return;
+          const T = entries[cur].t, Tp = cur > 0 ? entries[cur - 1].t : -Infinity, last = cur === entries.length - 1;
+          recolor(colorMode);
+          for (const im of Object.values(meshes).flat()) {
+            const u = im.userData, n = u.arr.length / 6;
+            if (!u.m0) u.m0 = im.instanceMatrix.array.slice();
+            if (!u.tt) { u.tt = new Float64Array(n); for (let k = 0; k < n; k++) { const o = k * 6, own = reg.owners[u.arr[o + 5]]; const t = own === VW_HISTORY.NONE ? undefined : times.get(VW_HISTORY.keyOf(reg.types[u.arr[o + 4]][0], u.arr[o], u.arr[o + 1], u.arr[o + 2], u.arr[o + 3])); u.tt[k] = t === undefined ? -Infinity : t; } }
+            const M = im.instanceMatrix.array;
+            for (let k = 0; k < n; k++) {
+              const t = u.tt[k];
+              if (last || t <= T) { for (let j = 0; j < 16; j++) M[k * 16 + j] = u.m0[k * 16 + j]; if (!last && cur > 0 && t > Tp) { tmp.setHex(0xffc845); im.setColorAt(k, tmp); } }
+              else for (let j = 0; j < 16; j++) M[k * 16 + j] = 0;
+            }
+            im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          }
+          shadowFresh = false; shadowPasses = 2; invalidate();
+        }
+        function set(i) { cur = Math.max(0, Math.min(entries.length - 1, i)); R.value = cur; showInfo(); apply(); }
+        function stopPlay() { if (timer) { clearInterval(timer); timer = 0; } play.textContent = '▶'; }
+        R.oninput = () => { stopPlay(); set(+R.value); };
+        play.onclick = () => {
+          if (timer) return stopPlay();
+          if (cur >= entries.length - 1) set(0);
+          play.textContent = '❚❚';
+          timer = setInterval(() => { if (cur >= entries.length - 1) return stopPlay(); set(cur + 1); }, 900);
+        };
+        return { init, onLoad: () => { if (ready && cur !== entries.length - 1) apply(); } };
+      })();
+      if (opts.history) TL.init(opts.history);
+
       function start() { if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } }
       function stop() { running = false; }
       // Basis-Auswahl

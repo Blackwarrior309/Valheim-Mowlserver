@@ -16,7 +16,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write     # Bau-Verlauf in den Branch „verlauf“ schreiben
   pages: write
   id-token: write
 
@@ -48,6 +48,19 @@ jobs:
           key: sync-${{ github.run_id }}
           restore-keys: sync-
 
+      # Bau-Verlauf (Zeitraffer): liegt im Branch „verlauf“ dieses Repos, nicht auf dem Server
+      - name: Verlauf holen
+        if: ${{ env.HAS_FTP == 'true' }}
+        env:
+          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          D="$RUNNER_TEMP/verlauf"
+          if ! git clone -q --depth 1 --branch verlauf "$REPO_URL" "$D" 2>/dev/null; then
+            rm -rf "$D"; mkdir -p "$D"; cd "$D"
+            git init -q -b verlauf && git remote add origin "$REPO_URL"
+            echo "Neuer Verlauf wird angelegt."
+          fi
+
       - name: Welt vom Server holen und umwandeln
         id: sync
         if: ${{ env.HAS_FTP == 'true' }}
@@ -63,12 +76,24 @@ jobs:
           VS_STRIP_IDS: 'true'      # Repo ist öffentlich → keine Steam-IDs
           VS_DATA: ${{ runner.temp }}/sync-data
           VS_OUT: ${{ runner.temp }}/sync-data/letzter-stand.vwelt
+          VS_HISTORY: ${{ runner.temp }}/verlauf
         # bei Änderungen am Repo/manuellem Start neu umwandeln (neue Viewer-/Konverter-Version), sonst nur bei neuem Spielstand
         run: node sync/sync.cjs ${{ github.event_name != 'schedule' && '--force' || '' }}
+
+      - name: Verlauf speichern
+        if: ${{ env.HAS_FTP == 'true' && steps.sync.outputs.history == 'true' }}
+        run: |
+          cd "$RUNNER_TEMP/verlauf"
+          git add -A
+          git -c user.name="valheim-sync" -c user.email="valheim-sync@users.noreply.github.com" commit -q -m "Verlauf $(date -u +'%Y-%m-%d %H:%M')"
+          git push -q origin verlauf
 
       - name: Letzten Stand in die Seite legen
         if: ${{ env.HAS_FTP == 'true' }}
         run: |
+          if [ -f "$RUNNER_TEMP/verlauf/index.json" ]; then
+            mkdir -p live/verlauf && cp -r "$RUNNER_TEMP/verlauf/index.json" "$RUNNER_TEMP/verlauf/e" live/verlauf/
+          fi
           if [ -f "$RUNNER_TEMP/sync-data/letzter-stand.vwelt" ]; then
             mkdir -p live && cp "$RUNNER_TEMP/sync-data/letzter-stand.vwelt" live/welt.vwelt
             ls -la live

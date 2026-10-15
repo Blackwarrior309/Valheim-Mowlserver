@@ -154,6 +154,28 @@ async function findWorldDir(ftp, world) {
 }
 
 
+// Einmalig: Aufbau des Weltordners (Namen, Größen, Zeiten) in den Verlauf schreiben – zeigt, welche älteren Stände/Backups es gibt
+async function scanWorldDir(cfg) {
+  const state = loadJson(STATE, {}); const ftp = new FTP(cfg.ftp); await ftp.connect();
+  const lines = [];
+  try {
+    const dir = state.remoteDir || (await findWorldDir(ftp, cfg.world)).dir;
+    const parent = dir.replace(/\/[^/]*$/, '') || '/';
+    async function walk(d, depth) {
+      let items; try { items = await ftp.list(d); } catch (e) { lines.push(d + ' (nicht lesbar)'); return; }
+      const pad = '  '.repeat(depth), files = items.filter((x) => !x.dir), dirs = items.filter((x) => x.dir);
+      if (depth > 0 && files.length > 8) lines.push(pad + '… ' + files.length + ' Dateien (' + (files.reduce((a, x) => a + (x.size || 0), 0) / 1e6).toFixed(1) + ' MB), z. B. ' + files.slice(0, 2).map((x) => x.name + ' ' + x.mod).join(', '));
+      else files.forEach((it) => lines.push(pad + '    ' + it.name + '  ' + it.size + '  ' + it.mod));
+      for (const it of dirs) { if (lines.length > 600) return; lines.push(pad + '[D] ' + it.name + '  ' + it.mod); if (depth < 2) await walk(join(d, it.name), depth + 1); }
+    }
+    lines.push('Weltordner: ' + dir); await walk(dir, 0);
+    if (parent !== dir) { lines.push('', 'Darüber: ' + parent); (await ftp.list(parent)).forEach((it) => lines.push((it.dir ? '[D] ' : '    ') + it.name + (it.dir ? '' : '  ' + it.size) + '  ' + it.mod)); }
+  } finally { ftp.close(); }
+  fs.mkdirSync(cfg.historyDir, { recursive: true });
+  fs.writeFileSync(path.join(cfg.historyDir, 'scan.txt'), lines.join('\n') + '\n');
+  log('Scan des Weltordners gespeichert (' + lines.length + ' Zeilen).');
+}
+
 // Live-Dump des Mods (welt.vwdump) auf dem Server suchen
 async function findDump(ftp) {
   const queue = [['/', 0]], seen = new Set(); let visited = 0;
@@ -303,6 +325,12 @@ async function publish(cfg, state, list, world) {
     changedOut = true;
     log(`Umgewandelt: ${snap.stats.zdos.toLocaleString('de-DE')} Objekte, ${snap.bases.length} Basen, ${(gz.length / 1e6).toFixed(2)} MB → Ordner „ausgabe“.`);
     snap.warnings.forEach((w) => log('Hinweis:', w));
+    if (cfg.historyDir) {
+      try {
+        const r = require('./history-store.cjs').insertSnapshot(cfg.historyDir, snap, new Date(snap.created).getTime(), { log, label: 'live' });
+        if (r.changed) historyChanged = true; else log('Verlauf: nichts Neues (' + r.reason + ')');
+      } catch (e) { log('Verlauf: Fehler –', e.message); }
+    }
     const g = cfg.github || {};
     if (g.token && g.repo && !/benutzername/.test(g.repo)) {
       log('Lade auf GitHub hoch (' + g.repo + '/' + (g.path || 'live/welt.vwelt') + ') …');
@@ -312,7 +340,7 @@ async function publish(cfg, state, list, world) {
     } else { state.lastUpload = state.lastUpload || 'lokal'; fs.writeFileSync(STATE, JSON.stringify(state, null, 1)); log('GitHub nicht eingerichtet – nur lokal gespeichert.'); }
 }
 
-let changedOut = false;
+let changedOut = false, historyChanged = false;
 function envConfig() {
   const b = (v, d) => (v === undefined || v === '' ? d : /^(1|true|ja|yes)$/i.test(v));
   return {
@@ -320,7 +348,8 @@ function envConfig() {
     source: ENV.VS_SOURCE || 'auto', world: ENV.VS_WORLD || '',
     github: {},                                   // kein API-Upload: der Workflow veröffentlicht die Seite selbst
     outFile: path.resolve(ENV.VS_OUT || 'live/welt.vwelt'),
-    stripSteamIds: b(ENV.VS_STRIP_IDS, true), saveShareHtml: false, intervalMinutes: 10
+    stripSteamIds: b(ENV.VS_STRIP_IDS, true), saveShareHtml: false, intervalMinutes: 10,
+    historyDir: ENV.VS_HISTORY ? path.resolve(ENV.VS_HISTORY) : ''
   };
 }
 
@@ -330,7 +359,8 @@ function envConfig() {
     fs.mkdirSync(DATA, { recursive: true });
     const cfg = envConfig(); let code = 0;
     try { await runOnce(cfg); } catch (e) { log('FEHLER:', e.message); code = 1; }
-    if (ENV.GITHUB_OUTPUT) fs.appendFileSync(ENV.GITHUB_OUTPUT, 'changed=' + changedOut + '\n');
+    if (cfg.historyDir && !fs.existsSync(path.join(cfg.historyDir, 'scan.txt'))) { try { await scanWorldDir(cfg); historyChanged = true; } catch (e) { log('Scan:', e.message); } }
+    if (ENV.GITHUB_OUTPUT) fs.appendFileSync(ENV.GITHUB_OUTPUT, 'changed=' + changedOut + '\nhistory=' + historyChanged + '\n');
     process.exit(code);
   }
   if (!fs.existsSync(CONFIG)) {
