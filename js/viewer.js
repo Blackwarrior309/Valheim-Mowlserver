@@ -297,14 +297,14 @@
     // ================= 3D =================
     const three = (function () {
       const cv = $('canvas.gl'), pane = $('[data-p="3d"]');
-      const Q = Object.assign({ shadows: '0', detail: 'natur', nature: 'mid', res: '1', range: 'mid' }, (() => { try { const o = JSON.parse(localStorage.getItem('vw-quality') || '{}'); if (o.v !== 2) { o.detail = 'natur'; o.v = 2; } return o; } catch (e) { return {}; } })());
+      const Q = Object.assign({ shadows: (window.matchMedia && matchMedia('(pointer:fine)').matches && innerWidth > 900) ? '1' : '0', detail: 'natur', nature: 'mid', res: '1', range: 'mid' }, (() => { try { const o = JSON.parse(localStorage.getItem('vw-quality') || '{}'); if (o.v !== 2) { o.detail = 'natur'; o.v = 2; } return o; } catch (e) { return {}; } })());
       const ren = new THREE.WebGLRenderer({ canvas: cv, antialias: true, preserveDrawingBuffer: true });
       ren.setPixelRatio(Math.min(devicePixelRatio, 2) * +Q.res); ren.shadowMap.enabled = true; ren.shadowMap.type = THREE.PCFSoftShadowMap; ren.shadowMap.autoUpdate = false;
       let dirty = 2; const invalidate = () => { dirty = 2; };
       const scene = new THREE.Scene(); scene.background = new THREE.Color(0x9fc3d8); scene.fog = new THREE.Fog(0x9fc3d8, 500, 1600);
       const cam = new THREE.PerspectiveCamera(45, 1, 0.5, 30000);
-      scene.add(new THREE.HemisphereLight(0xdfeeff, 0x5a5040, 0.75));
-      const sun = new THREE.DirectionalLight(0xfff1d6, 0.9); sun.position.set(-180, 260, 140); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+      scene.add(new THREE.HemisphereLight(0xdfeeff, 0x5a5040, 0.62));
+      const sun = new THREE.DirectionalLight(0xffe2b8, 1.2); sun.position.set(-180, 260, 140); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
       sun.shadow.bias = -0.0008; sun.castShadow = Q.shadows === '1'; scene.add(sun); scene.add(sun.target);
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000), new THREE.MeshLambertMaterial({ color: 0x4f5f5a })); floor.rotation.x = -Math.PI / 2; floor.position.y = -25.2; scene.add(floor);
       const water = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000), new THREE.MeshPhongMaterial({ color: 0x2f6f8f, transparent: true, opacity: 0.62, shininess: 80, specular: 0x99bbcc, depthWrite: false }));
@@ -321,16 +321,22 @@
         7: { sky: 0xb7cbdc, fog: 0xd1dbe3, hemi: 0xeaf3ff, ground: 0x72777c, sun: 0xf2f3ff, water: 0x46788f }, // Tiefer Norden
         9: { sky: 0x777d91, fog: 0x9297a4, hemi: 0xc7cbd9, ground: 0x474b50, sun: 0xd7d5e8, water: 0x36586e }  // Nebellande
       };
+      const skyCv = document.createElement('canvas'); skyCv.width = 2; skyCv.height = 256; const skyTex = new THREE.CanvasTexture(skyCv);
+      function paintSky(top, horizon) {
+        const x = skyCv.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256);
+        const c = (h) => '#' + new THREE.Color(h).getHexString();
+        g.addColorStop(0, c(top)); g.addColorStop(0.62, c(horizon)); g.addColorStop(1, c(horizon)); x.fillStyle = g; x.fillRect(0, 0, 2, 256); skyTex.needsUpdate = true;
+      }
       function applyEnvironment(r, big) {
         const [X0, X1, Z0, Z1] = r.bounds;
         const e = (!big && ENV[bioAt((X0 + X1) / 2, (Z0 + Z1) / 2)]) || ENV[1];
-        scene.background.setHex(e.sky); scene.fog.color.setHex(e.fog);
+        const top = new THREE.Color(e.sky).lerp(new THREE.Color(0x3d6a96), 0.45); paintSky(top, e.fog); scene.background = skyTex; scene.fog.color.setHex(e.fog);
         if (hemi) { hemi.color.setHex(e.hemi); hemi.groundColor.setHex(e.ground); }
         sun.color.setHex(e.sun); water.material.color.setHex(e.water);
       }
       const box = new THREE.BoxGeometry(1, 1, 1);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler(0, 0, 0, 'YXZ'), sv = new THREE.Vector3(), pv = new THREE.Vector3(), tmp = new THREE.Color();
-      const mats = { leaf: new THREE.MeshLambertMaterial({ color: 0x4d7f34 }), fir: new THREE.MeshLambertMaterial({ color: 0x2f5a3a }), swamp: new THREE.MeshLambertMaterial({ color: 0x5a6b3a }), ygg: new THREE.MeshLambertMaterial({ color: 0x8fb8c8 }), trunk: new THREE.MeshLambertMaterial({ color: 0x5a4330 }), rock: new THREE.MeshLambertMaterial({ color: 0x8d8c86 }), bush: new THREE.MeshLambertMaterial({ color: 0x557a33 }) };
+      const mats = { leaf: new THREE.MeshLambertMaterial({ color: 0x3f6e2a }), fir: new THREE.MeshLambertMaterial({ color: 0x2f5a3a }), swamp: new THREE.MeshLambertMaterial({ color: 0x5a6b3a }), ygg: new THREE.MeshLambertMaterial({ color: 0x8fb8c8 }), trunk: new THREE.MeshLambertMaterial({ color: 0x5a4330 }), rock: new THREE.MeshLambertMaterial({ color: 0x7c786f }), bush: new THREE.MeshLambertMaterial({ color: 0x557a33 }) };
       const geos = { crown: new THREE.IcosahedronGeometry(1, 1), crown0: new THREE.IcosahedronGeometry(1, 0), cone: new THREE.ConeGeometry(1, 1, 7), cyl: new THREE.CylinderGeometry(0.5, 0.6, 1, 6), rock: new THREE.DodecahedronGeometry(1, 0), log: new THREE.CylinderGeometry(0.4, 0.4, 1, 6) };
 
       // ---------- Detailgrafik: prozedurale Texturen (Triplanar) und Formen
@@ -491,14 +497,20 @@
         const NX = r.nx, NZ = r.nz, RS = r.res; const hu = b64u8(r.h); const H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2);
         const hAt = (i, j) => H[Math.min(NZ - 1, Math.max(0, j)) * NX + Math.min(NX - 1, Math.max(0, i))] / 10;
         const tg = new THREE.BufferGeometry(), pos = new Float32Array(NX * NZ * 3), col = new Float32Array(NX * NZ * 3);
-        const cSand = new THREE.Color(0xcbb68a), cG = new THREE.Color(0x6f9a45), cG2 = new THREE.Color(0x4f7a35), cRock = new THREE.Color(0x8a8a80), cSea = new THREE.Color(0x6b6a55);
+        const cSand = new THREE.Color(0xb9a273), cG = new THREE.Color(0x5f8a3a), cG2 = new THREE.Color(0x45692c), cRock = new THREE.Color(0x77736a), cSea = new THREE.Color(0x5e5c4a), cDirt = new THREE.Color(0x6b5a3c);
+        // Valheim-artige Bodenfarben je Biom: [Grundfarbe, Variante] – Flecken aus weichem Rauschen
+        const BIO3 = { 1: [0x4c7d2a, 0x6d8e33], 2: [0x4f5232, 0x3b3f2a], 3: [0xb9c0c6, 0x8f9499], 4: [0x34552b, 0x4a4a2e], 5: [0xb59f55, 0x93924a], 6: [0x4a2e26, 0x6a3a28], 7: [0xd6e0e8, 0xb8c4cc], 9: [0x4f5266, 0x5d5a52] };
+        const c3a = new THREE.Color(), c3b = new THREE.Color();
+        const noise = (x, z) => (Math.sin(x * 0.021 + Math.sin(z * 0.013) * 2.1) + Math.sin(z * 0.017 - x * 0.009 + Math.cos(x * 0.011) * 1.7) + Math.sin((x + z) * 0.047) * 0.5) / 2.5;
         for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) {
           const k = j * NX + i, h = hAt(i, j), x = X0 + i * RS, z = Z0 + j * RS;
           pos[k * 3] = x - CX; pos[k * 3 + 1] = h - WL; pos[k * 3 + 2] = -(z - CZ);
           const sl = Math.hypot(hAt(i + 1, j) - hAt(i - 1, j), hAt(i, j + 1) - hAt(i, j - 1)) / (2 * RS), e = h - WL;
           if (e < 0) tmp.copy(cSea).lerp(cSand, THREE.MathUtils.smoothstep(e, -7, 0)); // unter Wasser: Meeresgrund → Sand
-          else { const bc = BIO_COL[bioAt(x, z)]; if (bc) { tmp.setRGB(bc[0] / 255, bc[1] / 255, bc[2] / 255); tmp.offsetHSL(0, 0, Math.min(0.08, Math.max(0, e - 2) / 400)); } else tmp.copy(cG).lerp(cG2, Math.min(1, Math.max(0, e - 2) / 25));
-            tmp.lerp(cSand, 1 - THREE.MathUtils.smoothstep(e, 0.6, 3.2)); } // Strand weich ins Land
+          else { const b3 = BIO3[bioAt(x, z)]; const nz = noise(x, z);
+              if (b3) { c3a.setHex(b3[0]); c3b.setHex(b3[1]); tmp.copy(c3a).lerp(c3b, THREE.MathUtils.smoothstep(nz, -0.2, 0.6)); } else tmp.copy(cG).lerp(cG2, Math.min(1, Math.max(0, e - 2) / 25));
+              const nd = noise(x * 3.1 + 500, z * 3.1 - 300); if (nd > 0.55) tmp.lerp(cDirt, Math.min(0.35, (nd - 0.55) * 1.6)); // Erdflecken
+            tmp.lerp(cSand, 1 - THREE.MathUtils.smoothstep(e, 0.4, 2.4)); } // Strand weich ins Land
           if (e > 70) tmp.lerp(new THREE.Color(0xe8eef2), Math.min(1, (e - 70) / 40));
           if (sl > 0.7) tmp.lerp(cRock, Math.min(1, (sl - 0.7) * 1.5));
           tmp.offsetHSL(0, 0, (Math.sin(x * 0.37) * Math.cos(z * 0.29) + Math.sin(x * 0.11 + z * 0.13)) * 0.03);
