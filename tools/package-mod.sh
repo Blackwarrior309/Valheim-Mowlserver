@@ -11,7 +11,7 @@ VER=$(python3 -c "import json;print(json.load(open('$ROOT/mod/thunderstore/manif
 grep -q "Version = \"$VER\"" "$ROOT/mod/ValheimWeltLive/Plugin.cs" || { echo "Version $VER in manifest.json != Plugin.cs"; exit 1; }
 OUT="$ROOT/dist"; TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$OUT"
-web() { mkdir -p "$1"; cp "$ROOT/index.html" "$1/"; cp -r "$ROOT/css" "$ROOT/js" "$ROOT/lib" "$ROOT/plans" "$1/"; }
+web() { mkdir -p "$1"; cp "$ROOT/index.html" "$1/"; cp -r "$ROOT/css" "$ROOT/js" "$ROOT/lib" "$ROOT/plans" "$ROOT/textures" "$1/"; }
 
 # Thunderstore
 T="$TMP/ts"; mkdir -p "$T/plugins"
