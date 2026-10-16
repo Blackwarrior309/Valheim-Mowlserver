@@ -383,7 +383,7 @@ async function runOnce(cfg) {
     Object.keys(old).forEach((k) => { if (!now[k]) try { fs.unlinkSync(path.join(cache, k)); } catch (e) { } });
     state.files = now;
     log(`${files.length} Dateien auf dem Server, ${changed} geladen (${(bytes / 1e6).toFixed(1)} MB).`);
-    { const db = files.filter((f) => /\.db2?$/i.test(f.rel)).sort((a, b) => b.size - a.size)[0]; if (db) log('Welt zuletzt gespeichert:', db.rel, String(db.mod)); }
+    files.filter((f) => !/\.chunk$/i.test(f.rel)).forEach((f) => log('  ', f.rel, f.size, String(f.mod)));
     fs.writeFileSync(STATE, JSON.stringify(state, null, 1));
     if (!changed && !FORCE && state.lastUpload) { log('Keine Änderungen seit dem letzten Abgleich.'); return; }
     ftp.close();
