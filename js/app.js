@@ -43,6 +43,55 @@
     const repo = location.pathname.split('/').filter(Boolean)[0] || (m[1] + '.github.io');
     return 'https://github.com/' + m[1] + '/' + repo + '/actions/workflows/live.yml';
   }
+  // ---------- Server sofort abfragen: startet den Workflow über die GitHub-API ----------
+  // Der Token bleibt nur in diesem Browser (localStorage) und steht nie im Seitenquelltext.
+  const TOKEN_KEY = 'vw-gh-token';
+  const repoInfo = () => { const u = actionsUrl(); if (!u) return null; const m = u.match(/github\.com\/([^/]+)\/([^/]+)\//); return { owner: m[1], repo: m[2] }; };
+  const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } };
+  const setToken = (t) => { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) { } };
+  function tokenDialog(msg) {
+    return new Promise((resolve) => {
+      const ri = repoInfo();
+      const d = document.createElement('div'); d.className = 'vw-tokdlg';
+      d.innerHTML = `<div class="box"><b class="ttl">Server jetzt abfragen</b>
+        <p>${msg ? '<span class="tokerr">' + msg + '</span><br>' : ''}Startet den Abgleich mit dem Server sofort. Das darf nur der Besitzer des Repos – dafür braucht diese Seite einmalig einen GitHub-Token. Er wird nur in diesem Browser gespeichert.</p>
+        <ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Token erstellen</a> (Fine-grained): Repository access → <i>Only select repositories</i> → <b>${ri.repo}</b>, Permissions → <b>Actions: Read and write</b>.</li>
+        <li>Token hier einfügen:</li></ol>
+        <input type="password" placeholder="github_pat_…" autocomplete="off">
+        <div class="row"><button class="pri" data-a="ok">Speichern &amp; starten</button><button data-a="no">Abbrechen</button><a href="${actionsUrl()}" target="_blank" rel="noopener">oder auf GitHub starten</a></div></div>`;
+      document.body.appendChild(d); const inp = d.querySelector('input'); inp.focus();
+      const done = (v) => { d.remove(); resolve(v); };
+      d.querySelector('[data-a=ok]').onclick = () => done(inp.value.trim());
+      d.querySelector('[data-a=no]').onclick = () => done('');
+      inp.onkeydown = (e) => { if (e.key === 'Enter') done(inp.value.trim()); if (e.key === 'Escape') done(''); };
+      d.onclick = (e) => { if (e.target === d) done(''); };
+    });
+  }
+  let fetchBusy = false;
+  async function serverFetch() {
+    if (fetchBusy) return; const ri = repoInfo(); if (!ri) return;
+    let tok = getToken(), msg = '';
+    fetchBusy = true;
+    try {
+      for (let tries = 0; tries < 3; tries++) {
+        if (!tok) { tok = await tokenDialog(msg); if (!tok) { if (msg && viewer) viewer.setStatus('Server-Abfrage abgebrochen'); return; } }
+        viewer && viewer.setStatus('Starte Server-Abfrage …');
+        let r;
+        try { r = await fetch(`https://api.github.com/repos/${ri.owner}/${ri.repo}/actions/workflows/live.yml/dispatches`, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main' }) }); }
+        catch (e) { viewer && viewer.setStatus('Server-Abfrage: GitHub nicht erreichbar'); return; }
+        if (r.status === 204) {
+          setToken(tok);
+          const t0 = Date.now();
+          viewer && viewer.setStatus('Server-Abfrage gestartet – die Karte lädt in ca. 2–4 Min. neu');
+          // ein paar Minuten lang nachsehen, ob der neue Stand da ist
+          const iv = setInterval(() => { if (Date.now() - t0 > 7 * 60e3) { clearInterval(iv); return; } liveRefresh && liveRefresh(true); }, 30000);
+          return;
+        }
+        setToken(''); tok = '';
+        msg = r.status === 401 ? 'Token ungültig oder abgelaufen.' : (r.status === 403 || r.status === 404) ? 'Token hat keine Berechtigung für dieses Repo (Actions: Read and write).' : 'GitHub antwortet mit Fehler ' + r.status + '.';
+      }
+    } finally { fetchBusy = false; }
+  }
   function show(snap, gz, status) {
     current = snap; currentGz = gz;
     start.hidden = true; app.hidden = false;
@@ -51,7 +100,7 @@
       status, plans: planList, history: historyBase, mod: modBase,
       actions: [
         ...(liveRefresh ? [{ label: '⟳ Aktualisieren', title: 'Live-Welt jetzt neu laden', onClick: liveRefresh }] : []),
-        ...(liveRefresh && actionsUrl() ? [{ label: '▶ Server abfragen', title: 'Öffnet GitHub Actions: dort „Run workflow“ klicken (nur für Repo-Besitzer), holt sofort den neuesten Server-Stand', onClick: () => window.open(actionsUrl(), '_blank', 'noopener') }] : []),
+        ...(liveRefresh && actionsUrl() ? [{ label: '▶ Server abfragen', title: 'Startet den Abgleich mit dem Server sofort (nur für den Repo-Besitzer, braucht einmalig einen GitHub-Token)', onClick: serverFetch }] : []),
         { label: '⬇ Teilen-Datei (.html)', primary: true, title: 'Eine Datei, öffnet sich in jedem Browser – zum Verschicken', onClick: exportHtml },
         { label: '⬇ .vwelt', title: 'Kompakte Datendatei (für diese Seite, Live-Karten, Server)', onClick: () => download(packCurrent(), safe(current.world.name) + '_' + stamp() + '.vwelt', 'application/gzip') },
         { label: 'Neue Welt', onClick: () => { location.href = location.pathname; } }
@@ -245,7 +294,7 @@
       } catch (e) { if (first) { prog.hidden = true; showErr('Quelle nicht ladbar (' + src + '): ' + e.message); } else if (viewer) viewer.setStatus('Live · Verbindung fehlgeschlagen, neuer Versuch …'); }
     }
     let pulling = false;
-    liveRefresh = async () => { if (pulling) return; pulling = true; viewer && viewer.setStatus('Prüfe auf neue Daten …'); try { await pull(false, true); } finally { pulling = false; } };
+    liveRefresh = async (quiet) => { if (pulling) return; pulling = true; if (quiet !== true && viewer) viewer.setStatus('Prüfe auf neue Daten …'); try { await pull(false, quiet !== true); } finally { pulling = false; } };
     setProg('Lade Welt …', 0.3); pull(true).then(() => (prog.hidden = true));
     setInterval(() => { if (viewer && lastCreated) viewer.setStatus((P.get('refresh') ? 'Live · ' : '') + updText(lastCreated)); }, 60000);
     if (P.get('refresh')) setInterval(pull, refresh * 1000);
