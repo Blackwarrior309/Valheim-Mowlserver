@@ -1088,12 +1088,13 @@ ${board()}
     // Bestenliste: Tode (Grabsteine), gebaute Teile, Spielzeit und Strecke (Laufwege, nur mit Server-Mod)
     let boardDays = null;
     function board() {
-      const P = {}; const get = (n) => P[n] || (P[n] = { n, deaths: 0, pieces: 0, secs: 0, dist: 0 });
+      const P = {}; const get = (n) => P[n] || (P[n] = { n, deaths: 0, pieces: 0, secs: 0, dist: 0, made: 0 });
+      const CR = S.crafted || []; CR.forEach(([n, k]) => (get(n).made += k));
       (S.characters || []).forEach((c) => { if (c.name) get(c.name).pieces += c.pieces || 0; });
       const D = allDeaths(); D.forEach((d) => { if (d.n) get(d.n).deaths++; });
       if (EX.days.length && !boardDays) { heatDays(0).then((ds) => { boardDays = ds; if (tab === 'info') info(); }); }
       (boardDays || []).forEach((d) => Object.entries(d.players || {}).forEach(([n, p]) => { const q = get(n); q.secs += (p.n || 0) * (d.iv || 10); q.dist += p.dist || 0; }));
-      const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs).sort((a, b) => b.pieces - a.pieces);
+      const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs || p.made).sort((a, b) => b.pieces - a.pieces);
       if (!rows.length) return '';
       const hasT = !!(boardDays && boardDays.length);
       const hm = (s) => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; };
@@ -1101,8 +1102,9 @@ ${board()}
       const cell = (r, k, v) => `<td class="n">${r[k] && r[k] === top(k) ? '👑 ' : ''}${v}</td>`;
       const last = D.filter((d) => d.t || d.seen).sort((a, b) => (b.t || b.seen) - (a.t || a.seen)).slice(0, 8);
       return `<div class="vw-panel" style="margin-top:18px"><h2 style="margin-top:0">Bestenliste</h2>
-<table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
-${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
+<table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${CR.length ? '<td class="n sub">Hergestellt</td>' : ''}${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
+${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${CR.length ? cell(r, 'made', fmt(r.made)) : ''}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
+${CR.length ? `<h2>Hergestellte Gegenstände</h2>${CR.map(([n, k, it]) => `<details><summary>${esc(n)} <span class="sub">· ${fmt(k)}</span></summary><table>${it.slice(0, 40).map(([nm, c]) => `<tr><td>${esc(T(nm))}</td><td class="n">${fmt(c)}</td></tr>`).join('')}</table>${it.length > 40 ? `<div class="sub">… und ${fmt(it.length - 40)} weitere</div>` : ''}</details>`).join('')}<div class="sub" style="margin-top:6px">Nur Gegenstände, die noch in Kisten, Ständern oder am Boden liegen – was Spieler gerade bei sich tragen, steht nicht in der Welt-Datei.</div>` : ''}
 ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc(d.n)}</td><td class="sub">${new Date(d.t || d.seen).toLocaleString(LOC(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}${d.t ? '' : ' (gefunden)'}</td><td class="n sub">x ${Math.round(d.x)} / z ${Math.round(d.z)}</td></tr>`).join('')}</table>` : ''}
 <div class="sub" style="margin-top:8px">Tode werden über Grabsteine erfasst, die beim Speichern des Servers noch liegen.</div></div>`;
     }

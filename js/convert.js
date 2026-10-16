@@ -17,7 +17,7 @@
     return (h1 + Math.imul(h2, 1566083941)) | 0;
   }
   const K = {};
-  ['creator', 'owner', 'ownerName', 'text', 'tag', 'tagauthor', 'author', 'items', 'scale', 'timeOfDeath'].forEach((n) => (K[n] = stable(n)));
+  ['creator', 'owner', 'ownerName', 'text', 'tag', 'tagauthor', 'author', 'items', 'scale', 'timeOfDeath', 'crafterName', 'item', 'stack', 'quality'].forEach((n) => (K[n] = stable(n)));
   const K_AUTHOR_NAME = -1847800717;
 
   // ---------- Binär-Leser ----------
@@ -88,10 +88,11 @@
       if (fl & 0x04) q = r.u16();
       if (fl & 0x10) r.i32();
       if (fl & 0x02) r.u16();
-      if (fl & 0x20) { r.i64(); r.str(); }
+      let by = '';
+      if (fl & 0x20) { r.i64(); by = r.str(); }
       const h = r.i32();
       const t = r.u8(); for (let i = 0; i < t; i++) { r.str(); r.str(); }
-      out.push([h, stack, q]);
+      out.push([h, stack, q, by]);
     }
     return out;
   }
@@ -105,16 +106,16 @@
       const prefab = r.i32(); let yaw = 0;
       if (fl & 0x1000) { const a = r.u16(); if (a & 0x8000) yaw = (a & 0x7fff) * 0.5; else r.u16(); }
       if (fl & 1) r.skip(5);
-      let L = null, S = null, B = null, scale = 1;
+      let L = null, S = null, B = null, I = null, scale = 1;
       if (fl & 2) { const c = r.u8(); r.skip(c * 8); }
       if (fl & 4) { const c = r.u8(); for (let i = 0; i < c; i++) { const key = r.i32(); const vx = r.f32(); r.skip(8); if (key === K.scale) scale = vx; } }
       if (fl & 8) { const c = r.u8(); r.skip(c * 20); }
-      if (fl & 16) { const c = r.u8(); r.skip(c * 8); }
+      if (fl & 16) { const c = r.u8(); for (let i = 0; i < c; i++) { const key = r.i32(); const v = r.i32(); (I || (I = {}))[key] = v; } }
       if (fl & 32) { const c = r.u8(); for (let i = 0; i < c; i++) { const key = r.i32(); const v = r.i64(); (L || (L = {}))[key] = v; } }
       if (fl & 64) { const c = r.u8(); for (let i = 0; i < c; i++) { const key = r.i32(); const v = r.str(); (S || (S = {}))[key] = v; } }
       if (fl & 128) { const c = r.u8(); for (let i = 0; i < c; i++) { const key = r.i32(); const len = r.i32(); const v = r.bytes(len); (B || (B = {}))[key] = v; } }
       if (fl & 0x2000) continue; // Zonen-Platzhalter
-      visit(prefab, x, y, z, yaw, scale, L, S, B);
+      visit(prefab, x, y, z, yaw, scale, L, S, B, I);
     }
     return n;
   }
@@ -230,9 +231,9 @@
     let gx = new Float32Array(1 << 16), gn = 0; // Bodenpunkte x,y,z
     const gCells = new Set(), alt = []; // Ersatz-Bodenpunkte für Gebiete ohne bekannte Pflanzen (z. B. Aschelande)
     const pushG = (x, y, z) => { if (gn * 3 + 3 > gx.length) { const t = new Float32Array(gx.length * 2); t.set(gx); gx = t; } gx[gn * 3] = x; gx[gn * 3 + 1] = y; gx[gn * 3 + 2] = z; gn++; };
-    const pieces = []; const nature = []; const signs = []; const portals = []; const beds = []; const conts = []; const tombs = [];
+    const pieces = []; const nature = []; const signs = []; const portals = []; const beds = []; const conts = []; const tombs = []; const loose = [];
     let total = 0;
-    const visitor = (prefab, x, y, z, yaw, scale, L, S, B) => {
+    const visitor = (prefab, x, y, z, yaw, scale, L, S, B, I) => {
           if (y > 2000 || Math.abs(x) > 12000 || Math.abs(z) > 12000) return;
           const name = PREF[prefab];
           const cr = L ? L[K.creator] : undefined;
@@ -246,6 +247,7 @@
           else if (prefab === H_SIGN && S && S[K.text]) signs.push({ x, y, z, t: clean(S[K.text]), a: S[K.author] || '', an: S[K_AUTHOR_NAME] || '', c: cr !== undefined ? cr.toString() : '' });
           else if (H_BED.has(prefab) && S && S[K.ownerName]) beds.push({ x, y, z, n: S[K.ownerName], o: L && L[K.owner] !== undefined ? L[K.owner].toString() : '' });
           else if (prefab === H_TOMB) { let items = 0; try { if (B && B[K.items]) parseInv(B[K.items]).forEach((it) => (items += it[1])); } catch (e) { } tombs.push({ x, y, z, n: (S && S[K.ownerName]) || '', tod: L && L[K.timeOfDeath] !== undefined ? Number(L[K.timeOfDeath]) : null, items }); }
+          if (S && S[K.crafterName]) { const ih = S[K.item] ? stable(S[K.item]) : prefab; loose.push([ih, (I && I[K.stack]) || 1, (I && I[K.quality]) || 1, S[K.crafterName]]); }
           if (CONT[prefab] && B && B[K.items]) { try { conts.push({ x, y, z, t: CONT[prefab], c: cr !== undefined ? cr.toString() : '', inv: parseInv(B[K.items]) }); } catch (e) { } }
     };
     let live = null, EXP = null, BIO = null;
@@ -479,6 +481,11 @@
     const snap = {
       format: 'vwelt', version: FORMAT_VERSION, created: new Date().toISOString(), generator: 'Valheim Welt-Viewer (inoffiziell)',
       world: { name: world.name, seed: world.seedName, modifiers: world.modifiers },
+      crafted: (() => { // Wer hat welche (noch vorhandenen) Gegenstände hergestellt – aus Kisten, Ständern und vom Boden
+        const by = {}; const add = ([h, st, , who]) => { if (!who) return; const nm = D.items[h] || ('Unbekannt (0x' + (h >>> 0).toString(16) + ')'); const e = by[who] || (by[who] = { n: 0, i: {} }); e.n += st; e.i[nm] = (e.i[nm] || 0) + st; };
+        conts.forEach((c) => c.inv.forEach(add)); loose.forEach(add);
+        return Object.entries(by).sort((a, b) => b[1].n - a[1].n).map(([who, e]) => [who, e.n, Object.entries(e.i).sort((a, b) => b[1] - a[1])]);
+      })(),
       players: world.players.map((p) => strip ? { name: p.name } : { name: p.name, platform: p.platform }),
       characters: characters.map((c) => strip ? { name: c.name, account: c.account, pieces: c.pieces } : { name: c.name, account: c.account, steam: c.steam, pieces: c.pieces }),
       bosses: dbi.keys.filter((k) => k.startsWith('defeated_')).map((k) => k.slice(9)),

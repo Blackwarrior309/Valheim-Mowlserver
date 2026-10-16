@@ -30,6 +30,7 @@ Der Viewer liest `.vwelt` per Datei, per Teilen-HTML (eingebettet) oder per URL 
   "biomes":    { "x0", "z0", "res": 64, "nx", "nz", "b": "<base64 Uint8>", "src": "Weltgenerator"|"geschätzt" },   // 1 Wiesen 2 Sumpf 3 Berge 4 Schwarzwald 5 Ebenen 6 Aschelande 7 Tiefer Norden 8 Meer 9 Nebellande
   "world3d":   Region,                   // ganze erkundete Welt (id "world", 16-m-Gelände, alle Bauteile, Natur ausgedünnt, "mask" = erkundete Zellen)
   "regions":   [ Region, … ],             // Detail-3D je Basis (4-m-Gelände)
+  "crafted":   [[Hersteller, Anzahl, [[Gegenstand, Anzahl], …]], …],   // hergestellte Gegenstände in Kisten, Ständern, am Boden
   "stats":     { "zdos", "chunks", "pieces", "playerPieces", "containers", "groundPoints", "duplicatesSkipped" },
   "looseChests": [ Kiste mit Feld "g" = Ortsname ],   // Kisten außerhalb erkannter Basen
   "live":      { "time": ms, "players": [ { "name", "x", "y", "z" } ] },   // nur bei Mod-Dumps
