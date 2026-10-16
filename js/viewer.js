@@ -309,6 +309,25 @@
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000), new THREE.MeshLambertMaterial({ color: 0x4f5f5a })); floor.rotation.x = -Math.PI / 2; floor.position.y = -25.2; scene.add(floor);
       const water = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000), new THREE.MeshPhongMaterial({ color: 0x2f6f8f, transparent: true, opacity: 0.62, shininess: 80, specular: 0x99bbcc, depthWrite: false }));
       water.rotation.x = -Math.PI / 2; water.renderOrder = 2; scene.add(water);
+      // Himmel, Licht, Nebel und Wasser passend zum Biom in der Gebietsmitte
+      const hemi = scene.children.find((o) => o.isHemisphereLight);
+      const ENV = {
+        1: { sky: 0x9fc9df, fog: 0xb9d0d5, hemi: 0xdceeff, ground: 0x625a43, sun: 0xfff1d6, water: 0x2f6f8f }, // Wiesen
+        2: { sky: 0x879a91, fog: 0x9ba99c, hemi: 0xc6d5c9, ground: 0x4b5140, sun: 0xe1e5d4, water: 0x3f5a52 }, // Sumpf
+        3: { sky: 0xb4c9dc, fog: 0xc7d3df, hemi: 0xe7efff, ground: 0x777b80, sun: 0xfff4e2, water: 0x3f7090 }, // Berge
+        4: { sky: 0x91b5c7, fog: 0xa8c3c8, hemi: 0xd9e7d6, ground: 0x4f5941, sun: 0xfff0d0, water: 0x2d6a80 }, // Schwarzwald
+        5: { sky: 0xa8c9df, fog: 0xc3d5d6, hemi: 0xf1edda, ground: 0x696047, sun: 0xfff2d6, water: 0x337890 }, // Ebenen
+        6: { sky: 0x9a7770, fog: 0xb18d7d, hemi: 0xe5c2a5, ground: 0x51403a, sun: 0xffd0a0, water: 0x5a4844 }, // Aschelande
+        7: { sky: 0xb7cbdc, fog: 0xd1dbe3, hemi: 0xeaf3ff, ground: 0x72777c, sun: 0xf2f3ff, water: 0x46788f }, // Tiefer Norden
+        9: { sky: 0x777d91, fog: 0x9297a4, hemi: 0xc7cbd9, ground: 0x474b50, sun: 0xd7d5e8, water: 0x36586e }  // Nebellande
+      };
+      function applyEnvironment(r, big) {
+        const [X0, X1, Z0, Z1] = r.bounds;
+        const e = (!big && ENV[bioAt((X0 + X1) / 2, (Z0 + Z1) / 2)]) || ENV[1];
+        scene.background.setHex(e.sky); scene.fog.color.setHex(e.fog);
+        if (hemi) { hemi.color.setHex(e.hemi); hemi.groundColor.setHex(e.ground); }
+        sun.color.setHex(e.sun); water.material.color.setHex(e.water);
+      }
       const box = new THREE.BoxGeometry(1, 1, 1);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler(0, 0, 0, 'YXZ'), sv = new THREE.Vector3(), pv = new THREE.Vector3(), tmp = new THREE.Color();
       const mats = { leaf: new THREE.MeshLambertMaterial({ color: 0x4d7f34 }), fir: new THREE.MeshLambertMaterial({ color: 0x2f5a3a }), swamp: new THREE.MeshLambertMaterial({ color: 0x5a6b3a }), ygg: new THREE.MeshLambertMaterial({ color: 0x8fb8c8 }), trunk: new THREE.MeshLambertMaterial({ color: 0x5a4330 }), rock: new THREE.MeshLambertMaterial({ color: 0x8d8c86 }), bush: new THREE.MeshLambertMaterial({ color: 0x557a33 }) };
@@ -339,7 +358,7 @@
         } else if (kind === 'metal') {
           for (let i = 0; i < 8; i++) { fill(190 + rnd() * 50); x.fillRect(0, i * 32, S2, 32); x.fillStyle = 'rgba(0,0,0,.3)'; for (let k = 0; k < 4; k++) { x.beginPath(); x.arc(16 + k * 64, i * 32 + 16, 3, 0, 7); x.fill(); } }
         } else { for (let n = 0; n < 400; n++) { x.fillStyle = `rgba(0,0,0,${rnd() * 0.06})`; x.fillRect(rnd() * S2, rnd() * S2, 4, 4); } }
-        const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+        const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, ren.capabilities.getMaxAnisotropy()); return t;
       }
       const TEX = {}; const tex = (k) => TEX[k] || (TEX[k] = texCanvas(k));
 
@@ -381,7 +400,7 @@
   } else if(kind==='grass'){
     x.fillStyle='#5f8a3a';x.fillRect(0,0,S,S);for(let k=0;k<6000;k++){x.fillStyle=hsl(80+r()*30,35+r()*25,25+r()*25,0.6);x.fillRect(r()*S,r()*S,1.5,3+r()*4);}
   }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());return t;
 }
 
       const RTEX = {}; const rtex = (k) => RTEX[k] || (RTEX[k] = realTex(k));
@@ -408,8 +427,8 @@
         const glass = cat === 'glass';
         const m = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: glass, opacity: glass ? 0.55 : 1 });
         if (glass || mode === 'simple') return m;
-        if (mode === 'natur') { m.map = rtex(CAT_REAL[cat] || 'planks'); triplanar(m, cat === 'roof' || cat === 'droof' ? 0.6 : 0.5); m.customProgramCacheKey = () => 'nat' + cat; }
-        else { m.map = tex(CAT_TEX[cat] || 'plain'); triplanar(m, cat === 'roof' || cat === 'droof' ? 0.75 : 0.5); }
+        if (mode === 'natur') { m.map = rtex(CAT_REAL[cat] || 'planks'); triplanar(m, cat === 'roof' || cat === 'droof' ? 0.72 : 0.62); m.customProgramCacheKey = () => 'nat' + cat; }
+        else { m.map = tex(CAT_TEX[cat] || 'plain'); triplanar(m, cat === 'roof' || cat === 'droof' ? 0.82 : 0.62); }
         return m;
       }
       // Formen: Prismen für Giebel/Firste, Zylinder für Pfosten und Stämme
@@ -466,6 +485,7 @@
         const span = Math.max(X1 - X0, Z1 - Z0); bigArea = span > 2000; const sc = sun.shadow.camera;
         const sh = bigArea ? 380 : span / 2 + 20; sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.far = bigArea ? 1600 : 1500; sc.updateProjectionMatrix();
         if (!bigArea) { sun.position.set(-span * 0.3, span * 0.45 + 120, span * 0.25); sun.target.position.set(0, 0, 0); }
+        applyEnvironment(r, bigArea);
         const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF;
         // Gelände
         const NX = r.nx, NZ = r.nz, RS = r.res; const hu = b64u8(r.h); const H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2);
@@ -476,7 +496,9 @@
           const k = j * NX + i, h = hAt(i, j), x = X0 + i * RS, z = Z0 + j * RS;
           pos[k * 3] = x - CX; pos[k * 3 + 1] = h - WL; pos[k * 3 + 2] = -(z - CZ);
           const sl = Math.hypot(hAt(i + 1, j) - hAt(i - 1, j), hAt(i, j + 1) - hAt(i, j - 1)) / (2 * RS), e = h - WL;
-          const bc = e >= 1.6 ? BIO_COL[bioAt(x, z)] : null; if (e < -1) tmp.copy(cSea).lerp(cSand, Math.max(0, 1 + e / 8)); else if (e < 1.6) tmp.copy(cSand); else if (bc) { tmp.setRGB(bc[0] / 255, bc[1] / 255, bc[2] / 255); tmp.offsetHSL(0, 0, Math.min(0.08, (e - 2) / 400)); } else tmp.copy(cG).lerp(cG2, Math.min(1, (e - 2) / 25));
+          if (e < 0) tmp.copy(cSea).lerp(cSand, THREE.MathUtils.smoothstep(e, -7, 0)); // unter Wasser: Meeresgrund → Sand
+          else { const bc = BIO_COL[bioAt(x, z)]; if (bc) { tmp.setRGB(bc[0] / 255, bc[1] / 255, bc[2] / 255); tmp.offsetHSL(0, 0, Math.min(0.08, Math.max(0, e - 2) / 400)); } else tmp.copy(cG).lerp(cG2, Math.min(1, Math.max(0, e - 2) / 25));
+            tmp.lerp(cSand, 1 - THREE.MathUtils.smoothstep(e, 0.6, 3.2)); } // Strand weich ins Land
           if (e > 70) tmp.lerp(new THREE.Color(0xe8eef2), Math.min(1, (e - 70) / 40));
           if (sl > 0.7) tmp.lerp(cRock, Math.min(1, (sl - 0.7) * 1.5));
           tmp.offsetHSL(0, 0, (Math.sin(x * 0.37) * Math.cos(z * 0.29) + Math.sin(x * 0.11 + z * 0.13)) * 0.03);
