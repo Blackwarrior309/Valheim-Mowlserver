@@ -63,7 +63,7 @@
     'Keine Basen gefunden.': 'No bases found.',
     // 3D-Seitenleiste
     'Gebiet': 'Area', 'Ansicht': 'View', 'Von oben': 'Top', 'Schräg': 'Angled', 'Nah': 'Close', '✈ Flugmodus (F)': '✈ Fly mode (F)', 'Flugmodus': 'Fly mode',
-    'Grafik': 'Graphics', 'Natur': 'Nature', 'Einfach': 'Simple', 'Blöcke': 'Blocks',
+    'Grafik': 'Graphics', 'Realistisch': 'Realistic', 'Realistisch (gemalte Texturen)': 'Realistic (painted textures)', 'Gemalte Texturen (textures/*.jpg)': 'Painted textures (textures/*.jpg)', 'Natur': 'Nature', 'Einfach': 'Simple', 'Blöcke': 'Blocks',
     'Leistung & Grafik': 'Performance & graphics', 'Schatten': 'Shadows', 'Aus (schnell)': 'Off (fast)', 'An – berechnet im Stillstand': 'On – computed when idle',
     'Natur-Texturen (Holz, Stein, Stroh)': 'Natural textures (wood, stone, thatch)', 'Einfach texturiert (einfärbbar)': 'Simple textures (colourable)', 'Blöcke (am schnellsten)': 'Blocks (fastest)',
     'Wenig': 'Little', 'Mittel': 'Medium', 'Alles': 'All', 'Auflösung': 'Resolution', 'Sichtweite': 'View distance', 'Weit': 'Far',

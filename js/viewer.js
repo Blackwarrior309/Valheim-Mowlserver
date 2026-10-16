@@ -108,10 +108,10 @@
       <div class="row" style="margin-top:6px"><button class="selAll">Alles im Gebiet</button><button class="selClr">Leeren</button></div>
       <div class="sub selInfo" style="margin-top:4px">Klick = hinzufügen, Shift+Klick = entfernen.</div>
       <div class="selExp" hidden><input class="selName" type="text" placeholder="Name des Bauplans" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"><div class="row" style="margin-top:6px"><button class="pri selBp">⬇ PlanBuild (.blueprint)</button></div><div class="sub selHint" style="margin-top:4px" data-en="For the PlanBuild mod: put the file into <code>BepInEx/config/PlanBuild/blueprints</code>, place it in game with the blueprint rune as a hologram and build it.">Für den Mod PlanBuild: Datei nach <code>BepInEx/config/PlanBuild/blueprints</code> legen, im Spiel mit der Bauplan-Rune als Hologramm platzieren und nachbauen.</div></div>
-      <h2>Grafik</h2><div class="row gstyle"><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
+      <h2>Grafik</h2><div class="row gstyle"><button data-gs="real" title="Gemalte Texturen (textures/*.jpg)">Realistisch</button><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
       <details class="perf"><summary>Leistung &amp; Grafik</summary>
         <div class="qrow"><label for="vwq-sh">Schatten</label><select id="vwq-sh" data-q="shadows"><option value="0">Aus (schnell)</option><option value="1">An – berechnet im Stillstand</option></select></div>
-        <div class="qrow"><label for="vwq-de">Grafik</label><select id="vwq-de" data-q="detail"><option value="natur">Natur-Texturen (Holz, Stein, Stroh)</option><option value="full">Einfach texturiert (einfärbbar)</option><option value="simple">Blöcke (am schnellsten)</option></select></div>
+        <div class="qrow"><label for="vwq-de">Grafik</label><select id="vwq-de" data-q="detail"><option value="real">Realistisch (gemalte Texturen)</option><option value="natur">Natur-Texturen (Holz, Stein, Stroh)</option><option value="full">Einfach texturiert (einfärbbar)</option><option value="simple">Blöcke (am schnellsten)</option></select></div>
         <div class="qrow"><label for="vwq-na">Natur</label><select id="vwq-na" data-q="nature"><option value="low">Wenig</option><option value="mid">Mittel</option><option value="high">Alles</option></select></div>
         <div class="qrow"><label for="vwq-re">Auflösung</label><select id="vwq-re" data-q="res"><option value="1">100 %</option><option value="0.75">75 %</option><option value="0.5">50 %</option></select></div>
         <div class="qrow"><label for="vwq-ra">Sichtweite</label><select id="vwq-ra" data-q="range"><option value="near">Nah</option><option value="mid">Mittel</option><option value="far">Weit</option></select></div>
@@ -409,13 +409,14 @@
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());return t;
 }
 
-      // Gemalte Texturen (textures/*.jpg) ersetzen die selbst gezeichneten, sobald sie geladen sind; ohne Datei bleibt die gezeichnete
-      const IMG_TEX = { planks: 1 };
+      // Grafik „Realistisch“: gemalte Texturen aus textures/ (Liste in textures/list.json). Fehlt eine Datei, bleibt die selbst gezeichnete.
+      let REAL = false;
       const texBase = (() => { const sc = [...document.scripts].find((x) => /viewer\.js/.test(x.src)); return sc ? sc.src.replace(/js\/viewer\.js.*$/, '') : ''; })();
+      const texList = (texBase && location.protocol !== 'file:') ? fetch(texBase + 'textures/list.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})) : Promise.resolve({});
       const RTEX = {}; const rtex = (k) => {
-        if (RTEX[k]) return RTEX[k];
-        const t = RTEX[k] = realTex(k);
-        if (IMG_TEX[k] && texBase && location.protocol !== 'file:') { const img = new Image(); img.onload = () => { t.image = img; t.needsUpdate = true; invalidate(); }; img.src = texBase + 'textures/' + k + '.jpg?v=3'; }
+        const key = (REAL ? 'img:' : '') + k; if (RTEX[key]) return RTEX[key];
+        const t = RTEX[key] = realTex(k);
+        if (REAL) texList.then((L) => { if (!L[k]) return; const img = new Image(); img.onload = () => { t.image = img; t.needsUpdate = true; invalidate(); }; img.src = texBase + 'textures/' + k + '.jpg?v=' + L[k]; });
         return t;
       };
       const CAT_REAL = { wood: 'planks', floor: 'planks', dark: 'planks', chest: 'planks', craft: 'planks', ship: 'planks', bed: 'planks', core: 'logs', roof: 'thatch', droof: 'tar', stone: 'stone', portal: 'stone', fire: 'stone', marble: 'bmarble', iron: 'iron', misc: 'planks' };
@@ -499,7 +500,7 @@
       function load(r, keepCam) {
         clear(); reg = r; content = new THREE.Group(); scene.add(content);
         const [X0, X1, Z0, Z1] = r.bounds; CX = (X0 + X1) / 2; CZ = (Z0 + Z1) / 2;
-        const pmode = Q.detail === 'simple' ? 'simple' : (Q.detail === 'natur' && colorMode !== 'own') ? 'natur' : 'full'; curMode = pmode;
+        const pmode = Q.detail === 'simple' ? 'simple' : ((Q.detail === 'natur' || Q.detail === 'real') && colorMode !== 'own') ? 'natur' : 'full'; curMode = pmode; REAL = Q.detail === 'real';
         const span = Math.max(X1 - X0, Z1 - Z0); bigArea = span > 2000; const sc = sun.shadow.camera;
         const sh = bigArea ? 380 : span / 2 + 20; sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.far = bigArea ? 1600 : 1500; sc.updateProjectionMatrix();
         if (!bigArea) { sun.position.set(-span * 0.3, span * 0.45 + 120, span * 0.25); sun.target.position.set(0, 0, 0); }
@@ -596,7 +597,7 @@
         L.innerHTML = mode === 'own' ? reg.owners.map((o, i) => `<div><span class="sw" style="background:${hex(OWNC[i % OWNC.length])}"></span>${esc(o)}</div>`).join('')
           : Object.keys(meshes).map((c) => `<div><span class="sw" style="background:${hex((CAT[c] || CAT.misc)[0])}"></span>${(CAT[c] || CAT.misc)[1]} <span class="sub">(${fmt(meshes[c].reduce((a, m) => a + m.count, 0))})</span></div>`).join('');
       }
-      $('.cMat').onclick = () => { $('.cMat').classList.add('on'); $('.cOwn').classList.remove('on'); colorMode = 'mat'; if (Q.detail === 'natur' && reg) reloadKeep(); else recolor('mat'); };
+      $('.cMat').onclick = () => { $('.cMat').classList.add('on'); $('.cOwn').classList.remove('on'); colorMode = 'mat'; if ((Q.detail === 'natur' || Q.detail === 'real') && reg) reloadKeep(); else recolor('mat'); };
       $('.cOwn').onclick = () => { $('.cOwn').classList.add('on'); $('.cMat').classList.remove('on'); colorMode = 'own'; if (curMode === 'natur' && reg) reloadKeep(); else recolor('own'); };
       const layerDefs = [['Bauteile', (v) => Object.values(meshes).flat().forEach((m) => (m.visible = v))], ['Dächer', (v) => ['roof', 'droof'].forEach((c) => meshes[c] && meshes[c].forEach((m) => (m.visible = v)))], ['Vegetation', (v) => natG && (natG.visible = v)], ['Wasser', (v) => (water.visible = v)], ['Namen', (v) => (showLbl = v)]];
       const layerState = layerDefs.map(() => true);
