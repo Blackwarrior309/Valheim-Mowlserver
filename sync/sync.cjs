@@ -422,6 +422,14 @@ async function publish(cfg, state, list, world) {
 }
 
 let changedOut = false, historyChanged = false;
+// Kurzprotokoll als Hinweis am Lauf (in der Actions-Übersicht sichtbar, ohne Zugangsdaten)
+function summary(cfg, code) {
+  try {
+    const red = (x) => [cfg.ftp.host, cfg.ftp.user, cfg.ftp.password].filter(Boolean).reduce((t, v) => t.split(v).join('***'), x);
+    const esc = (x) => x.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+    console.log('::' + (code ? 'error' : 'notice') + ' title=Abgleich::' + esc(red(LOGBUF.slice(-25).join('\n'))));
+  } catch (e) { }
+}
 function envConfig() {
   const b = (v, d) => (v === undefined || v === '' ? d : /^(1|true|ja|yes)$/i.test(v));
   return {
@@ -445,6 +453,7 @@ function envConfig() {
         if (cfg.historyDir) { const red = (x) => [cfg.ftp.host, cfg.ftp.user, cfg.ftp.password].filter(Boolean).reduce((t, v) => t.split(v).join('***'), x); fs.mkdirSync(cfg.historyDir, { recursive: true }); fs.writeFileSync(path.join(cfg.historyDir, 'fehler.txt'), red(new Date().toISOString() + '\n' + LOGBUF.join('\n')) + '\n'); }
         if (ENV.GITHUB_OUTPUT) fs.appendFileSync(ENV.GITHUB_OUTPUT, 'changed=' + changedOut + '\nhistory=' + (historyChanged || !!cfg.historyDir) + '\n');
       } catch (x) { }
+      summary(cfg, 1);
       process.exit(1);
     };
     process.on('uncaughtException', fatal); process.on('unhandledRejection', fatal);
@@ -463,6 +472,7 @@ function envConfig() {
       fs.mkdirSync(cfg.historyDir, { recursive: true }); fs.writeFileSync(path.join(cfg.historyDir, 'fehler.txt'), red(new Date().toISOString() + '\n' + LOGBUF.join('\n')) + '\n'); historyChanged = true;
     }
     if (ENV.GITHUB_OUTPUT) fs.appendFileSync(ENV.GITHUB_OUTPUT, 'changed=' + changedOut + '\nhistory=' + historyChanged + '\n');
+    summary(cfg, code);
     process.exit(code);
   }
   if (!fs.existsSync(CONFIG)) {
