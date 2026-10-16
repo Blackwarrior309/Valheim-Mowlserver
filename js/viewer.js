@@ -409,7 +409,15 @@
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());return t;
 }
 
-      const RTEX = {}; const rtex = (k) => RTEX[k] || (RTEX[k] = realTex(k));
+      // Gemalte Texturen (textures/*.jpg) ersetzen die selbst gezeichneten, sobald sie geladen sind; ohne Datei bleibt die gezeichnete
+      const IMG_TEX = { planks: 1 };
+      const texBase = (() => { const sc = [...document.scripts].find((x) => /viewer\.js/.test(x.src)); return sc ? sc.src.replace(/js\/viewer\.js.*$/, '') : ''; })();
+      const RTEX = {}; const rtex = (k) => {
+        if (RTEX[k]) return RTEX[k];
+        const t = RTEX[k] = realTex(k);
+        if (IMG_TEX[k] && texBase && location.protocol !== 'file:') { const img = new Image(); img.onload = () => { t.image = img; t.needsUpdate = true; invalidate(); }; img.src = texBase + 'textures/' + k + '.jpg?v=3'; }
+        return t;
+      };
       const CAT_REAL = { wood: 'planks', floor: 'planks', dark: 'planks', chest: 'planks', craft: 'planks', ship: 'planks', bed: 'planks', core: 'logs', roof: 'thatch', droof: 'tar', stone: 'stone', portal: 'stone', fire: 'stone', marble: 'bmarble', iron: 'iron', misc: 'planks' };
       const CAT_TEX = { wood: 'planks', floor: 'planks', dark: 'planks', core: 'logs', roof: 'shingles', droof: 'shingles', stone: 'stone', marble: 'marble', iron: 'metal', chest: 'planks', craft: 'planks', ship: 'planks', bed: 'planks', portal: 'stone', fire: 'stone', misc: 'plain' };
       function triplanar(mat, scale) {
