@@ -427,8 +427,8 @@
         ridge: (() => { const g = prism([[-0.5, -0.5], [0.5, -0.5], [0, 0.5]]); g.rotateY(Math.PI / 2); return g; })()
       };
       function shapeOf(name) {
-        if (/pole|stone_pillar_round/.test(name)) return 'cyl';
-        if (/wood_wall_log_4x0\.5|wood_log_(26|45)|_log$/.test(name)) return 'logx';
+        if (/pole|stone_pillar_round|groundtorch|walltorch|brazierceiling|spice|mortarandpestle|spinningwheel|treasure_stack|treasure_pile|stone_pile|coal_pile/.test(name)) return 'cyl';
+        if (/wood_wall_log_4x0\.5|wood_log_(26|45)|_log$|wood_core_stack/.test(name)) return 'logx';
         if (/wall_roof.*upsidedown/.test(name)) return 'triInv';
         if (/wall_roof_top/.test(name)) return 'gable';
         if (/wall_roof/.test(name)) return 'tri';
