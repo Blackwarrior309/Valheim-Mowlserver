@@ -28,6 +28,8 @@ function cstr(b, o) { const e = b.indexOf(0, o); return [b.toString('utf8', o, e
 (async () => {
   const out = { time: new Date().toISOString(), ok: false };
   try {
+    // Adresse aus dem Nitrado-Webinterface als Secret VS_GAME_ADDR (z. B. 1.2.3.4:2456), sonst Versuch über den FTP-Host
+    const ga = (E.VS_GAME_ADDR || '').trim().match(/^([^:\s]+)(?::(\d+))?$/); if (ga) { E.VS_GAME_HOST = ga[1]; if (ga[2]) E.VS_GAME_PORT = ga[2]; }
     let port = +E.VS_GAME_PORT || 0;
     if (!port) {
       const ftp = new FTP({ host: E.VS_FTP_HOST, port: +E.VS_FTP_PORT || 21, user: E.VS_FTP_USER, password: E.VS_FTP_PASSWORD || '', secure: /^(1|true|ja|yes)$/i.test(E.VS_FTP_SECURE || '') });

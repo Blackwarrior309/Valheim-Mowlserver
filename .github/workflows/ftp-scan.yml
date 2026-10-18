@@ -35,4 +35,5 @@ jobs:
           VS_FTP_USER: ${{ secrets.VS_FTP_USER }}
           VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
           VS_FTP_SECURE: ${{ secrets.VS_FTP_SECURE }}
+          VS_GAME_ADDR: ${{ secrets.VS_GAME_ADDR }}
         run: node sync/server-query.cjs
