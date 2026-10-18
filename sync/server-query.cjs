@@ -14,11 +14,11 @@ function a2s(ip, port, payload, timeout = 3000) {
   });
 }
 const HDR = Buffer.from([0xff, 0xff, 0xff, 0xff]);
-async function ask(ip, port, kind) {
+async function ask(ip, port, kind, timeout) {
   const base = kind === 'info' ? Buffer.concat([HDR, Buffer.from('TSource Engine Query\0', 'latin1')]) : Buffer.concat([HDR, Buffer.from([0x55])]);
   let ch = kind === 'info' ? Buffer.alloc(0) : Buffer.from([0xff, 0xff, 0xff, 0xff]);
   for (let i = 0; i < 3; i++) {
-    const m = await a2s(ip, port, Buffer.concat([base, ch]));
+    const m = await a2s(ip, port, Buffer.concat([base, ch]), timeout);
     if (m[4] === 0x41) { ch = m.subarray(5, 9); continue; } // Challenge
     return m;
   }
@@ -33,10 +33,11 @@ function cstr(b, o) { const e = b.indexOf(0, o); return [b.toString('utf8', o, e
       const ftp = new FTP({ host: E.VS_FTP_HOST, port: +E.VS_FTP_PORT || 21, user: E.VS_FTP_USER, password: E.VS_FTP_PASSWORD || '', secure: /^(1|true|ja|yes)$/i.test(E.VS_FTP_SECURE || '') });
       await ftp.connect(); try { const t = (await ftp.get('/valheim/docker_start_server.sh')).toString('utf8'); const m = t.match(/-port[\s=]+"?(\d{2,5})/); if (m) port = +m[1]; else out.startScript = [...new Set(t.match(/(^|\s)-[a-zA-Z]+|\$\{?[A-Z_]+\}?/g) || [])].map((x) => x.trim()).join(' '); } finally { ftp.close(); }
     }
-    if (!port) throw new Error('Spielport nicht gefunden');
     const ip = (await dns.lookup(E.VS_GAME_HOST || E.VS_FTP_HOST)).address;
     let info = null, used = 0;
-    for (const qp of [port + 1, port]) { try { info = await ask(ip, qp, 'info'); used = qp; break; } catch (e) { } }
+    const cand = port ? [port + 1, port] : [];
+    if (!port) for (let p = 2456; p <= 2480; p++) cand.push(p); // Spielport unbekannt: übliche Valheim-Ports durchprobieren
+    for (const qp of cand) { try { info = await ask(ip, qp, 'info', 1200); used = qp; out.queryPort = qp; break; } catch (e) { } }
     if (!info) throw new Error('Server antwortet nicht auf die Steam-Abfrage');
     let o = 6; let name, map, folder, game; [name, o] = cstr(info, o); [map, o] = cstr(info, o); [folder, o] = cstr(info, o); [game, o] = cstr(info, o); o += 2;
     out.players = info[o]; out.maxPlayers = info[o + 1]; out.name = name; out.ok = true;
@@ -48,5 +49,5 @@ function cstr(b, o) { const e = b.indexOf(0, o); return [b.toString('utf8', o, e
   const j = JSON.stringify(out);
   if (process.argv[2]) fs.writeFileSync(process.argv[2], j); console.log(j);
   const esc = (x) => x.replace(/%/g, '%25').replace(/\n/g, '%0A');
-  console.log('::notice title=Steam-Abfrage::' + esc(out.ok ? `${out.name}: ${out.players}/${out.maxPlayers} online` + (out.list ? '\nListe: ' + (out.list.map((x) => (x.n || '(ohne Name)') + ' ' + Math.round(x.s / 60) + ' min').join(', ') || 'leer') : '\n' + (out.listError || '')) : 'Fehler: ' + out.error + (out.startScript ? '\nStartskript-Schalter: ' + out.startScript : '')));
+  console.log('::notice title=Steam-Abfrage::' + esc(out.ok ? `${out.name}: ${out.players}/${out.maxPlayers} online (Abfrage-Port ${out.queryPort})` + (out.list ? '\nListe: ' + (out.list.map((x) => (x.n || '(ohne Name)') + ' ' + Math.round(x.s / 60) + ' min').join(', ') || 'leer') : '\n' + (out.listError || '')) : 'Fehler: ' + out.error + (out.startScript ? '\nStartskript-Schalter: ' + out.startScript : '')));
 })();
