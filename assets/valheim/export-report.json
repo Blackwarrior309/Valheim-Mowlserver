@@ -1,0 +1,12 @@
+{
+  "exported": 453,
+  "missing": [
+    "Beech_log",
+    "wood_wall",
+    "wood_wall_2x2"
+  ],
+  "errors": {},
+  "limitations": [
+    "Static meshes only; no Unity shaders, animation, particles or dynamic object states."
+  ]
+}

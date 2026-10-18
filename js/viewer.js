@@ -108,10 +108,11 @@
       <div class="row" style="margin-top:6px"><button class="selAll">Alles im Gebiet</button><button class="selClr">Leeren</button></div>
       <div class="sub selInfo" style="margin-top:4px">Klick = hinzufügen, Shift+Klick = entfernen.</div>
       <div class="selExp" hidden><input class="selName" type="text" placeholder="Name des Bauplans" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"><div class="row" style="margin-top:6px"><button class="pri selBp">⬇ PlanBuild (.blueprint)</button></div><div class="sub selHint" style="margin-top:4px" data-en="For the PlanBuild mod: put the file into <code>BepInEx/config/PlanBuild/blueprints</code>, place it in game with the blueprint rune as a hologram and build it.">Für den Mod PlanBuild: Datei nach <code>BepInEx/config/PlanBuild/blueprints</code> legen, im Spiel mit der Bauplan-Rune als Hologramm platzieren und nachbauen.</div></div>
-      <h2>Grafik</h2><div class="row gstyle"><button data-gs="real" title="Gemalte Texturen (textures/*.jpg)">Realistisch</button><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
+      <h2>Grafik</h2><div class="row gstyle"><button data-gs="valheim">Valheim Original</button><button data-gs="real" title="Gemalte Texturen (textures/*.jpg)">Realistisch</button><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
+      <div class="sub originalStatus" role="status" hidden></div>
       <details class="perf"><summary>Leistung &amp; Grafik</summary>
         <div class="qrow"><label for="vwq-sh">Schatten</label><select id="vwq-sh" data-q="shadows"><option value="0">Aus (schnell)</option><option value="1">An – berechnet im Stillstand</option></select></div>
-        <div class="qrow"><label for="vwq-de">Grafik</label><select id="vwq-de" data-q="detail"><option value="real">Realistisch (gemalte Texturen)</option><option value="natur">Natur-Texturen (Holz, Stein, Stroh)</option><option value="full">Einfach texturiert (einfärbbar)</option><option value="simple">Blöcke (am schnellsten)</option></select></div>
+        <div class="qrow"><label for="vwq-de">Grafik</label><select id="vwq-de" data-q="detail"><option value="valheim">Valheim Original (Modelle &amp; Texturen)</option><option value="real">Realistisch (gemalte Texturen)</option><option value="natur">Natur-Texturen (Holz, Stein, Stroh)</option><option value="full">Einfach texturiert (einfärbbar)</option><option value="simple">Blöcke (am schnellsten)</option></select></div>
         <div class="qrow"><label for="vwq-na">Natur</label><select id="vwq-na" data-q="nature"><option value="low">Wenig</option><option value="mid">Mittel</option><option value="high">Alles</option></select></div>
         <div class="qrow"><label for="vwq-re">Auflösung</label><select id="vwq-re" data-q="res"><option value="1">100 %</option><option value="0.75">75 %</option><option value="0.5">50 %</option></select></div>
         <div class="qrow"><label for="vwq-ra">Sichtweite</label><select id="vwq-ra" data-q="range"><option value="near">Nah</option><option value="mid">Mittel</option><option value="far">Weit</option></select></div>
@@ -126,7 +127,7 @@
       <h2>Färbung</h2><div class="row"><button class="cMat on">Material</button><button class="cOwn">Erbauer</button></div><div class="legend" style="margin-top:8px"></div>
       <h2>Gebaut von</h2><table class="own"></table>
       <h2>Häufigste Bauteile</h2><table class="top"></table>
-      <div class="sub" style="margin-top:10px">Ziehen = drehen · Rechtsklick/2 Finger = verschieben · Mausrad = Zoom · Doppelklick = hinzoomen · Kiste anklicken = Inhalt.<br>Gelände ist aus Bäumen/Steinen geschätzt, Bauteile sind vereinfachte Blöcke in echter Lage und Drehung.</div>
+      <div class="sub" style="margin-top:10px">Ziehen = drehen · Rechtsklick/2 Finger = verschieben · Mausrad = Zoom · Doppelklick = hinzoomen · Kiste anklicken = Inhalt.<br><span data-en="Terrain is estimated from trees and rocks. The graphics setting controls object detail.">Gelände ist aus Bäumen und Steinen geschätzt. Die Grafikeinstellung bestimmt die Modelldetails.</span></div>
     </div>
     <div class="vw-tip" hidden></div><div class="vw-chest" hidden></div>
     <div class="vw-joy" hidden><div class="k"></div></div>
@@ -412,6 +413,24 @@
       // Grafik „Realistisch“: gemalte Texturen aus textures/ (Liste in textures/list.json). Fehlt eine Datei, bleibt die selbst gezeichnete.
       let REAL = false;
       const texBase = (() => { const sc = [...document.scripts].find((x) => /viewer\.js/.test(x.src)); return sc ? sc.src.replace(/js\/viewer\.js.*$/, '') : ''; })();
+      const originals = g.VWValheimAssets && texBase && location.protocol !== 'file:' ? g.VWValheimAssets.create(texBase, THREE) : null;
+      let originalRevision = 0;
+      function prepareOriginals(r) {
+        const revision = ++originalRevision, status = $('.originalStatus');
+        status.hidden = Q.detail !== 'valheim';
+        if (status.hidden) return;
+        if (!originals) { status.textContent = 'Originalgrafik ist hier nicht verfügbar. Natur-Grafik wird verwendet.'; return; }
+        const names = [...new Set(r.types.map((t) => t[0]).concat(Object.keys(r.natureModels || {})))];
+        status.textContent = 'Valheim-Modelle und Texturen werden geladen …';
+        const before = names.filter((n) => originals.get(n)).length;
+        originals.prepare(names).then((count) => {
+          if (revision !== originalRevision || Q.detail !== 'valheim' || reg !== r) return;
+          status.textContent = `${count} von ${names.length} Objekttypen mit Originalgrafik. Fehlende Modelle nutzen Natur-Grafik. Gelände und Effekte bleiben vereinfacht.`;
+          if (count > before) reloadKeep();
+        }).catch(() => {
+          if (revision === originalRevision) status.textContent = 'Originalgrafik konnte nicht geladen werden. Natur-Grafik wird verwendet.';
+        });
+      }
       const texList = (texBase && location.protocol !== 'file:') ? fetch(texBase + 'textures/list.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})) : Promise.resolve({});
       const RTEX = {}; const rtex = (k) => {
         const key = (REAL ? 'img:' : '') + k; if (RTEX[key]) return RTEX[key];
@@ -494,13 +513,14 @@
         const nn = Math.min(40, Math.max(0.5, dist / 400)); if (Math.abs(cam.near - nn) > 0.05) { cam.near = nn; cam.updateProjectionMatrix(); } // Nahgrenze mit dem Zoom: genaue Tiefe, kein Flackern von Wasser/Strand
       }
       function clear() {
-        if (content) { scene.remove(content); content.traverse((o) => { if (o.geometry && !Object.values(geos).includes(o.geometry) && o.geometry !== box) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material)) o.material.dispose(); }); }
+        if (content) { scene.remove(content); content.traverse((o) => { if (o.userData.original) return; if (o.geometry && !Object.values(geos).includes(o.geometry) && o.geometry !== box) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material)) o.material.dispose(); }); }
         labels.forEach((l) => l.d.remove()); labels = []; meshes = {}; pickList = []; clearMarkers(); $('.vw-chest').hidden = true;
       }
       function load(r, keepCam) {
         clear(); reg = r; content = new THREE.Group(); scene.add(content);
         const [X0, X1, Z0, Z1] = r.bounds; CX = (X0 + X1) / 2; CZ = (Z0 + Z1) / 2;
-        const pmode = Q.detail === 'simple' ? 'simple' : ((Q.detail === 'natur' || Q.detail === 'real') && colorMode !== 'own') ? 'natur' : 'full'; curMode = pmode; REAL = Q.detail === 'real';
+        const pmode = Q.detail === 'simple' ? 'simple' : ((Q.detail === 'natur' || Q.detail === 'real' || Q.detail === 'valheim') && colorMode !== 'own') ? 'natur' : 'full'; curMode = pmode; REAL = Q.detail === 'real';
+        ren.outputEncoding = Q.detail === 'valheim' ? THREE.sRGBEncoding : THREE.LinearEncoding;
         const span = Math.max(X1 - X0, Z1 - Z0); bigArea = span > 2000; const sc = sun.shadow.camera;
         const sh = bigArea ? 380 : span / 2 + 20; sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.far = bigArea ? 1600 : 1500; sc.updateProjectionMatrix();
         if (!bigArea) { sun.position.set(-span * 0.3, span * 0.45 + 120, span * 0.25); sun.target.position.set(0, 0, 0); }
@@ -540,24 +560,43 @@
         for (const [cat, arr] of Object.entries(r.pieces)) {
           const n = arr.length / 6; if (!n) continue;
           const groups = {};
-          for (let k = 0; k < n; k++) { const o = k * 6; const ty = r.types[arr[o + 4]]; const sk = detailed ? shapeOf(ty[0]) : 'box'; (groups[sk] || (groups[sk] = [])).push(o); }
+          for (let k = 0; k < n; k++) { const o = k * 6; const ty = r.types[arr[o + 4]]; const sk = Q.detail === 'valheim' && originals && originals.get(ty[0]) ? 'original:' + ty[0] : detailed ? shapeOf(ty[0]) : 'box'; (groups[sk] || (groups[sk] = [])).push(o); }
           for (const [sk, idxs] of Object.entries(groups)) {
-            const im = new THREE.InstancedMesh(SHAPES[sk], pieceMat(cat, pmode), idxs.length); im.castShadow = true; im.receiveShadow = true;
+            const original = sk.startsWith('original:') && originals.get(sk.slice(9));
+            const im = new THREE.InstancedMesh(original ? original.geometry : SHAPES[sk], original ? original.materials : pieceMat(cat, pmode), idxs.length); im.castShadow = true; im.receiveShadow = true;
             const sub = new Array(idxs.length * 6);
             idxs.forEach((o, k) => {
               for (let j = 0; j < 6; j++) sub[k * 6 + j] = arr[o + j];
               const ty = r.types[arr[o + 4]], tilt = (ty[4] || 0) * Math.PI / 180, alongX = ty[1] >= ty[3] * 1.5;
               pv.set(arr[o] - CX, arr[o + 1] - WL, -(arr[o + 2] - CZ));
               if (tilt && alongX) eu.set(0, -arr[o + 3] * Math.PI / 180, tilt, 'YXZ'); else eu.set(-tilt, -arr[o + 3] * Math.PI / 180, 0, 'YXZ');
-              q.setFromEuler(eu); sv.set(ty[1], ty[2], ty[3]); m4.compose(pv, q, sv); im.setMatrixAt(k, m4);
+              if (original) { eu.set(0, -arr[o + 3] * Math.PI / 180, 0, 'YXZ'); sv.set(1, 1, 1); }
+              else sv.set(ty[1], ty[2], ty[3]);
+              q.setFromEuler(eu); m4.compose(pv, q, sv); im.setMatrixAt(k, m4);
             });
-            im.userData = { cat, arr: sub }; (meshes[cat] || (meshes[cat] = [])).push(im); content.add(im); pickList.push(im);
+            im.userData = { cat, arr: sub, original: !!original }; (meshes[cat] || (meshes[cat] = [])).push(im); content.add(im); pickList.push(im);
           }
         }
         recolor(colorMode);
         // Natur
         natG = new THREE.Group(); content.add(natG);
-        const N = r.nature || {};
+        let N = r.nature || {};
+        if (Q.detail === 'valheim' && originals && r.natureModels) {
+          N = {};
+          for (const [name, entry] of Object.entries(r.natureModels)) {
+            const model = originals.get(name), a = entry.instances;
+            if (!model) { const fallback = N[entry.kind] || (N[entry.kind] = []); for (const v of a) fallback.push(v); continue; }
+            const step = bigArea ? ({ low: 4, mid: 2, high: 1 }[Q.nature] || 1) : (Q.nature === 'low' ? 2 : 1);
+            const im = new THREE.InstancedMesh(model.geometry, model.materials, Math.ceil(a.length / 5 / step));
+            let instance = 0;
+            for (let i = 0; i < a.length; i += 5 * step) {
+              pv.set(a[i] - CX, a[i + 1] - WL, -(a[i + 2] - CZ));
+              eu.set(0, -a[i + 3] * Math.PI / 180, 0, 'YXZ'); q.setFromEuler(eu); sv.setScalar(a[i + 4] || 1);
+              m4.compose(pv, q, sv); im.setMatrixAt(instance++, m4);
+            }
+            im.userData.original = true; im.castShadow = !bigArea; im.receiveShadow = true; natG.add(im);
+          }
+        }
         const NS = bigArea ? { low: 4, mid: 2, high: 1 }[Q.nature] : { low: 2, mid: 1, high: 1 }[Q.nature] || 1;
         const list = (keys, f) => { const out = []; keys.forEach(([k, s]) => { const a = N[k] || []; for (let i = 0, c = 0; i < a.length; i += 5, c++) if (c % NS === 0) out.push([a[i], a[i + 1], a[i + 2], a[i + 3], a[i + 4], s]); }); return out; };
         function inst(geo, mat, arr, fn) { if (!arr.length) return; const im = new THREE.InstancedMesh(geo, mat, arr.length); im.castShadow = !bigArea; arr.forEach((p, k) => { fn(p); im.setMatrixAt(k, m4); }); natG.add(im); }
@@ -580,7 +619,7 @@
         $('.top').innerHTML = r.topTypes.slice(0, 15).map((t) => `<tr><td>${esc(pieceName(t[0]))}</td><td class="n">${fmt(t[1])}</td></tr>`).join('');
         chestSearch(); placePlans(); drawPlayers(); shadowFresh = false; shadowPasses = 2; invalidate();
         if (!keepCam) views('obl');
-        SEL.reset(); TL.onLoad();
+        SEL.reset(); TL.onLoad(); prepareOriginals(r);
       }
       function recolor(mode) {
         colorMode = mode;
@@ -588,6 +627,7 @@
           const { cat, arr } = im.userData; const n = arr.length / 6;
           const NAT_TINT = { dark: 0x8a7a6a, misc: 0xd8d0c0 };
           for (let k = 0; k < n; k++) { const o = k * 6; tmp.setHex(mode === 'own' ? OWNC[arr[o + 5] % OWNC.length] : curMode === 'natur' ? (NAT_TINT[cat] || 0xffffff) : CAT[cat] ? CAT[cat][0] : 0xb4a58a); if (mode !== 'own') { const j = ((arr[o] * 7.3 + arr[o + 2] * 3.1 + arr[o + 1] * 5.7) % 1 + 1) % 1; tmp.offsetHSL(0, 0, (j - 0.5) * 0.07); } im.setColorAt(k, tmp); }
+          if (im.userData.original && mode !== 'own') for (let k = 0; k < n; k++) im.setColorAt(k, tmp.setHex(0xffffff));
           im.instanceColor.needsUpdate = true;
         }
         SEL.paint();
@@ -597,7 +637,7 @@
         L.innerHTML = mode === 'own' ? reg.owners.map((o, i) => `<div><span class="sw" style="background:${hex(OWNC[i % OWNC.length])}"></span>${esc(o)}</div>`).join('')
           : Object.keys(meshes).map((c) => `<div><span class="sw" style="background:${hex((CAT[c] || CAT.misc)[0])}"></span>${(CAT[c] || CAT.misc)[1]} <span class="sub">(${fmt(meshes[c].reduce((a, m) => a + m.count, 0))})</span></div>`).join('');
       }
-      $('.cMat').onclick = () => { $('.cMat').classList.add('on'); $('.cOwn').classList.remove('on'); colorMode = 'mat'; if ((Q.detail === 'natur' || Q.detail === 'real') && reg) reloadKeep(); else recolor('mat'); };
+      $('.cMat').onclick = () => { $('.cMat').classList.add('on'); $('.cOwn').classList.remove('on'); colorMode = 'mat'; if ((Q.detail === 'natur' || Q.detail === 'real' || Q.detail === 'valheim') && reg) reloadKeep(); else recolor('mat'); };
       $('.cOwn').onclick = () => { $('.cOwn').classList.add('on'); $('.cMat').classList.remove('on'); colorMode = 'own'; if (curMode === 'natur' && reg) reloadKeep(); else recolor('own'); };
       const layerDefs = [['Bauteile', (v) => Object.values(meshes).flat().forEach((m) => (m.visible = v))], ['Dächer', (v) => ['roof', 'droof'].forEach((c) => meshes[c] && meshes[c].forEach((m) => (m.visible = v)))], ['Vegetation', (v) => natG && (natG.visible = v)], ['Wasser', (v) => (water.visible = v)], ['Namen', (v) => (showLbl = v)]];
       const layerState = layerDefs.map(() => true);

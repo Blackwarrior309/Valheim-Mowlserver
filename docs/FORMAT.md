@@ -51,6 +51,7 @@ Der Viewer liest `.vwelt` per Datei, per Teilen-HTML (eingebettet) oder per URL 
   "owners": [ "Leyrawr (Clwhmmr)", … ],
   "pieces": { "<kategorie>": [x,y,z,gierGrad,typIndex,ownerIndex,  x,y,z,…] },   // flach, Schritt 6
   "nature": { "<art>": [x,y,z,gier,scale, …] },                                    // flach, Schritt 5
+  "natureModels": { "<prefabName>": { "kind": "tree_beech", "instances": [x,y,z,gier,scale, …] } }, // optional, Originalgrafik; Schritt 5
   "labels": [ ["portal"|"bed"|"tomb", text, x, y, z] ],
   "chests": [ { "t": "Holzkiste", "s": "Schildtext", "o": "Erbauer", "x","y","z", "i": [[itemName, anzahl], …] } ],
   "builders": [[name, anzahl]], "topTypes": [[prefab, anzahl]]

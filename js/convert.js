@@ -241,7 +241,7 @@
           // Bodenhöhe: bekannte Pflanzen/Steine; andere natürliche Objekte nur als Ersatz (siehe unten), unsichtbare Systemobjekte (_ZoneCtrl usw., liegen auf Höhe 0) nie
           if (GROUND.has(prefab)) { pushG(x, y, z); gCells.add(Math.floor(x / 32) + ',' + Math.floor(z / 32)); }
           else if (cr === undefined && !(name && (SPEC[name] || name[0] === '_')) && !H_PORTAL.has(prefab) && y > WATER - 40) { if (alt.length < 3e6) alt.push(x, y, z); }
-          const nk = NAT[prefab]; if (nk) nature.push([nk, x, y, z, yaw, scale]);
+          const nk = NAT[prefab]; if (nk) nature.push([nk, x, y, z, yaw, scale, name]);
           if (cr === undefined) { const bh = hintOf(prefab); if (bh) { const k = Math.floor(x / BR) + ',' + Math.floor(z / BR); let v = bioVotes.get(k); if (!v) bioVotes.set(k, (v = new Uint16Array(10))); v[bh]++; } }
           if (H_PORTAL.has(prefab)) portals.push({ tag: (S && S[K.tag]) || '', x, y, z });
           else if (prefab === H_SIGN && S && S[K.text]) signs.push({ x, y, z, t: clean(S[K.text]), a: S[K.author] || '', an: S[K_AUTHOR_NAME] || '', c: cr !== undefined ? cr.toString() : '' });
@@ -393,11 +393,11 @@
         if (p[5]) bOwn[on] = (bOwn[on] || 0) + 1;
         tCount[name] = (tCount[name] || 0) + 1;
       });
-      const NATR = {};
+      const NATR = {}, natureModels = {};
       const CAP = W ? { rock: 15000, bush: 10000, log: 4000 } : null, cnt = {}, step = {};
       if (W) { nature.forEach((n) => (cnt[n[0]] = (cnt[n[0]] || 0) + 1)); Object.keys(cnt).forEach((k) => (step[k] = Math.max(1, Math.ceil(cnt[k] / (CAP[k] || 25000))))); }
       const seenN = {};
-      nature.forEach((n) => { if (!inR(n[1], n[3])) return; if (W) { seenN[n[0]] = (seenN[n[0]] || 0) + 1; if (seenN[n[0]] % step[n[0]]) return; } (NATR[n[0]] || (NATR[n[0]] = [])).push(r1(n[1]), r1(n[2]), r1(n[3]), Math.round(n[4]), r2(n[5])); });
+      nature.forEach((n) => { if (!inR(n[1], n[3])) return; if (W) { seenN[n[0]] = (seenN[n[0]] || 0) + 1; if (seenN[n[0]] % step[n[0]]) return; } const values = [r1(n[1]), r1(n[2]), r1(n[3]), Math.round(n[4]), r2(n[5])]; (NATR[n[0]] || (NATR[n[0]] = [])).push(...values); if (n[6]) { const entry = natureModels[n[6]] || (natureModels[n[6]] = { kind: n[0], instances: [] }); entry.instances.push(...values); } });
       const labels = [];
       portals.forEach((p) => { if (inR(p.x, p.z)) labels.push(['portal', p.tag, r1(p.x), r1(p.y + 4), r1(p.z)]); });
       beds.forEach((b) => { if (inR(b.x, b.z)) labels.push(['bed', b.n, r1(b.x), r1(b.y + 1.5), r1(b.z)]); });
@@ -412,7 +412,7 @@
       return {
         id: W ? 'world' : 'b' + idx, name, center: [Math.round(cx), Math.round(cz)], pieceCount: cl.n,
         bounds: [x0, x1, z0, z1], res, nx, nz, h: b64(new Uint8Array(h16.buffer)), mask: hm.mask ? b64(hm.mask) : undefined,
-        types, owners, pieces: P, nature: NATR, labels, chests,
+        types, owners, pieces: P, nature: NATR, natureModels, labels, chests,
         builders: top, topTypes: Object.entries(tCount).sort((a, b) => b[1] - a[1]).slice(0, 25)
       };
     }
