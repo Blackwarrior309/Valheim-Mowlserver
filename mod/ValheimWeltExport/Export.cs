@@ -16,7 +16,7 @@ using UnityEngine;
 
 namespace ValheimWeltExport
 {
-    [BepInPlugin("de.valheimweltviewer.export", "Valheim Welt Bauteil-Export", "1.0.0")]
+    [BepInPlugin("de.valheimweltviewer.export", "Valheim Welt Bauteil-Export", "1.1.0")]
     public class Export : BaseUnityPlugin
     {
         bool done;
@@ -33,6 +33,8 @@ namespace ValheimWeltExport
             yield return new WaitForSeconds(3f); // Lokalisierung und Prefabs sicher geladen
             try { Write(); }
             catch (Exception e) { Logger.LogError("Bauteil-Export fehlgeschlagen: " + e); }
+            try { WriteWorldGen(); }
+            catch (Exception e) { Logger.LogError("Weltgenerator-Export fehlgeschlagen: " + e); }
         }
 
         static readonly CultureInfo IC = CultureInfo.InvariantCulture;
@@ -130,6 +132,48 @@ namespace ValheimWeltExport
         }
 
         static string V(Vector3 v) => "[" + F(v.x) + "," + F(v.y) + "," + F(v.z) + "]";
+
+        // Messwerte des Weltgenerators, damit die Webseite die Karte aus dem Seed exakt nachrechnen kann
+        void WriteWorldGen()
+        {
+            var wg = WorldGenerator.instance; if (wg == null) return;
+            var sb = new StringBuilder("{\"format\":\"vw-worldgen\",\"version\":1");
+            var world = Field(wg, "m_world");
+            sb.Append(",\"seedName\":").Append(J(Field(world, "m_seedName") as string)).Append(",\"seed\":").Append(Field(world, "m_seed"));
+            sb.Append(",\"worldGenVersion\":").Append(Field(world, "m_worldGenVersion"));
+            sb.Append(",\"offsets\":[");
+            for (int i = 0; i <= 4; i++) { if (i > 0) sb.Append(','); sb.Append(F((float)Field(wg, "m_offset" + i))); }
+            sb.Append("],\"riverSeed\":").Append(Field(wg, "m_riverSeed")).Append(",\"streamSeed\":").Append(Field(wg, "m_streamSeed"));
+            // Zufallsgenerator von Unity: erste Werte nach InitState(12345)
+            var st = UnityEngine.Random.state; UnityEngine.Random.InitState(12345);
+            sb.Append(",\"rng12345\":["); for (int i = 0; i < 8; i++) { if (i > 0) sb.Append(','); sb.Append(UnityEngine.Random.Range(-10000, 10000)); } sb.Append(']');
+            UnityEngine.Random.state = st;
+            // Mathf.PerlinNoise an festen Stellen
+            sb.Append(",\"perlin\":[");
+            var rnd = new System.Random(7); int k = 0;
+            for (int i = 0; i < 300; i++)
+            {
+                float x = (float)(rnd.NextDouble() * 400 - 200), y = (float)(rnd.NextDouble() * 400 - 200);
+                if (i < 20) { x = i * 0.37f; y = i * 0.11f; }
+                if (k++ > 0) sb.Append(',');
+                sb.Append('[').Append(F(x)).Append(',').Append(F(y)).Append(',').Append(Mathf.PerlinNoise(x, y).ToString("R", IC)).Append(']');
+            }
+            sb.Append("],\"samples\":[");
+            // Biom und Grundhöhe auf einem Raster über die ganze Welt
+            var baseH = typeof(WorldGenerator).GetMethod("GetBaseHeight", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(float), typeof(float), typeof(bool) }, null);
+            k = 0;
+            for (int gz = -10400; gz <= 10400; gz += 400) for (int gx = -10400; gx <= 10400; gx += 400)
+            {
+                var b = (int)wg.GetBiome((float)gx, (float)gz, 0.02f, false);
+                var h = (float)baseH.Invoke(wg, new object[] { (float)gx, (float)gz, false });
+                if (k++ > 0) sb.Append(',');
+                sb.Append('[').Append(gx).Append(',').Append(gz).Append(',').Append(b).Append(',').Append(h.ToString("R", IC)).Append(']');
+            }
+            sb.Append("]}\n");
+            var dir = Path.Combine(Paths.ConfigPath, "ValheimWeltLive"); Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "weltgenerator.json"), sb.ToString(), new UTF8Encoding(false));
+            Logger.LogInfo("Weltgenerator-Messwerte gespeichert");
+        }
 
         void Write()
         {
