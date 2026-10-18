@@ -8,8 +8,9 @@
   // Snapshot inkl. eingeblendeter Baupläne packen
   function packCurrent() {
     const plans = viewer ? viewer.getPlans() : [];
-    if (!plans.length) return currentGz;
-    return fflate.gzipSync(fflate.strToU8(JSON.stringify(Object.assign({}, current, { plans }))), { level: 9 });
+    const workspace = viewer && viewer.getWorkspace ? viewer.getWorkspace() : null;
+    if (!plans.length && (!workspace || !Object.keys(workspace.records).length)) return currentGz;
+    return fflate.gzipSync(fflate.strToU8(JSON.stringify(Object.assign({}, current, { plans, workspace }))), { level: 9 });
   }
 
   // ---------- Hilfen ----------
@@ -93,6 +94,7 @@
     } finally { fetchBusy = false; }
   }
   function show(snap, gz, status) {
+    if (viewer && current && VWTools.worldKey(current) !== VWTools.worldKey(snap)) { viewer.destroy(); viewer = null; }
     current = snap; currentGz = gz;
     start.hidden = true; app.hidden = false;
     if (viewer) { viewer.update(snap); if (status) viewer.setStatus(status); return; }
@@ -113,7 +115,7 @@
     try {
       viewer && viewer.setStatus('Erzeuge Teilen-Datei …');
       const get = (p) => fetch(p).then((r) => { if (!r.ok) throw new Error(p + ' nicht ladbar'); return r.text(); });
-      const [three, ff, data, view, i18n, rec, wgen] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => ''), get('js/worldgen.js').catch(() => '')]);
+      const [three, ff, data, view, i18n, rec, wgen, tools, ws] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => ''), get('js/worldgen.js').catch(() => ''), get('js/map-tools.js'), get('js/viewer-workspace.js')]);
       const js = (s) => s.replace(/<\/script/gi, '<\\/script');
       const title = (current.world.name || 'Valheim-Welt') + ' – Valheim-Welt';
       const html = `<!doctype html>
@@ -129,6 +131,8 @@
 <script>${js(data)}</script>
 <script>${js(rec)}</script>
 <script>${js(wgen)}</script>
+<script>${js(tools)}</script>
+<script>${js(ws)}</script>
 <script>${js(view)}</script>
 <script id="vwelt" type="application/octet-stream">${u8ToB64(packCurrent())}</script>
 <script>

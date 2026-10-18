@@ -12,3 +12,6 @@ Inoffizielles Fan-Projekt, nicht mit Iron Gate verbunden.
 
 Grafikoption **Valheim Original**: exportierte Spielmodelle und Texturen, bei Bedarf
 im Browser geladen. Export, Abdeckung und Grenzen: [Originalgrafik](docs/ORIGINAL-GRAPHICS.md).
+
+Routen mit Portalwechseln, Änderungsansicht, teilbare Orte, benannte 3D-Räume mit
+Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md).

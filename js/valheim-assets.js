@@ -3,6 +3,7 @@
   'use strict';
   function create(base, THREE) {
     let manifest;
+    let disposed = false;
     const models = new Map(), pending = new Map(), textures = new Map();
     const url = (file) => base + 'assets/valheim/' + file;
     async function json(file) {
@@ -29,7 +30,7 @@
               t.wrapS = t.wrapT = THREE.RepeatWrapping;
               t.encoding = THREE.sRGBEncoding;
               t.repeat.fromArray(spec.repeat || [1, 1]); t.offset.fromArray(spec.offset || [0, 0]);
-              resolve(t);
+              if (disposed) { t.dispose(); reject(new Error('Viewer geschlossen')); } else resolve(t);
             }, undefined, reject);
           }));
           m.map = await textures.get(key);
@@ -52,24 +53,28 @@
           geometry.computeBoundingSphere();
           // Sequential materials ensure partial loads can be disposed on error.
           for (const spec of d.materials) mats.push(await material(spec));
+          if (disposed) throw new Error('Viewer geschlossen');
           models.set(name, { geometry, materials: mats });
         } catch (e) {
           if (geometry) geometry.dispose(); mats.forEach((m) => m.dispose());
-          console.warn('Valheim-Grafik: Ersatzmodell für', name, e);
+          if (!disposed) console.warn('Valheim-Grafik: Ersatzmodell für', name, e);
         }
       })());
       await pending.get(name);
+      if (!models.has(name)) pending.delete(name);
     }
     async function prepare(names) {
+      if (disposed) return 0;
       const entries = await index();
       const queue = [...new Set(names)].filter((n) => entries[n]);
       let next = 0;
       await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
-        while (next < queue.length) { const name = queue[next++]; await read(name, entries[name]); }
+        while (next < queue.length && !disposed) { const name = queue[next++]; await read(name, entries[name]); }
       }));
       return names.filter((n) => models.has(n)).length;
     }
-    return { prepare, get: (name) => models.get(name) };
+    function dispose() { disposed = true; models.forEach((m) => { m.geometry.dispose(); m.materials.forEach((v) => v.dispose()); }); textures.forEach((p) => p.then((t) => t.dispose()).catch(() => {})); models.clear(); textures.clear(); pending.clear(); }
+    return { prepare, get: (name) => models.get(name), dispose };
   }
   g.VWValheimAssets = { create };
 })(typeof self !== 'undefined' ? self : globalThis);

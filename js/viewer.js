@@ -85,6 +85,15 @@
   const pieceName = (n) => PN()[n] || n;
 
   function mount(root, snap, opts) {
+    let destroyed = false, workspace = null;
+    const cleanup = [], timers = new Set(), frames = new Set(), timeouts = new Set();
+    const listen = (target, name, fn, options) => { target.addEventListener(name, fn, options); cleanup.push(() => target.removeEventListener(name, fn, options)); };
+    const addEventListener = (name, fn, options) => listen(g, name, fn, options);
+    const setInterval = (fn, ms) => { if (destroyed) return 0; const id = g.setInterval(() => { if (!destroyed) fn(); }, ms); timers.add(id); return id; };
+    const clearInterval = (id) => { timers.delete(id); g.clearInterval(id); };
+    const setTimeout = (fn, ms) => { if (destroyed) return 0; const id = g.setTimeout(() => { timeouts.delete(id); if (!destroyed) fn(); }, ms); timeouts.add(id); return id; };
+    const clearTimeout = (id) => { timeouts.delete(id); g.clearTimeout(id); };
+    const requestAnimationFrame = (fn) => { const id = g.requestAnimationFrame((t) => { frames.delete(id); if (!destroyed) fn(t); }); frames.add(id); return id; };
     opts = opts || {};
     if (!document.getElementById('vw-css')) { const st = document.createElement('style'); st.id = 'vw-css'; st.textContent = CSS; document.head.appendChild(st); }
     root.innerHTML = '';
@@ -118,6 +127,7 @@
       <h2>Grafik</h2><div class="row gstyle"><button data-gs="valheim" hidden>Valheim Original</button><button data-gs="real" title="Gemalte Texturen (textures/*.jpg)">Realistisch</button><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
       <div class="sub originalStatus" role="status" hidden></div>
       <details class="perf"><summary>Leistung &amp; Grafik</summary>
+        <div class="row"><button data-profile="low">Sparsam / Handy</button><button data-profile="mid">Ausgewogen</button><button data-profile="high">Detail</button></div>
         <div class="qrow"><label for="vwq-sh">Schatten</label><select id="vwq-sh" data-q="shadows"><option value="0">Aus (schnell)</option><option value="1">An – berechnet im Stillstand</option></select></div>
         <div class="qrow"><label for="vwq-de">Grafik</label><select id="vwq-de" data-q="detail"><option value="valheim" hidden disabled>Valheim Original (Modelle &amp; Texturen)</option><option value="real">Realistisch (gemalte Texturen)</option><option value="natur">Natur-Texturen (Holz, Stein, Stroh)</option><option value="full">Einfach texturiert (einfärbbar)</option><option value="simple">Blöcke (am schnellsten)</option></select></div>
         <div class="qrow"><label for="vwq-na">Natur</label><select id="vwq-na" data-q="nature"><option value="low">Wenig</option><option value="mid">Mittel</option><option value="high">Alles</option></select></div>
@@ -143,7 +153,7 @@
   </div>
   <div class="vw-pane" data-p="chests" hidden><div class="vw-scroll"><div class="vw-wrap">
     <div class="vw-bar"><input type="search" class="kq" placeholder="Item suchen, z. B. Eisen, Met, Kernholz …" autocomplete="off"><select class="ka"></select><button class="klab">Nur beschriftete</button><button class="kgame" hidden title="Öffnet die Kisten-Suche im laufenden Spiel und setzt Pins auf der Karte">🎯 Im Spiel suchen</button></div>
-    <div class="vw-stats kstats"></div><div class="kcraft"></div><div class="kroute"></div>
+    <details class="vw-panel"><summary>Routen-Einstellungen</summary><div class="row"><select class="rtPlayer" aria-label="Routenstart"><option value="view">Aktuelle 3D-Position</option><option value="station">Werkstation</option></select><label><input class="rtBoat" type="checkbox"> Bootswege erlauben</label><label><input class="rtMetal" type="checkbox"> Welt erlaubt Metall durch Portale</label></div><div class="sub">Wege berücksichtigen das verfügbare Höhenraster; unbekannte Gebiete können nicht zuverlässig bewertet werden.</div></details><div class="vw-stats kstats"></div><div class="kcraft"></div><div class="kroute"></div>
     <div class="vw-grid"><div class="vw-panel"><h2 style="margin-top:0">Summe</h2><table class="ktot"></table><div class="sub" style="margin-top:8px">Klick auf ein Item filtert die Kisten. „★2“ = Ausrüstungsstufe.</div></div><div class="klist"></div></div>
   </div></div></div>
   <div class="vw-pane" data-p="info" hidden><div class="vw-scroll"><div class="vw-wrap info"></div></div></div>
@@ -681,6 +691,42 @@
         return 'box';
       }
       let curMode = 'natur', bigArea = false, reg = null, CX = 0, CZ = 0, content = null, meshes = {}, pickList = [], natG = null, terrain = null, labels = [], showLbl = true, colorMode = 'mat';
+      const areaG = new THREE.Group(), changeG = new THREE.Group(); scene.add(areaG, changeG);
+      let roomDefs = [], roomLab = [], changeDef = null, changeMode = 'off', areaPick = null, areaFirst = null;
+      function emptyGroup(group) { while (group.children.length) { const o = group.children[0]; group.remove(o); if (o.geometry) o.geometry.dispose(); for (const m of [].concat(o.material || [])) m.dispose(); } }
+      function drawAreas(rooms = roomDefs) {
+        roomDefs = rooms; emptyGroup(areaG); roomLab.forEach((l) => l.d.remove()); roomLab = [];
+        if (!reg) return;
+        for (const r of rooms) {
+          const size = r.max.map((n, i) => n - r.min[i]), center = r.max.map((n, i) => (n + r.min[i]) / 2);
+          if (r.max[0] < reg.bounds[0] || r.min[0] > reg.bounds[1] || r.max[2] < reg.bounds[2] || r.min[2] > reg.bounds[3]) continue;
+          const box = new THREE.BoxGeometry(...size), edges = new THREE.EdgesGeometry(box); box.dispose();
+          const mesh = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x4ddbd4, transparent: true, opacity: 0.8 }));
+          mesh.position.copy(W(...center)); areaG.add(mesh);
+          const d = document.createElement('div'); d.className = 'vw-lbl'; d.textContent = r.name; LB.appendChild(d); roomLab.push({ d, v: W(center[0], r.max[1], center[2]) });
+        }
+        invalidate();
+      }
+      function tintChanges() {
+        if (!reg || !changeDef || changeMode === 'off' || changeMode === 'removed') return;
+        const keys = new Set(changeDef.added.map((p) => [p.name, [p.x, p.y, p.z].join(','), p.yaw].join('|')));
+        for (const im of Object.values(meshes).flat()) { const a = im.userData.arr;
+          for (let i = 0; i < a.length; i += 6) if (keys.has([reg.types[a[i + 4]][0], [a[i], a[i + 1], a[i + 2]].join(','), a[i + 3]].join('|'))) im.setColorAt(i / 6, tmp.setHex(0x33ff66));
+          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+        }
+      }
+      function drawChanges(data = changeDef, mode = changeMode) {
+        changeDef = data; changeMode = mode; emptyGroup(changeG); if (!reg) return;
+        recolor(colorMode);
+        if (data && mode !== 'off' && mode !== 'added') for (const p of data.removed) {
+          if (p.x < reg.bounds[0] || p.x > reg.bounds[1] || p.z < reg.bounds[2] || p.z > reg.bounds[3]) continue;
+          const spec = g.VW_DATA.pieces[p.name] || ['misc', 1, 1, 1], box = new THREE.BoxGeometry(spec[1], spec[2], spec[3]), edges = new THREE.EdgesGeometry(box); box.dispose();
+          const ghost = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xff4444 })); ghost.position.copy(W(p.x, p.y, p.z)); ghost.rotation.y = -p.yaw * Math.PI / 180; changeG.add(ghost);
+        }
+        invalidate();
+      }
+      function beginArea(fn) { if (areaPick) areaPick(null); areaPick = fn; areaFirst = null; cv.style.cursor = fn ? 'crosshair' : ''; if (fn) { if (walk) toggleWalk(false); if (fly) toggleFly(false); } }
+      addEventListener('keydown', (e) => { if (e.code === 'Escape' && areaPick) beginArea(null); });
       const W = (x, y, z) => new THREE.Vector3(x - CX, y - WL, -(z - CZ));
       const LB = $('.vw-labels');
       // Kamera
@@ -702,7 +748,7 @@
         const nn = Math.min(40, Math.max(0.5, dist / 400)); if (Math.abs(cam.near - nn) > 0.05) { cam.near = nn; cam.updateProjectionMatrix(); } // Nahgrenze mit dem Zoom: genaue Tiefe, kein Flackern von Wasser/Strand
       }
       function clear() {
-        if (content) { scene.remove(content); content.traverse((o) => { if (o.userData.original) return; if (o.geometry && !Object.values(geos).includes(o.geometry) && o.geometry !== box) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material)) o.material.dispose(); }); }
+        if (content) { scene.remove(content); content.traverse((o) => { if (o.userData.original) return; if (o.geometry && !Object.values(geos).includes(o.geometry) && o.geometry !== box && !Object.values(SHAPES).includes(o.geometry)) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material)) o.material.dispose(); }); }
         labels.forEach((l) => l.d.remove()); labels = []; meshes = {}; pickList = []; clearMarkers(); $('.vw-chest').hidden = true;
       }
       function load(r, keepCam) {
@@ -757,11 +803,11 @@
         for (const [cat, arr] of Object.entries(r.pieces)) {
           const n = arr.length / 6; if (!n) continue;
           const groups = {};
-          for (let k = 0; k < n; k++) { const o = k * 6; const ty = r.types[arr[o + 4]]; const sk = Q.detail === 'valheim' && originals && originals.get(ty[0]) ? 'original:' + ty[0] : detailed ? shapeOf(ty[0]) : 'box'; (groups[sk] || (groups[sk] = [])).push(o); }
+          for (let k = 0; k < n; k++) { const o = k * 6; const ty = r.types[arr[o + 4]]; const shape = Q.detail === 'valheim' && originals && originals.get(ty[0]) ? 'original:' + ty[0] : detailed ? shapeOf(ty[0]) : 'box'; const sk = shape + '@' + Math.floor(arr[o] / 128) + ',' + Math.floor(arr[o + 2] / 128); (groups[sk] || (groups[sk] = [])).push(o); }
           for (const [sk, idxs] of Object.entries(groups)) {
-            const original = sk.startsWith('original:') && originals.get(sk.slice(9));
-            const im = new THREE.InstancedMesh(original ? original.geometry : SHAPES[sk], original ? original.materials : pieceMat(cat, pmode), idxs.length); im.castShadow = true; im.receiveShadow = true;
-            const sub = new Array(idxs.length * 6);
+            const shape = sk.split('@')[0], original = shape.startsWith('original:') && originals.get(shape.slice(9));
+            const im = new THREE.InstancedMesh(original ? original.geometry : SHAPES[shape], original ? original.materials : pieceMat(cat, pmode), idxs.length); im.castShadow = true; im.receiveShadow = true;
+            const sub = new Array(idxs.length * 6), bounds = new THREE.Box3();
             idxs.forEach((o, k) => {
               for (let j = 0; j < 6; j++) sub[k * 6 + j] = arr[o + j];
               const ty = r.types[arr[o + 4]], tilt = (ty[4] || 0) * Math.PI / 180, alongX = ty[1] >= ty[3] * 1.5;
@@ -769,9 +815,9 @@
               if (tilt && alongX) eu.set(0, -arr[o + 3] * Math.PI / 180, tilt, 'YXZ'); else eu.set(-tilt, -arr[o + 3] * Math.PI / 180, 0, 'YXZ');
               if (original) { eu.set(0, -arr[o + 3] * Math.PI / 180, 0, 'YXZ'); sv.set(1, 1, 1); }
               else sv.set(ty[1], ty[2], ty[3]);
-              q.setFromEuler(eu); m4.compose(pv, q, sv); im.setMatrixAt(k, m4);
+              q.setFromEuler(eu); m4.compose(pv, q, sv); im.setMatrixAt(k, m4); bounds.expandByPoint(pv);
             });
-            im.userData = { cat, arr: sub, original: !!original }; (meshes[cat] || (meshes[cat] = [])).push(im); content.add(im); pickList.push(im);
+            im.userData = { cat, arr: sub, original: !!original, bounds: bounds.expandByScalar(40) }; (meshes[cat] || (meshes[cat] = [])).push(im); content.add(im); pickList.push(im);
           }
         }
         recolor(colorMode);
@@ -818,7 +864,7 @@
         $('.top').innerHTML = r.topTypes.slice(0, 15).map((t) => `<tr><td>${esc(pieceName(t[0]))}</td><td class="n">${fmt(t[1])}</td></tr>`).join('');
         chestSearch(); placePlans(); drawPlayers(); shadowFresh = false; shadowPasses = 2; invalidate();
         if (!keepCam) views('obl');
-        SEL.reset(); TL.onLoad(); prepareOriginals(r); drawRoute3();
+        SEL.reset(); TL.onLoad(); prepareOriginals(r); drawRoute3(); drawAreas(); drawChanges();
       }
       function recolor(mode) {
         colorMode = mode;
@@ -829,7 +875,7 @@
           if (im.userData.original && mode !== 'own') for (let k = 0; k < n; k++) im.setColorAt(k, tmp.setHex(0xffffff));
           im.instanceColor.needsUpdate = true;
         }
-        SEL.paint();
+        tintChanges(); SEL.paint();
         invalidate();
         const L = $('.legend');
         if (!reg) return;
@@ -855,6 +901,7 @@
       function reloadKeep() { const st = { tgt: tgt.clone(), dist, yaw, pit }; load(reg, true); applyLayers(); tgt.copy(st.tgt); dist = st.dist; yaw = st.yaw; pit = st.pit; }
       function setShadows(on) { sun.castShadow = on; shadowFresh = false; shadowPasses = on ? 2 : 0; invalidate(); }
       const syncGs = () => $$('[data-gs]').forEach((b) => b.classList.toggle('on', b.dataset.gs === Q.detail));
+      $$('[data-profile]').forEach((b) => b.onclick = () => { Object.assign(Q, ({ low: { detail: 'natur', nature: 'low', shadows: '0', res: '0.5', range: 'near' }, mid: { detail: originals ? 'valheim' : 'natur', nature: 'mid', shadows: '0', res: '1', range: 'mid' }, high: { detail: originals ? 'valheim' : 'natur', nature: 'high', shadows: '1', res: '1', range: 'far' } })[b.dataset.profile]); try { localStorage.setItem('vw-quality', JSON.stringify(Q)); } catch (e) { } $$('[data-q]').forEach((el) => el.value = Q[el.dataset.q]); ren.setPixelRatio(Math.min(devicePixelRatio, 2) * +Q.res); setShadows(Q.shadows === '1' && !fly && !walk); syncGs(); if (reg) reloadKeep(); resize(); });
       $$('[data-gs]').forEach((b) => (b.onclick = () => { const sel = $('[data-q="detail"]'); sel.value = b.dataset.gs; sel.onchange(); }));
       $$('[data-q]').forEach((el) => {
         el.value = Q[el.dataset.q];
@@ -971,9 +1018,10 @@
       function chestSearch() {
         const q = $('.cq').value.trim().toLowerCase(); curQ = q; clearMarkers(); const CR = $('.cres');
         if (!reg) return;
-        if (!q) { CR.innerHTML = `<div class="sub">${reg.chests.length} Kisten in diesem Gebiet. Treffer werden gelb markiert, Kiste anklicken zeigt den Inhalt.</div>`; return; }
+        const roomFilter = workspace && workspace.filter3();
+        if (!q && !roomFilter) { CR.innerHTML = `<div class="sub">${reg.chests.length} Kisten in diesem Gebiet. Treffer werden gelb markiert, Kiste anklicken zeigt den Inhalt.</div>`; return; }
         const matches = [];
-        reg.chests.forEach((c, i) => { const n = c.i.filter((it) => hitItem(it, q)).reduce((a, b) => a + b[1], 0); if (n || c.s.toLowerCase().includes(q)) matches.push({ i, n }); });
+        reg.chests.forEach((c, i) => { if (roomFilter && workspace.chestRoom(c)?.id !== roomFilter) return; const n = c.i.filter((it) => hitItem(it, q)).reduce((a, b) => a + b[1], 0); if (!q || n || c.s.toLowerCase().includes(q) || (workspace?.chestRoom(c)?.name || '').toLowerCase().includes(q)) matches.push({ i, n }); });
         matches.sort((a, b) => b.n - a.n);
         matches.forEach((m) => {
           const c = reg.chests[m.i], v = W(c.x, c.y, c.z);
@@ -1004,6 +1052,7 @@
       const pUp = (e) => {
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
+          if (areaPick) { const hit = rayHit(e, true); if (hit) { const p = { x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }; if (!areaFirst) { areaFirst = p; areaPick(p, null); } else { const fn = areaPick, first = areaFirst; areaPick = null; areaFirst = null; cv.style.cursor = ''; fn(first, p); } } return; }
           const h = rayHit(e);
           if (SEL.active) { if (h && h.instanceId != null) SEL.click(h.object, h.instanceId, e.shiftKey || downAt.shift); }
           else if (h && h.object.userData.cat === 'chest') { const k = chestAt(arrAt(h)); if (k >= 0) openChest(k, false); }
@@ -1099,10 +1148,21 @@
             const c = new THREE.Vector3(a[o] - CX, a[o + 1] - WL + YO(ty), -(a[o + 2] - CZ));
             if (tilt && alongX) eu.set(0, -a[o + 3] * Math.PI / 180, tilt, 'YXZ'); else eu.set(-tilt, -a[o + 3] * Math.PI / 180, 0, 'YXZ');
             const qq = new THREE.Quaternion().setFromEuler(eu), h = new THREE.Vector3(ty[1] / 2, ty[2] / 2, ty[3] / 2);
+              let rampAxis = 'z', rampSign = 1;
+              if (im.userData.original) {
+                if (!im.geometry.boundingBox) im.geometry.computeBoundingBox();
+                const matrix = new THREE.Matrix4(), scale = new THREE.Vector3(); im.getMatrixAt(k, matrix); matrix.decompose(pv, qq, scale);
+                im.geometry.boundingBox.getCenter(c).applyMatrix4(matrix); im.geometry.boundingBox.getSize(h).multiplyScalar(0.5).multiply(scale);
+                if (/stair|ladder/i.test(nm)) {
+                  const p = im.geometry.attributes.position.array, mean = [0, 0, 0]; for (let j = 0; j < p.length; j++) mean[j % 3] += p[j] / (p.length / 3);
+                  let x = 0, z = 0; for (let j = 0; j < p.length; j += 3) { x += (p[j] - mean[0]) * (p[j + 1] - mean[1]); z += (p[j + 2] - mean[2]) * (p[j + 1] - mean[1]); }
+                  rampAxis = Math.abs(x) > Math.abs(z) ? 'x' : 'z'; rampSign = Math.sign(rampAxis === 'x' ? x : z) || 1;
+                }
+              }
             const door = /door|gate|grate/i.test(nm) && !/portal|drawbridge|cloth/i.test(nm), portal = /^portal/i.test(nm), chest = im.userData.cat === 'chest', cloth = /cloth|banner|rug|carpet|torch|Candle|lantern|garland|sapling|mistletoe/i.test(nm);
             const r = Math.hypot(h.x, h.y, h.z);
             const ramp = /stair|ladder/i.test(nm); // Treppen/Leitern: begehbare Rampe statt Klotz
-            const b = { c, q: qq, iq: qq.clone().invert(), h, r, door, portal, chest, ramp, open: false, pass: cloth, im, k, ty };
+              const b = { c, q: qq, iq: qq.clone().invert(), h, r, door, portal, chest, ramp, rampAxis, rampSign, open: false, pass: cloth, im, k, ty };
             OBB.push(b); if (door || portal || chest) DOORS.push(b);
             const x0 = Math.floor((c.x - r) / GS), x1 = Math.floor((c.x + r) / GS), z0 = Math.floor((c.z - r) / GS), z1 = Math.floor((c.z + r) / GS);
             for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const kk = gx + ',' + gz; let l = GRID.get(kk); if (!l) GRID.set(kk, (l = [])); l.push(b); }
@@ -1127,8 +1187,8 @@
           if (b.pass || (b.door && b.open)) continue; if (Math.abs(b.c.x - x) > b.r || Math.abs(b.c.z - z) > b.r) continue;
           if (b.ramp) { // Höhe auf der Schräge; Steigrichtung unbekannt → die Richtung nehmen, die unter den Füßen liegt
             lv.set(x - b.c.x, 0, z - b.c.z).applyQuaternion(b.iq); if (Math.abs(lv.x) > b.h.x + 0.1 || Math.abs(lv.z) > b.h.z + 0.05) continue;
-            const t = Math.max(0, Math.min(1, (lv.z + b.h.z) / (2 * b.h.z))), y0 = b.c.y - b.h.y, H2 = 2 * b.h.y;
-            const feet = fromY - STEP; let best = null; for (const hh of [y0 + t * H2, y0 + (1 - t) * H2]) if (hh <= fromY + 0.01 && (best === null || Math.abs(hh - feet) < Math.abs(best - feet))) best = hh; if (best !== null) g = Math.max(g, best);
+              const axis = b.rampAxis, t = Math.max(0, Math.min(1, (lv[axis] * b.rampSign + b.h[axis]) / (2 * b.h[axis]))), y0 = b.c.y - b.h.y, H2 = 2 * b.h.y;
+              const hh = y0 + t * H2; if (hh <= fromY + 0.01) g = Math.max(g, hh);
             continue;
           }
           let t = rayBox(b, o, DOWN, 40);
@@ -1156,13 +1216,14 @@
       function heroColors(lin) { if (lin === heroLin) return; heroLin = lin; HERO_MATS.forEach((m) => { m.color.setHex(m.userData.hex); if (lin) m.color.convertSRGBToLinear(); }); }
       // ---- Route des Routenplaners in 3D: Linie mit nummerierten Wegpunkten (Portalsprünge gestrichelt)
       let RT3 = null, rtG = null, rtLab = [];
+      const rtMatU = new THREE.LineDashedMaterial({ color: 0xf28c28, dashSize: 1, gapSize: 2, depthTest: false, transparent: true });
       const rtMat = new THREE.LineBasicMaterial({ color: 0xffc83d, depthTest: false, transparent: true, opacity: 0.95 }), rtMatJ = new THREE.LineDashedMaterial({ color: 0xbe96ff, dashSize: 3, gapSize: 3, depthTest: false, transparent: true });
       function drawRoute3() {
         if (rtG) { scene.remove(rtG); rtG.traverse((o) => o.geometry && o.geometry.dispose()); rtG = null; } rtLab.forEach((l) => l.d.remove()); rtLab = [];
         if (!RT3 || !reg) { invalidate(); return; } rtG = new THREE.Group(); rtG.renderOrder = 12; scene.add(rtG);
         const P = RT3.path; let seg = [];
-        const flush = (mat, pts) => { if (pts.length < 2) return; const g2 = new THREE.BufferGeometry().setFromPoints(pts); const ln = new THREE.Line(g2, mat); ln.renderOrder = 12; if (mat === rtMatJ) ln.computeLineDistances(); rtG.add(ln); };
-        P.forEach((p, i) => { const v = W(p.x, p.y + 1.5, p.z); if (p.jump) { flush(rtMat, seg); flush(rtMatJ, [W(P[i - 1].x, P[i - 1].y + 1.5, P[i - 1].z), v]); seg = [v]; } else seg.push(v); }); flush(rtMat, seg);
+        const flush = (mat, pts) => { if (pts.length < 2) return; const g2 = new THREE.BufferGeometry().setFromPoints(pts); const ln = new THREE.Line(g2, mat); ln.renderOrder = 12; if (mat.isLineDashedMaterial) ln.computeLineDistances(); rtG.add(ln); };
+        P.forEach((p, i) => { const v = W(p.x, p.y + 1.5, p.z); if (p.jump || p.uncertain) { flush(rtMat, seg); flush(p.jump ? rtMatJ : rtMatU, [W(P[i - 1].x, P[i - 1].y + 1.5, P[i - 1].z), v]); seg = [v]; } else seg.push(v); }); flush(rtMat, seg);
         RT3.pts.forEach((p, i) => { const d = document.createElement('div'); d.className = 'vw-lbl rt'; d.style.background = '#ffc83d'; d.style.color = '#2a1d08'; d.style.fontWeight = '700'; d.textContent = (i + 1) + ' ' + p.label; LB.appendChild(d); rtLab.push({ d, v: W(p.x, p.y + 3, p.z) }); });
         invalidate();
       }
@@ -1206,7 +1267,8 @@
 
       // ---- Mitspieler im Browser: Position und Name laufen über einen öffentlichen MQTT-Broker (kein Server nötig, nichts am Spielserver)
       const MP = { cli: null, loading: false, me: Math.random().toString(36).slice(2, 10), peers: new Map(), lastPub: 0, lastMsg: '', mine: new Map() };
-      const mpRoom = () => 'vwelt/' + (location.host + location.pathname).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 60) + '/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
+      const inviteRoom = new URLSearchParams(location.search).get('room');
+      const mpRoom = () => 'vwelt/' + (inviteRoom && /^[a-zA-Z0-9_-]{16,80}$/.test(inviteRoom) ? 'invite/' + inviteRoom + '/' : '') + (location.host + location.pathname).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 60) + '/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
       const NAME_IN = $('.walkName');
       let myName = ''; try { myName = localStorage.getItem('vw-walk-name') || ''; } catch (e) { }
       if (!myName) myName = 'Wikinger ' + MP.me.slice(0, 3).toUpperCase();
@@ -1214,7 +1276,7 @@
       function mpStart() {
         if (MP.cli || MP.loading || !texBase || location.protocol === 'file:') return; MP.loading = true;
         const url = new URLSearchParams(location.search).get('mqtt') || 'wss://broker.emqx.io:8084/mqtt';
-        const go = () => { try {
+        const go = () => { if (destroyed) { MP.loading = false; return; } try {
           const c = g.mqtt.connect(url, { clientId: 'vw_' + MP.me, clean: true, connectTimeout: 15000, reconnectPeriod: 4000, keepalive: 30, will: { topic: mpRoom() + '/p/' + MP.me, payload: '', qos: 0, retain: false } });
           MP.cli = c; c.on('connect', () => { c.subscribe(mpRoom() + '/p/+'); MP.lastPub = 0; }); c.on('message', onPeer); c.on('error', (e) => console.warn('Mitspieler:', e && e.message));
         } catch (e) { console.warn('Mitspieler nicht verfügbar:', e && e.message); } };
@@ -1222,9 +1284,11 @@
       }
       const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
       function onPeer(topic, msg) {
+        if (destroyed || !topic.startsWith(mpRoom() + '/p/') || msg.length > 2048) return;
         const id = topic.split('/').pop(); if (id === MP.me || MP.mine.has(id)) return;
         let d = null; try { d = msg && msg.length ? JSON.parse(new TextDecoder().decode(msg)) : null; } catch (e) { }
         let P = MP.peers.get(id);
+        if (d && (!g.VWTools.point(d) || !Number.isFinite(d.y) || !Number.isFinite(d.r) || !P && MP.peers.size >= 64)) return;
         if (!d) { if (P) { scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id); invalidate(); } return; }
         if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
         Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, g: !!d.g, seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n; invalidate();
@@ -1301,7 +1365,7 @@
       addEventListener('beforeunload', () => { try { mpLeave(); } catch (e) { } });
       function lookWalk(dx, dy) { wyaw -= dx * 0.0042; wpit = Math.max(-1.2, Math.min(1.35, wpit + dy * 0.0035)); }
       cv.addEventListener('click', () => { if (walk && innerWidth > 760 && document.pointerLockElement !== cv && cv.requestPointerLock) cv.requestPointerLock(); });
-      document.addEventListener('mousemove', (e) => { if (walk && document.pointerLockElement === cv) lookWalk(e.movementX, e.movementY); });
+      listen(document, 'mousemove', (e) => { if (walk && document.pointerLockElement === cv) lookWalk(e.movementX, e.movementY); });
       function target() { // Tür/Portal/Kiste vor der Figur
         const f = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw)); let best = null, bd = 2.6;
         for (const b of DOORS) { const dx = b.c.x - pos.x, dz = b.c.z - pos.z; if (Math.abs(dx) > 4 || Math.abs(dz) > 4) continue; const d = Math.hypot(dx, dz); if (Math.abs(b.c.y - (pos.y + 1)) > 2.6) continue; const sc = Math.max(0, d - Math.max(b.h.x, b.h.z) * 0.6) - 0.6 * (dx * f.x + dz * f.z) / (d || 1); if (sc < bd) { bd = sc; best = b; } }
@@ -1382,17 +1446,19 @@
       }
 
       // ---- Schleife
-      let running = false, last = performance.now(), lastKey = '';
-      const pv2 = new THREE.Vector3();
+      let animationId = 0, running = false, last = performance.now(), lastKey = '';
+      const pv2 = new THREE.Vector3(), viewFrustum = new THREE.Frustum(), viewMatrix = new THREE.Matrix4();
       function resize() { const r = pane.getBoundingClientRect(); if (!r.width) return; ren.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); invalidate(); }
       addEventListener('resize', resize);
       function frame() {
-        if (!running) return;
+        if (!running || destroyed) return;
         const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
         if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit();
         mpTick(dt); opTick(dt);
         if (bigArea) { scene.fog.far = Math.max(14000 * ({ near: 0.5, mid: 1, far: 2 }[Q.range] || 1), (fly ? 0 : dist) * 2.2); scene.fog.near = scene.fog.far * 0.2; }
         cam.updateMatrixWorld();
+        viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+        for (const im of pickList) { const bounds = im.userData.bounds; im.visible = layerState[0] && (!['roof', 'droof'].includes(im.userData.cat) || layerState[1]) && (!bounds || viewFrustum.intersectsBox(bounds)); }
         const key = cam.matrixWorld.elements.map((v) => v.toFixed(3)).join(',');
         if (key !== lastKey) { lastKey = key; lastMove = now; dirty = Math.max(dirty, 1); if (bigArea) shadowFresh = false; }
         if (sun.castShadow && (!shadowFresh || shadowPasses > 0) && now - lastMove > 350 && !fly) { refreshShadow(); if (shadowPasses > 0) shadowPasses--; }
@@ -1402,11 +1468,12 @@
           const r = pane.getBoundingClientRect();
           const place = (l, vis) => { l.d.style.display = vis ? 'block' : 'none'; if (vis) { l.d.style.left = ((pv2.x + 1) / 2 * r.width) + 'px'; l.d.style.top = ((1 - pv2.y) / 2 * r.height) + 'px'; } };
           labels.forEach((l) => { pv2.copy(l.v).project(cam); const d = fly ? l.v.distanceTo(cam.position) : dist; place(l, showLbl && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && d < (l.k === 'bed' || l.k === 'tomb' ? (fly ? 60 : 220) : (fly ? 150 : 380))); });
+          roomLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           rtLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           plLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, !l.out && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           chLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && (fly ? l.v.distanceTo(cam.position) < 120 : dist < 260)); });
         }
-        requestAnimationFrame(frame);
+        animationId = requestAnimationFrame(frame);
       }
       // ---- Auswahl & Export (PlanBuild .blueprint)
       const SEL = (function () {
@@ -1487,7 +1554,8 @@
           const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
           a.download = name.replace(/[\\/:*?"<>|]+/g, '_') + '.blueprint'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
         };
-        return { get active() { return active; }, click, paint, reset, toBlueprint, count };
+        function selectedMaterials() { const out = new Map(); sel.forEach((set, im) => set.forEach((k) => { for (const [h, n] of pieceCost(rec(im, k).t[0]) || []) { const name = itemName(h); out.set(name, (out.get(name) || 0) + n); } })); return [...out]; }
+        return { get active() { return active; }, click, paint, reset, toBlueprint, count, selectedMaterials };
       })();
 
       // ---- Zeitraffer (Bau-Verlauf aus live/verlauf/)
@@ -1545,18 +1613,28 @@
       })();
       if (opts.history) TL.init(opts.history);
 
-      function start() { mpStart(); if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } }
-      function stop() { running = false; }
+      function start() { if (destroyed) return; mpStart(); if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); animationId = requestAnimationFrame(frame); } }
+      function stop() { running = false; g.cancelAnimationFrame(animationId); frames.delete(animationId); }
       // Basis-Auswahl
       const sel = $('.reg');
       function fillSelect() { const A = areas(); sel.innerHTML = A.map((r, i) => `<option value="${i}">${r.id === 'world' ? '🌍 Ganze Welt (alle erkundeten Gebiete)' : r.id === 'seed' ? '🗺 ' + esc(r.name) : esc(r.name) + ' (' + fmt(r.pieceCount) + ' Teile, Detail)'}</option>`).join(''); if (reg) { const i = A.findIndex((x) => x.id === reg.id); if (i >= 0) sel.value = i; } }
       sel.onchange = () => selectRegion(+sel.value);
       function selectRegion(i, keepCam) {
         const A = areas(), r = A[i]; if (!r) return; sel.value = i;
-        if (r.lazy && !r.H16) { const st = $('.vw-status'), prev = st.textContent; st.textContent = T('Lade Gelände der ganzen Welt …'); prepSeed(r).then(() => { st.textContent = prev; if (+sel.value === i) { load(r, keepCam); applyLayers(); } }).catch((e) => { st.textContent = 'Gelände nicht ladbar: ' + e.message; }); return; }
+        if (r.lazy && !r.H16) { const st = $('.vw-status'), prev = st.textContent; st.textContent = T('Lade Gelände der ganzen Welt …'); return prepSeed(r).then(() => { if (destroyed) return; st.textContent = prev; if (+sel.value === i) { load(r, keepCam); applyLayers(); } }).catch((e) => { st.textContent = 'Gelände nicht ladbar: ' + e.message; }); }
         load(r, keepCam); applyLayers();
       }
-      return { start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
+      function focusAt(p) {
+        setTab('3d'); const contains = (r) => p.x >= r.bounds[0] && p.x <= r.bounds[1] && p.z >= r.bounds[2] && p.z <= r.bounds[3];
+        const A = areas(), i = A.findIndex((r) => r.id === p.region); const chosen = i >= 0 ? i : A.findIndex((r) => !['world', 'seed'].includes(r.id) && contains(r));
+        return Promise.resolve(selectRegion(chosen >= 0 ? chosen : 0)).then(() => { if (destroyed || !reg) return; tgt.copy(W(p.x, p.y == null ? WL : p.y, p.z)); dist = p.dist || 65; yaw = p.yaw == null ? yaw : p.yaw; pit = p.pit == null ? 0.7 : p.pit; invalidate(); });
+      }
+      function capture() { if (!reg) return null; return { region: reg.id, camera: { x: tgt.x + CX, y: tgt.y + WL, z: CZ - tgt.z, dist, yaw, pit } }; }
+      function dispose() {
+        running = false; originalRevision++; if (MP.cli) { mpLeave(); MP.cli.end(true); } if (originals) originals.dispose();
+        const resources = new Set(); scene.traverse((o) => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) { resources.add(m); for (const v of Object.values(m)) if (v && v.isTexture) resources.add(v); } }); resources.forEach((r) => r.dispose()); ren.dispose(); ren.forceContextLoss();
+      }
+      return { drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
     })();
 
     $('.w3d').onclick = () => { setTab('3d'); three.selectRegion(0); };
@@ -1619,17 +1697,38 @@
       const by = {}; (S.portals || []).forEach((p) => { if (p.tag) (by[p.tag] || (by[p.tag] = [])).push(p); });
       const w = S.world3d, PY = []; if (w && w.pieces && w.pieces.portal) { const a = w.pieces.portal; for (let i = 0; i < a.length; i += 6) PY.push([a[i], a[i + 1], a[i + 2]]); }
       const yOf = (p) => { let best = 32, bd = 1e9; PY.forEach(([x, y, z]) => { const d = Math.hypot(x - p.x, z - p.z); if (d < bd) { bd = d; best = y; } }); return best; };
-      const L = []; Object.entries(by).forEach(([t, l]) => { for (let i = 0; i < l.length; i++) for (let j = 0; j < l.length; j++) if (i !== j) L.push({ a: { x: l[i].x, y: yOf(l[i]), z: l[i].z }, b: { x: l[j].x, y: yOf(l[j]), z: l[j].z }, tag: t }); });
+      const L = []; Object.entries(by).forEach(([t, l]) => { if (l.length !== 2) return; for (let i = 0; i < l.length; i++) for (let j = 0; j < l.length; j++) if (i !== j) L.push({ a: { x: l[i].x, y: yOf(l[i]), z: l[i].z }, b: { x: l[j].x, y: yOf(l[j]), z: l[j].z }, tag: t }); });
       return L;
     }
-    const PORTAL_COST = 45; // Ladezeit + Umweg zum Portal: kurze Wege lieber laufen
-    function legOf(a, b, PL) { // kürzester Weg a→b: zu Fuß/Boot oder über ein Portalpaar
-      let best = { d: Math.hypot(a.x - b.x, a.z - b.z), via: null };
-      for (const l of PL) { const d = Math.hypot(a.x - l.a.x, a.z - l.a.z) + PORTAL_COST + Math.hypot(l.b.x - b.x, l.b.z - b.z); if (d < best.d) best = { d, via: l }; }
-      return best;
+    let routeTerrain = null;
+    function routingTerrain() {
+      if (routeTerrain && routeTerrain.snap === S) return routeTerrain;
+      const r = S.world3d, grid = new Map(), floors = new Map();
+      const terrains = (S.regions || []).concat(r ? [r] : []).filter((v) => v.h).sort((a, b) => a.res - b.res).map((region) => { const bytes = b64u8(region.h); return { region, heights: new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2) }; });
+      const rawHeight = (x, z) => {
+        const t = terrains.find(({ region: v }) => x >= v.bounds[0] && x <= v.bounds[1] && z >= v.bounds[2] && z <= v.bounds[3]); if (!t) return NaN;
+        const v = t.region, fx = (x - v.bounds[0]) / v.res, fz = (z - v.bounds[2]) / v.res, i = Math.min(v.nx - 2, Math.floor(fx)), j = Math.min(v.nz - 2, Math.floor(fz));
+        const dx = fx - i, dz = fz - j, h = (xx, zz) => t.heights[zz * v.nx + xx] / 10;
+        return (h(i, j) * (1 - dx) + h(i + 1, j) * dx) * (1 - dz) + (h(i, j + 1) * (1 - dx) + h(i + 1, j + 1) * dx) * dz;
+      };
+      if (r) for (const [cat, a] of Object.entries(r.pieces)) for (let i = 0; i < a.length; i += 6) {
+        const ty = r.types[a[i + 4]], name = ty[0];
+        if (!/wall|fence|stake/.test(name) && cat !== 'floor') continue;
+        const yaw = -a[i + 3] * Math.PI / 180, item = { x: a[i], y: a[i + 1], z: a[i + 2], w: ty[1], h: ty[2], d: ty[3], yaw };
+        const rad = Math.hypot(ty[1], ty[3]) / 2;
+        for (let x = Math.floor((item.x - rad) / 4); x <= Math.floor((item.x + rad) / 4); x++) for (let z = Math.floor((item.z - rad) / 4); z <= Math.floor((item.z + rad) / 4); z++) { const k = x + ',' + z, map = cat === 'floor' ? floors : grid; (map.get(k) || map.set(k, []).get(k)).push(item); }
+      }
+      const inside = (p, x, z, margin = 0) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.cos(p.yaw) + dz * Math.sin(p.yaw)) <= p.w / 2 + margin && Math.abs(-dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw)) <= p.d / 2 + margin; };
+      const height = (x, z) => { let y = rawHeight(x, z); for (const p of floors.get(Math.floor(x / 4) + ',' + Math.floor(z / 4)) || []) if (inside(p, x, z) && p.y > y && p.y < Math.max(y + 4, 34)) y = p.y; return y; };
+      const blocked = (x, z, y) => (grid.get(Math.floor(x / 4) + ',' + Math.floor(z / 4)) || []).some((p) => p.y + p.h / 2 > y + 0.4 && p.y - p.h / 2 < y + 1.5 && inside(p, x, z, 0.2));
+      return (routeTerrain = { snap: S, height, blocked });
+    }
+    function legOf(a, b, PL) {
+      const boat = $('.rtBoat').checked, height = routingTerrain().height;
+      return g.VWTools.portalRoute(a, b, PL, (p, q) => { let penalty = 0; for (let j = 1; j < 8; j++) { const y = height(p.x + (q.x - p.x) * j / 8, p.z + (q.z - p.z) * j / 8); if (y < 29) penalty += boat ? 0.15 : 2; } return Math.hypot(p.x - q.x, p.z - q.z) * (1 + penalty) + Math.abs((p.y || 30) - (q.y || 30)) * 2; });
     }
     function planRoute(h, qty) {
-      const CH = allChests(), ST = stationsByKind(), PL = portalLinks();
+      const CH = allChests(), ST = stationsByKind(); let PL = portalLinks(); const legCache = new Map(); const estimate = (a, b) => { const k = JSON.stringify([a.x,a.y,a.z,b.x,b.y,b.z]); if (!legCache.has(k)) legCache.set(k, legOf(a,b,PL)); return legCache.get(k); };
       const avail = new Map(); CH.forEach((c) => c.m.forEach((k, ih) => avail.set(ih, (avail.get(ih) || 0) + k)));
       const takes = new Map(), missing = new Map(), crafts = [];
       function need(ih, n, depth) {
@@ -1641,56 +1740,67 @@
       function craft(rc, batches, depth) { rc.ing.forEach(([ih, k]) => need(ih, k * batches, depth + 1)); crafts.push({ h: rc.out, n: batches * rc.amt, batches, st: rc.st, sure: rc.sure }); }
       const top = recipeOf(h); if (!top) return { err: 'Kein Rezept bekannt.' };
       craft(top, Math.ceil(qty / top.amt), 0);
-      // Start: eigene Position (Mod/Laufen), sonst die passende Werkstation
-      let me = null; try { const L = (typeof LIVE !== 'undefined' && LIVE) || []; if (L.length) me = { x: L[0].x, y: L[0].y, z: L[0].z, label: L[0].name }; } catch (e) { }
-      if (!me) { const wp = three.walkPos && three.walkPos(); if (wp) me = Object.assign({ label: T('Du') }, wp); }
+      if (!$('.rtMetal').checked && [...takes.keys()].some((ih) => /^(Copper|Tin|Bronze|Iron|Silver|BlackMetal|Flametal|FlametalNew|CopperOre|TinOre|IronScrap|SilverOre|BlackMetalScrap|FlametalOreNew)$/.test((RC.items[ih] || [])[0] || ''))) PL = [];
+      // Explicit player selection; never pick an unrelated online player automatically.
+      const choice = $('.rtPlayer').value, players = livePlayers();
+      let me = choice.startsWith('player:') ? players.find((p) => p.name === choice.slice(7)) : null;
+      if (choice === 'view') { me = three.walkPos(); if (!me) me = three.capture()?.camera || null; if (me) me = { ...me, label: 'Aktuelle 3D-Position' }; }
+      if (choice.startsWith('player:') && !me) return { err: 'Der gewählte Spieler ist nicht mehr online.' };
+      if (me && !me.label) me = { ...me, label: me.name };
       const anchor0 = me || (CH[0] && { x: CH[0].c.x, z: CH[0].c.z }) || { x: 0, z: 0 };
-      const nearest = (list, p) => { let b = null, bd = 1e18; (list || []).forEach((q) => { const d = legOf(p, q, PL).d; if (d < bd) { bd = d; b = q; } }); return b; };
+      const nearest = (list, p) => { let b = null, bd = 1e18; (list || []).forEach((q) => { const d = estimate(p, q).d; if (d < bd) { bd = d; b = q; } }); return b; };
       const finalKind = ST[top.st] ? top.st : 'workbench', finalSt = nearest(ST[finalKind], anchor0) || nearest(ST.workbench, anchor0);
       const anchor = finalSt || anchor0;
       // Kisten wählen: je Zutat die nächstgelegenen (zur Werkstation) zuerst
       const pick = new Map();
       takes.forEach((n, ih) => {
-        const cand = CH.filter((c) => c.m.get(ih)).map((c) => ({ c, d: legOf(c.c, anchor, PL).d })).sort((a, b) => a.d - b.d);
+        const cand = CH.filter((c) => c.m.get(ih)).map((c) => ({ c, d: estimate(c.c, anchor).d })).sort((a, b) => a.d - b.d);
         let left = n; for (const { c } of cand) { if (left <= 0) break; const t = Math.min(left, c.m.get(ih)); left -= t; const e = pick.get(c) || pick.set(c, []).get(c); e.push([ih, t]); }
       });
       // Reihenfolge der Kisten: nächster Nachbar + 2-opt, Ende Richtung Werkstation
       let order = [...pick.keys()]; const start = me || anchor;
-      const D = (a, b) => legOf(a, b, PL).d;
+      const D = (a, b) => estimate(a, b).d;
       { const rest = order.slice(); order = []; let cur = start; while (rest.length) { let bi = 0, bd = 1e18; rest.forEach((c, i) => { const d = D(cur, c.c); if (d < bd) { bd = d; bi = i; } }); cur = rest[bi].c; order.push(rest.splice(bi, 1)[0]); } }
       const tour = (o) => { let d = 0, cur = start; o.forEach((c) => { d += D(cur, c.c); cur = c.c; }); return d + D(cur, anchor); };
-      for (let it = 0, imp = true; imp && it < 40; it++) { imp = false; for (let i = 0; i < order.length - 1; i++) for (let j = i + 1; j < order.length; j++) { const o2 = order.slice(0, i).concat(order.slice(i, j + 1).reverse(), order.slice(j + 1)); if (tour(o2) < tour(order) - 0.5) { order = o2; imp = true; } } }
+      for (let it = 0, imp = true; imp && it < (order.length > 30 ? 1 : 8); it++) { imp = false; for (let i = 0; i < order.length - 1; i++) for (let j = i + 1; j < order.length; j++) { const o2 = order.slice(0, i).concat(order.slice(i, j + 1).reverse(), order.slice(j + 1)); if (tour(o2) < tour(order) - 0.5) { order = o2; imp = true; } } }
       // Wegpunkte + Werkstationen in Herstell-Reihenfolge
       const pts = []; const push = (p, kind, label, info) => pts.push({ x: p.x, y: p.y != null ? p.y : 34, z: p.z, kind, label, info });
-      if (me) push(me, 'start', me.label || T('Start'));
+      push(start, 'start', me ? me.label || T('Start') : 'Start an der Werkstation');
       order.forEach((c) => push(c.c, 'chest', (c.c.s ? '„' + c.c.s + '“' : c.c.t) + (c.reg ? ' · ' + c.reg : ''), pick.get(c).map(([ih, t]) => fmt(t) + '× ' + itemName(ih)).join(', ')));
       const stepsAt = new Map(); crafts.forEach((cr) => { const k = ST[cr.st] ? cr.st : 'workbench'; (stepsAt.get(k) || stepsAt.set(k, []).get(k)).push(cr); });
       stepsAt.forEach((list, k) => { if (k === finalKind) return; const sp = nearest(ST[k], anchor); push(sp || anchor, 'station', ST_NAME[k] + (sp ? '' : ' (' + T('nicht gefunden') + ')'), list.map((cr) => fmt(cr.n) + '× ' + itemName(cr.h)).join(', ')); });
       if (finalSt || !pts.length) push(finalSt || anchor, 'station', ST_NAME[finalKind] + (ST[top.st] ? '' : ' (' + T('nicht gefunden') + ')'), (stepsAt.get(finalKind) || []).map((cr) => fmt(cr.n) + '× ' + itemName(cr.h)).join(', '));
-      // Wege mit Portalsprüngen auflösen
-      const path = []; let dist = 0;
+      // Resolve every portal hop, then navigate walking/boat legs over the height grid.
+      const path = []; let dist = 0, uncertain = 0, straight = 0; const terrain = routingTerrain();
       for (let i = 0; i < pts.length; i++) {
-        if (i === 0) { path.push({ x: pts[0].x, y: pts[0].y, z: pts[0].z }); continue; }
-        const l = legOf(pts[i - 1], pts[i], PL); dist += l.via ? l.d - PORTAL_COST : l.d;
-        if (l.via) { path.push({ x: l.via.a.x, y: l.via.a.y, z: l.via.a.z, portal: l.via.tag }); path.push({ x: l.via.b.x, y: l.via.b.y, z: l.via.b.z, jump: true, portal: l.via.tag }); }
-        path.push({ x: pts[i].x, y: pts[i].y, z: pts[i].z });
-        pts[i].via = l.via ? l.via.tag : null;
+        if (i === 0) { path.push({ ...pts[0] }); continue; }
+        const leg = estimate(pts[i - 1], pts[i]); if (!Number.isFinite(leg.d)) return { err: 'Keine Verbindung zwischen den Wegpunkten.' };
+        for (let j = 1; j < leg.path.length; j++) {
+          const target = leg.path[j], from = leg.path[j - 1];
+          if (target.jump) { path.push(target); continue; }
+          let segment = g.VWTools.terrainRoute(from, target, terrain.height, { boat: $('.rtBoat').checked, blocked: terrain.blocked }), weak = false;
+          if (!Number.isFinite(segment.d)) { uncertain++; weak = true; segment = g.VWTools.terrainRoute(from, target, terrain.height, { boat: $('.rtBoat').checked }); }
+          if (!Number.isFinite(segment.d)) { straight++; path.push({ ...target, uncertain: true }); dist += Math.hypot(target.x - from.x, target.z - from.z); continue; }
+          for (let k = 1; k < segment.path.length; k++) { dist += Math.hypot(segment.path[k].x - segment.path[k - 1].x, segment.path[k].z - segment.path[k - 1].z); path.push({ ...segment.path[k], ...(weak ? { uncertain: true } : {}) }); }
+        }
+        pts[i].via = leg.via;
       }
-      return { h, qty, pts, path, dist: Math.round(dist), missing: [...missing].map(([ih, n]) => [itemName(ih), n]), crafts, guess: crafts.some((c) => !c.sure) };
+      return { h, qty, pts, path, uncertain, straight, dist: Math.round(dist), missing: [...missing].map(([ih, n]) => [itemName(ih), n]), crafts, guess: crafts.some((c) => !c.sure) };
     }
     function routeHtml(R) {
       if (R.err) return `<div class="sub">${esc(R.err)}</div>`;
       const ic = { start: '🧍', chest: '📦', station: '🔨' };
-      return `<h3 style="margin:14px 0 6px">🧭 ${T('Route')}: ${fmt(R.qty)}× ${esc(itemName(R.h))} <span class="sub">· ${T('ca.')} ${fmt(R.dist)} m ${T('zu Fuß')}</span></h3>` +
+      return `<h3 style="margin:14px 0 6px">🧭 ${T('Route')}: ${fmt(R.qty)}× ${esc(itemName(R.h))} <span class="sub">· ${T('ca.')} ${fmt(R.dist)} m ${$('.rtBoat').checked ? 'zu Fuß / Boot' : T('zu Fuß')}</span></h3>` +
+        (R.uncertain ? `<p role="status" style="color:#c47a20">${R.uncertain} Wegabschnitte konnten nicht als begehbar bestätigt werden (orange gestrichelt). ${R.straight || 0} davon sind reine Luftlinie. Bei den übrigen sind Gebäudehindernisse/Stockwerke ungeprüft; Geländedaten und Bootsmodus werden berücksichtigt.</p>` : '') +
         (R.missing.length ? `<div class="vw-card" style="border-color:#c0574a"><b>${T('Fehlt in allen Kisten')}:</b> ${R.missing.map(([n, k]) => fmt(k) + '× ' + esc(n)).join(', ')}</div>` : '') +
         `<ol class="rtList" style="margin:8px 0 6px 18px;padding:0">${R.pts.map((p, i) => `<li style="margin:4px 0">${p.via ? `<span class="sub">⛩ ${T('Portal')} „${esc(p.via)}“ →</span><br>` : ''}${ic[p.kind] || '•'} <b>${esc(p.label)}</b>${p.info ? '<br><span class="sub">' + (p.kind === 'chest' ? T('mitnehmen') + ': ' : T('herstellen') + ': ') + esc(p.info) + '</span>' : ''}</li>`).join('')}</ol>` +
         `<div class="row" style="gap:6px"><button class="rt3d">🌍 ${T('In 3D zeigen')}</button><button class="rtMap">🗺 ${T('Auf der Karte')}</button><button class="rtClr">✕ ${T('Route löschen')}</button></div>` +
-        (R.guess ? `<div class="sub" style="margin-top:6px">${T('Werkstationen für Rezepte sind geschätzt (Schmiede für Metall, Kessel für Essen, sonst Werkbank). Wege sind Luftlinie.')}</div>` : `<div class="sub" style="margin-top:6px">${T('Wege sind Luftlinie.')}</div>`);
+        (R.guess ? `<div class="sub" style="margin-top:6px">${T('Werkstationen für Rezepte sind geschätzt (Schmiede für Metall, Kessel für Essen, sonst Werkbank). Wege sind Näherungen aus dem Höhenraster; Gebäudeinneres und unbekanntes Gelände können abweichen.')}</div>` : `<div class="sub" style="margin-top:6px">${T('Wege sind Näherungen aus dem Höhenraster; Gebäudeinneres und unbekanntes Gelände können abweichen.')}</div>`);
     }
     function setRoute(R) { ROUTE = R && !R.err ? R : null; try { three.setRoute(ROUTE); } catch (e) { } try { map.draw(); } catch (e) { } }
     function drawRoute2d(ctx, toS, s) {
       if (!ROUTE) return; const P = ROUTE.path; ctx.save(); ctx.lineWidth = 3;
-      for (let i = 1; i < P.length; i++) { const [x1, y1] = toS(P[i - 1].x, P[i - 1].z), [x2, y2] = toS(P[i].x, P[i].z); ctx.strokeStyle = P[i].jump ? 'rgba(190,150,255,.9)' : 'rgba(255,200,60,.95)'; ctx.setLineDash(P[i].jump ? [3, 6] : [10, 6]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+      for (let i = 1; i < P.length; i++) { const [x1, y1] = toS(P[i - 1].x, P[i - 1].z), [x2, y2] = toS(P[i].x, P[i].z); ctx.strokeStyle = P[i].uncertain ? '#f28c28' : P[i].jump ? 'rgba(190,150,255,.9)' : 'rgba(255,200,60,.95)'; ctx.setLineDash(P[i].uncertain ? [2, 6] : P[i].jump ? [3, 6] : [10, 6]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
       ctx.setLineDash([]); ctx.font = 'bold 11px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ROUTE.pts.forEach((p, i) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = p.kind === 'station' ? '#ffb347' : p.kind === 'start' ? '#4cc36b' : '#ffd84a'; ctx.strokeStyle = '#2a1d08'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#2a1d08'; ctx.fillText(String(i + 1), x, y + 0.5); });
       ctx.textBaseline = 'alphabetic'; ctx.restore();
@@ -1705,12 +1815,15 @@
       q.oninput = render; sel.onchange = render;
       function fill() { sel.innerHTML = `<option value="">Alle Orte</option>` + S.regions.map((r, i) => `<option value="${i}">${esc(r.name)}</option>`).join('') + ((S.looseChests || []).length ? `<option value="loose">Außenposten, Karren, Schiffe</option>` : ''); }
       function render() {
+        const playerSelect = $('.rtPlayer'), oldPlayer = playerSelect.value;
+        playerSelect.innerHTML = '<option value="view">Aktuelle 3D-Position</option><option value="station">Werkstation</option>' + livePlayers().map((p) => `<option value="player:${esc(p.name)}">${esc(p.name)}</option>`).join(''); playerSelect.value = [...playerSelect.options].some((o) => o.value === oldPlayer) ? oldPlayer : 'station';
         const s = q.value.trim().toLowerCase(), a = sel.value;
         let cs = []; if (a !== 'loose') S.regions.forEach((r, ri) => { if (a !== '' && +a !== ri) return; r.chests.forEach((c) => cs.push(Object.assign({ reg: r.name }, c))); });
         if (a === '' || a === 'loose') (S.looseChests || []).forEach((c) => cs.push(Object.assign({ reg: c.g }, c)));
+        if (workspace && workspace.filter()) cs = cs.filter((c) => workspace.chestRoom(c)?.id === workspace.filter());
         const all = cs; if (only) cs = cs.filter((c) => c.s);
         const match = (it) => s && (g.VW_I18N ? g.VW_I18N.names(it[0]) : [it[0]]).some((n) => n.toLowerCase().includes(s));
-        if (s) cs = cs.filter((c) => c.i.some(match) || c.s.toLowerCase().includes(s));
+        if (s) cs = cs.filter((c) => c.i.some(match) || c.s.toLowerCase().includes(s) || (workspace?.chestRoom(c)?.name || '').toLowerCase().includes(s));
         let found = 0; cs.forEach((c) => c.i.forEach((it) => { if (match(it)) found += it[1]; }));
         const items = cs.reduce((n, c) => n + c.i.reduce((m, i) => m + i[1], 0), 0);
         $('.kstats').innerHTML = `<div class="vw-stat"><b>${fmt(cs.length)}</b><span>Kisten</span></div><div class="vw-stat"><b>${fmt(items)}</b><span>Items</span></div>` + (s ? `<div class="vw-stat"><b>${fmt(found)}</b><span>× „${esc(q.value)}“</span></div>` : `<div class="vw-stat"><b>${fmt(all.filter((c) => !c.i.length).length)}</b><span>leere Kisten</span></div>`);
@@ -1723,7 +1836,7 @@
         let tl = Object.entries(tot).sort((x, y) => y[1] - x[1]); if (s) tl = tl.filter((t) => (g.VW_I18N ? g.VW_I18N.names(t[0]) : [t[0]]).some((n) => n.toLowerCase().includes(s)));
         $('.ktot').innerHTML = tl.slice(0, s ? 400 : 60).map((t) => `<tr class="click" data-i="${esc(t[0])}" style="cursor:pointer"><td>${esc(t[0])}</td><td class="n">${fmt(t[1])}</td></tr>`).join('') + (tl.length > 60 && !s ? `<tr><td colspan="2" class="sub">… ${tl.length - 60} weitere – Suche nutzen</td></tr>` : '') || '<tr><td class="sub">Nichts gefunden</td></tr>';
         $$('.ktot tr.click').forEach((tr) => (tr.onclick = () => { q.value = tr.dataset.i.replace(/ ★\d+$/, ''); render(); }));
-        const groups = {}; cs.forEach((c) => (groups[c.reg] = groups[c.reg] || []).push(c));
+        const groups = {}; cs.forEach((c) => { const label = workspace?.chestRoom(c)?.name || c.reg || 'Ohne Bereich'; (groups[label] || (groups[label] = [])).push(c); });
         $('.klist').innerHTML = Object.entries(groups).map(([gname, arr]) => `<h3>${esc(gname)} <span class="sub">· ${arr.length} Kisten</span></h3><div class="vw-cards">` + arr.map(card).join('') + '</div>').join('') || '<div class="sub">Keine Kiste passt zur Suche.</div>';
         $$('.vw-card .more').forEach((b) => (b.onclick = () => { const k = b.dataset.k; open.has(k) ? open.delete(k) : open.add(k); render(); }));
         function card(c) {
@@ -1788,9 +1901,17 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
       S = newSnap; STOCK = null; $('.vw-title').textContent = S.world.name + (S.world.seed ? ' · ' + S.world.seed : '');
       map.build(); map.layersChanged(); three.fillSelect(); kisten.fill(); loadSeedMeta();
       if (keep && prevReg) { const i = areas().findIndex((r) => r.id === prevReg); if (i >= 0) { three.selectRegion(i, true); three.state = cam; } }
-      setTab(prevTab);
+      setTab(prevTab); if (workspace) workspace.update();
     }
+    if (g.VWWorkspace) workspace = g.VWWorkspace.mount(R, {
+      history: opts.history, snapshot: () => S, chests: () => { const seen = new Set(); return S.regions.flatMap((r) => r.chests).concat(S.looseChests || []).filter((c) => { const k = [c.x, c.y, c.z].join(','); if (seen.has(k)) return false; seen.add(k); return true; }); },
+      roomsChanged: (rs) => three.drawAreas(rs), searchChanged: () => { kisten.render(); three.searchRooms(); },
+      focus: (p) => three.focusAt(p), openChests: () => setTab('chests'), pick: (fn) => three.beginArea(fn),
+      blueprintMaterials: (text) => { const needs = new Map(), unknown = new Set(); for (const line of text.split('\n')) { if (!line.trim() || line.trim().startsWith('#')) continue; const name = line.split(';')[0].trim(), cost = pieceCost(name); if (!cost) { unknown.add(name); continue; } for (const [h, n] of cost) { const item = itemName(h); needs.set(item, (needs.get(item) || 0) + n); } } return { needs: [...needs], unknown: [...unknown] }; },
+      selectedMaterials: () => three.selectedMaterials(), camera: () => three.capture(), restore: (p) => three.focusAt(p), changes: (d, mode) => three.drawChanges(d, mode)
+    });
     apply(snap, false);
+    if (workspace) workspace.restoreLink();
     loadExtra();
     if (g.VW_I18N) g.VW_I18N.onChange(() => { try { info(); if (tab === 'map') map.draw(); } catch (e) { } });
     if (snap.plans && snap.plans.length) three.setPlans(snap.plans);
@@ -1812,7 +1933,8 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     $('.gameLink').onclick = () => gameLink(!GL.on);
     if (location.protocol === 'file:') $('.gameLink').hidden = true; else { let a = ''; try { a = localStorage.getItem('vw-gamelink'); } catch (e) { } if (a) gameLink(true); }
     setInterval(() => { try { if (tab === 'map' && three.peerList().some((p) => !p.web)) map.draw(); } catch (e) { } }, 2000); // Mitspieler aus dem Spiel bewegen sich
-    return { update: (s) => { LIVE = null; apply(s, true); }, setStatus, setTab, open3d, getPlans: () => three.getPlans(), updateLive };
+    function destroy() { if (destroyed) return; destroyed = true; if (workspace) workspace.destroy(); timers.forEach((id) => g.clearInterval(id)); timeouts.forEach((id) => g.clearTimeout(id)); frames.forEach((id) => g.cancelAnimationFrame(id)); cleanup.forEach((f) => f()); three.dispose(); R.remove(); }
+    return { update: (s) => { if (!destroyed) { LIVE = null; apply(s, true); } }, destroy, setStatus, setTab, open3d, getPlans: () => three.getPlans(), getWorkspace: () => workspace && workspace.exportData(), updateLive };
   }
   g.VWViewer = { mount };
 })(typeof self !== 'undefined' ? self : globalThis);
