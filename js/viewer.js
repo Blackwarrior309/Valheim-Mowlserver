@@ -235,7 +235,7 @@
     const PIN_IC = { 0: '🔥', 1: '🏠', 2: '🔨', 3: '●', 4: '✦', 9: '☠' };
     const PIN_N = { '$enemy_eikthyr': 'Eikthyr', '$enemy_gdking': 'Der Älteste', '$enemy_bonemass': 'Knochenmasse', '$enemy_dragon': 'Moder', '$enemy_goblinking': 'Yagluth', '$enemy_seekerqueen': 'Die Königin', '$enemy_fader': 'Fader' };
     const pinName = (p) => { const n = p.n || ''; if (PIN_N[n]) return T(PIN_N[n]); if (/^\$hud_pin_hildir/.test(n)) return 'Hildir'; return n.replace(/^\$\w+_/, ''); };
-    const crCol = (c) => c.tame ? '#4cc36b' : c.boss ? '#ff2fd0' : (c.f === 'AnimalsVeg' || c.f === 'PlayerSpawned') ? '#ffd84a' : '#ff5a4a'; // gezähmt grün, Boss pink, harmlos gelb, feindlich rot
+    const crCol = (c) => c.tame ? '#4cc36b' : c.boss ? '#ff2fd0' : (c.f === 'AnimalsVeg' || c.f === 'PlayerSpawned' || /^(Deer|Hare|Chicken|Hen|Lox_Calf|Boar_piggy)$/.test(c.p)) ? '#ffd84a' : c.f === 'Dverger' ? '#58a8ff' : '#ff5a4a'; // gezähmt grün, Boss pink, harmlos gelb, Dvergr (neutral) blau, feindlich rot
     const FOG = 110; // Abdunklung unerkundeter Gebiete auf der fertigen Weltkarte (0–255)
     const BIO_COL = [null, [111, 154, 69], [92, 86, 52], [196, 202, 208], [52, 86, 50], [190, 172, 88], [92, 52, 42], [226, 236, 244], null, [84, 82, 104]];
     let BIOU = null, BIOS = null;
