@@ -1,3 +1,7 @@
 dist/
 live/
 __pycache__/
+
+# Local .NET build output
+mod/**/bin/
+mod/**/obj/
