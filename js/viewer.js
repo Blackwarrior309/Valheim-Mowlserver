@@ -1072,21 +1072,23 @@
       // ---- Eingabe (Orbit)
       const ptrs = new Map(); let drag = null, pd = 0, downAt = null, grab = null;
       /* Wikinger mit der Maus packen und werfen: Mod-Figuren nur hier im Viewer; Mitspieler im Laufmodus sehen es auch bei sich (über MQTT) */
-      function opAt(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam);
-        const L = [...OP.values()].filter((O) => O.h.g.visible).map((O) => ({ O, h: O.h.g })).concat([...MP.peers.entries()].filter(([, P]) => P.h.g.visible).map(([id, P]) => ({ id, P, h: P.h.g })));
-        const hits = ray.intersectObjects(L.map((o) => o.h), true); if (!hits.length) return null; let o = hits[0].object; while (o && !L.some((x) => x.h === o)) o = o.parent; return L.find((x) => x.h === o) || null; }
+      function heroList() { return [...OP.values()].filter((O) => O.h.g.visible).map((O) => ({ O, h: O.h.g, x: O.x, y: O.y, z: O.z })).concat([...MP.peers.entries()].filter(([, P]) => P.h.g.visible).map(([id, P]) => ({ id, P, h: P.h.g, x: P.x, y: P.y, z: P.z }))); }
+      function opAt(e) { const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; let best = null, bd = 30; /* großzügig: Figur muss nur ungefähr getroffen werden */
+        for (const H of heroList()) for (const dy of [0.3, 1, 1.7]) { pv2.set(H.x - CX, H.y - WL + dy, CZ - H.z).project(cam); if (pv2.z > 1) continue; const d = Math.hypot((pv2.x + 1) / 2 * r.width - mx, (1 - pv2.y) / 2 * r.height - my); if (d < bd) { bd = d; best = H; } }
+        return best; }
       function grabSend(id, d) { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/t/' + id, JSON.stringify(Object.assign({ from: MP.me, n: myName }, d)), { qos: 0 }); }
+      function holdAt(H, x, y, z, gy) { const now = performance.now(); invalidate();
+        if (H.O) { const O = H.O; O.held = true; O.fall = null; O.wait = 0; O.ret = false; O.gy = gy; O.x = x; O.z = z; O.y = y; return; }
+        const P = H.P; P.fly = null; P.ov = { x, y, z };
+        if (!P.g && now - (H.sent || 0) > 90) { H.sent = now; grabSend(H.id, { s: 'hold', x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2) }); } }
+      function throwIt(H, vx, vy, vz) { invalidate(); const cl = (v) => Math.max(-25, Math.min(25, v)); vx = cl(vx); vz = cl(vz); vy = Math.max(-5, Math.min(14, vy));
+        if (H.O) { const O = H.O; O.held = false; O.fall = { vx, vy, vz }; return; }
+        const P = H.P, o = P.ov; if (!o) return; P.ov = null; P.fly = { x: o.x, y: o.y, z: o.z, vx, vy, vz, t: 0 };
+        if (!P.g) grabSend(H.id, { s: 'throw', x: +o.x.toFixed(2), y: +o.y.toFixed(2), z: +o.z.toFixed(2), vx: +vx.toFixed(2), vy: +vy.toFixed(2), vz: +vz.toFixed(2) }); }
       function grabMove(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const h = ray.intersectObject(terrain)[0]; if (!h) return;
-        const gy = h.point.y + WL, x = h.point.x + CX, z = CZ - h.point.z, now = performance.now(); cv.style.cursor = 'grabbing'; invalidate();
-        if (grab.O) { const O = grab.O; O.held = true; O.fall = null; O.wait = 0; O.ret = false; O.gy = gy; O.x = x; O.z = z; O.y = gy + 2.2; return; }
-        const P = grab.P; P.fly = null; P.ov = { x, y: gy + 2.2, z }; grab.hist.push([now, x, gy + 2.2, z]); while (grab.hist.length > 2 && now - grab.hist[0][0] > 150) grab.hist.shift();
-        if (!P.g && now - grab.sent > 90) { grab.sent = now; grabSend(grab.id, { s: 'hold', x: +x.toFixed(2), y: +(gy + 2.2).toFixed(2), z: +z.toFixed(2) }); } }
-      function grabRelease(G) {
-        if (G.O) { G.O.held = false; G.O.fall = { vy: 0 }; invalidate(); return; }
-        const P = G.P, o = P.ov; if (!o) return; const a = G.hist[0], b = G.hist[G.hist.length - 1], t = Math.max(0.03, (b[0] - a[0]) / 1000);
-        const cl = (v) => Math.max(-25, Math.min(25, v)), vx = cl((b[1] - a[1]) / t), vz = cl((b[3] - a[3]) / t), vy = Math.min(14, 3 + Math.hypot(vx, vz) * 0.35);
-        P.ov = null; P.fly = { x: o.x, y: o.y, z: o.z, vx, vy, vz, t: 0 }; invalidate();
-        if (!P.g) grabSend(G.id, { s: 'throw', x: +o.x.toFixed(2), y: +o.y.toFixed(2), z: +o.z.toFixed(2), vx: +vx.toFixed(2), vy: +vy.toFixed(2), vz: +vz.toFixed(2) }); }
+        const gy = h.point.y + WL, x = h.point.x + CX, z = CZ - h.point.z, now = performance.now(); cv.style.cursor = 'grabbing';
+        grab.hist.push([now, x, gy + 2.2, z]); while (grab.hist.length > 2 && now - grab.hist[0][0] > 150) grab.hist.shift(); holdAt(grab, x, gy + 2.2, z, gy); }
+      function grabRelease(G) { const a = G.hist[0], b = G.hist[G.hist.length - 1]; if (!a) return; const t = Math.max(0.03, (b[0] - a[0]) / 1000), vx = (b[1] - a[1]) / t, vz = (b[3] - a[3]) / t; throwIt(G, vx, 3 + Math.hypot(vx, vz) * 0.35, vz); }
       cv.addEventListener('contextmenu', (e) => e.preventDefault());
       cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!walk && !fly && !areaPick && !SEL.active && e.button === 0 && ptrs.size === 1) { const H = opAt(e); if (H) grab = Object.assign(H, { x0: e.clientX, y0: e.clientY, moved: false, hist: [], sent: 0 }); } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
       const pUp = (e) => {
@@ -1332,7 +1334,7 @@
         const H = O.h;
         if (O.held) { O.anim += dt * 7; const w = Math.sin(O.anim); H.legL.rotation.x = w * 0.5; H.legR.rotation.x = -w * 0.5; H.armL.rotation.x = H.armR.rotation.x = -2.7 + w * 0.25; H.armL.rotation.z = -0.3; H.armR.rotation.z = 0.3; H.g.rotation.z = w * 0.12; return; }
         H.g.rotation.z = 0; H.armL.rotation.z = H.armR.rotation.z = 0;
-        if (O.fall) { O.fall.vy -= 25 * dt; O.y += O.fall.vy * dt; H.armL.rotation.x = H.armR.rotation.x = -2.4; if (O.y <= O.gy) { O.y = O.gy; O.fall = null; O.wait = 1.2; } return; }
+        if (O.fall) { const F = O.fall; F.vy -= 18 * dt; O.x += (F.vx || 0) * dt; O.z += (F.vz || 0) * dt; O.y += F.vy * dt; O.gy = groundY(O.x - CX, CZ - O.z, O.y - WL + 1) + WL; H.armL.rotation.x = H.armR.rotation.x = -2.4; if (F.vy < 0 && O.y <= O.gy) { O.y = O.gy; O.fall = null; O.wait = 1.2; } return; }
         if (O.wait > 0) { O.wait -= dt; const t = Math.max(0, O.wait); H.armL.rotation.x = H.armR.rotation.x = -t; H.legL.rotation.x = H.legR.rotation.x = 0; if (O.wait <= 0) { O.ret = true; O.d0 = Math.max(0.1, Math.hypot(O.tx - O.x, O.tz - O.z)); O.y0 = O.y; } return; }
         const dx = O.tx - O.x, dz = O.tz - O.z, d = Math.hypot(dx, dz);
         if (d < 0.3 || d > 400) { O.ret = false; return; }
@@ -1488,6 +1490,7 @@
       if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
+        if (!on && carry) { throwIt(carry, 0, 0, 0); carry = null; }
         if (on && !reg) return;
         if (on && fly) toggleFly(false);
         walk = on; TIP.hidden = true; PROMPT.hidden = true; highlight(null); WB.classList.toggle('on', walk); HERO.visible = walk; HUD.hidden = CROSS.hidden = !walk; JOY.hidden = !walk || innerWidth > 760; ACT.hidden = !walk;
@@ -1504,7 +1507,7 @@
       WB.onclick = () => toggleWalk();
       addEventListener('beforeunload', () => { try { mpLeave(); } catch (e) { } });
       function lookWalk(dx, dy) { wyaw -= dx * 0.0042; wpit = Math.max(-1.2, Math.min(1.35, wpit + dy * 0.0035)); }
-      cv.addEventListener('click', () => { if (walk && innerWidth > 760 && document.pointerLockElement !== cv && cv.requestPointerLock) cv.requestPointerLock(); });
+      cv.addEventListener('click', () => { if (walk && carry) { carryThrow(); return; } if (walk && innerWidth > 760 && document.pointerLockElement !== cv && cv.requestPointerLock) cv.requestPointerLock(); });
       listen(document, 'mousemove', (e) => { if (walk && document.pointerLockElement === cv) lookWalk(e.movementX, e.movementY); });
       function target() {
         const origin=pos.clone().add(new THREE.Vector3(0,1.55,0));
@@ -1517,7 +1520,15 @@
         return best;
       }
       function portalOf(b) { const wx = b.c.x + CX, wz = CZ - b.c.z; let me = null, md = 6; (S.portals || []).forEach((p) => { const d = Math.hypot(p.x - wx, p.z - wz); if (d < md) { md = d; me = p; } }); return me; }
+      /* Laufmodus: E = Wikinger vor dir hochheben, nochmal E oder Klick = in Blickrichtung werfen */
+      let carry = null;
+      function carryThrow() { const H = carry; carry = null; if (!H) return; const v = 16; throwIt(H, Math.sin(wyaw) * v, 7 + Math.max(0, Math.sin(wpit)) * 4, -Math.cos(wyaw) * v); say('💨 geworfen!'); }
+      function carryStart() { const me = { x: pos.x + CX, z: CZ - pos.z }, fx = Math.sin(wyaw), fz = -Math.cos(wyaw); let best = null, bd = 4;
+        for (const H of heroList()) { const dx = H.x - me.x, dz = H.z - me.z, d = Math.hypot(dx, dz); if (d < bd && d > 0.05 && (dx * fx + dz * fz) / d > -0.2) { bd = d; best = H; } }
+        if (!best) return false; carry = Object.assign(best, { sent: 0 }); say('🤚 ' + ((best.P && best.P.n) || [...OP].find(([, O]) => O === best.O)?.[0] || 'Wikinger') + ' gepackt – E oder Klick = werfen'); return true; }
       function interact() {
+        if (carry) { carryThrow(); return; }
+        if (carryStart()) return;
         const best = target();
         if (!best) { say('Hier ist keine Tür, Kiste oder Portal.'); return; }
         if (best.chest) { const a = best.im.userData.arr, o = best.k * 6, k = chestAt([a[o], a[o + 1], a[o + 2]]); if (k >= 0) { if (document.pointerLockElement === cv) document.exitPointerLock(); openChest(k, false); } else say('Kiste ist leer'); return; }
@@ -1557,7 +1568,7 @@
         const mv = fw.clone().multiplyScalar(mz).addScaledVector(rt, mx);
         const held = grabbedBy && performance.now() - grabbedBy.t < 1500;
         const prev = pos.clone(); if (!held) pos.addScaledVector(mv, sp * (l > 0 ? 1 : 0) / (l > 1 ? 1 : 1));
-        if (flingV) { pos.x += flingV.x * dt; pos.z += flingV.z * dt; if (onGround) { flingV.x *= 0.8; flingV.z *= 0.8; if (Math.hypot(flingV.x, flingV.z) < 0.3) flingV = null; } }
+        if (flingV) { pos.x += flingV.x * dt; pos.z += flingV.z * dt; if (onGround) { flingV.x *= 0.88; flingV.z *= 0.88; if (Math.hypot(flingV.x, flingV.z) < 0.3) flingV = null; } }
         // Schwerkraft, Stufen, Wasser
         let g = groundY(pos.x, pos.z, pos.y + STEP); const water = -1.3;
         for (const [ox, oz] of [[RAD, 0], [-RAD, 0], [0, RAD], [0, -RAD]]) g = Math.max(g, groundY(pos.x + ox, pos.z + oz, pos.y + STEP)); // Füße als Scheibe: kleine Fugen überbrücken
@@ -1575,7 +1586,9 @@
         const sw = Math.sin(anim) * (l > 0.05 ? 0.7 : 0) * (onGround ? 1 : 0.3);
         legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw * 0.8; armR.rotation.x = sw * 0.8;
         if (held || flingV) { const w = Math.sin(performance.now() / 90); legL.rotation.x = w * 0.5; legR.rotation.x = -w * 0.5; armL.rotation.x = armR.rotation.x = -2.6 + w * 0.2; }
-        HERO.position.copy(pos); mpPublish(performance.now(), l > 0.05 || !onGround);
+        HERO.position.copy(pos);
+        if (carry) { const sx = pos.x + Math.sin(wyaw) * 1.1, sz = pos.z + Math.cos(wyaw) * 1.1; holdAt(carry, sx + CX, pos.y + WL + 1.9, CZ - sz, pos.y + WL); armL.rotation.x = armR.rotation.x = -2.8; }
+        mpPublish(performance.now(), l > 0.05 || !onGround);
         // Kamera: hinter dem Kopf, Mausrad = Abstand bis in die Ich-Perspektive; nicht durch Wände
         const head = pos.clone(); head.y += 1.62;
         const dir = new THREE.Vector3(-Math.sin(wyaw) * Math.cos(wpit), Math.sin(wpit), -Math.cos(wyaw) * Math.cos(wpit));
