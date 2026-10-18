@@ -6,5 +6,12 @@
  "size": 21000,
  "px": 3072,
  "image": "NxKPxyPYhX.webp",
+ "terrain": {
+  "file": "NxKPxyPYhX-gelaende.bin",
+  "res": 24,
+  "n": 876,
+  "x0": -10500,
+  "z0": -10500
+ },
  "source": "valheim-map.world (All Data, Generator 11.2)"
 }

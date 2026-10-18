@@ -24,6 +24,7 @@
 .vw-pane{position:absolute;inset:0;overflow:hidden}
 .vw-side{position:absolute;top:12px;left:12px;width:310px;max-width:calc(100% - 32px);max-height:calc(100% - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;z-index:3;backdrop-filter:blur(6px)}
 .vw-side.min{max-height:46px;overflow:hidden}
+.vw-filter{display:grid;grid-template-columns:1fr 1fr;gap:1px 8px}.vw-filter label{display:flex;align-items:center;gap:6px;padding:3px 2px;cursor:pointer;border-radius:5px;font-size:13px;white-space:nowrap;overflow:hidden}.vw-filter label:hover{background:rgba(127,127,127,.12)}.vw-filter input{margin:0;accent-color:#c8913f;flex:none}.vw-filter .ic{width:12px;text-align:center;flex:none;font-size:12px}.vw-filter .n{margin-left:auto;opacity:.55;font-size:11px}.vw-filter label[hidden]{display:none}
 .vw h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin:12px 0 6px}
 .vw h3{font-size:15px;margin:18px 0 8px}
 .vw .row{display:flex;flex-wrap:wrap;gap:6px}
@@ -95,9 +96,10 @@
 <div class="vw-main">
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
     <div class="vw-side"><button class="vw-mob" data-min>Menü</button><button class="pri w3d" style="width:100%;margin-top:4px">🌍 Ganze Welt in 3D ansehen</button><h2>Basen</h2><div class="vw-maplist"></div>
-      <h2 data-en="Map layers">Karten-Ebenen</h2><div class="row mlay"><button data-ml="portals">⛩ Portal-Netz</button><button data-ml="deaths">✝ Tode</button><button data-ml="heat" hidden>👣 Laufwege</button><button data-ml="seed" title="Unerkundete Gebiete aus dem Seed berechnet (wie der Weltgenerator des Spiels)">🗺 Ganze Welt (Seed)</button><button data-ml="dungeons" hidden title="Dungeons und Dörfer aus dem Spielstand">⛏ Dungeons</button></div>
+      <h2 data-en="Map layers">Karten-Ebenen</h2><div class="vw-filter"></div>
       <div class="heatCtl" hidden><div class="row" style="margin-top:6px"><select class="hPl" style="flex:1;min-width:0"></select><select class="hDays"><option value="0">Alle Tage</option><option value="1">Heute</option><option value="7">7 Tage</option><option value="30">30 Tage</option></select></div></div>
       <div class="sub mlInfo" style="margin-top:6px"></div>
+      <button class="gameLink" style="width:100%;margin-top:8px" title="Braucht den Mod „Valheim Welt Live“ auf diesem PC (http://localhost:8686). Deine Position wird live auf der Karte gezeigt und an andere Besucher der Karte geschickt.">🎮 Mein Spiel live zeigen (Mod)</button>
       <h2>Legende</h2><div class="sub">● Basis (anklicken = 3D) · ◆ Portal · ▲ Boss/Ort (grau = noch nicht erkundet)<br>Ziehen = verschieben · Mausrad/Pinch = Zoom</div><div class="sub biolg" style="margin-top:6px"></div></div>
   </div>
   <div class="vw-pane" data-p="3d" hidden><canvas class="gl"></canvas><div class="vw-labels"></div>
@@ -149,9 +151,62 @@
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
     let S = snap, tab = 'map', LIVE = null;
-    const areas = () => (S.world3d ? [S.world3d] : []).concat(S.regions);
-    const livePlayers = () => (LIVE || (S.live && S.live.players) || []);
+    // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
+    const SEEDW = { seed: '', meta: null, data: null, reg: null, regS: null };
+    function seedRegion() {
+      const m = SEEDW.meta; if (!m || !m.terrain || SEEDW.seed !== (S.world && S.world.seed)) return null;
+      if (SEEDW.reg && SEEDW.regS === S) return SEEDW.reg;
+      const w = S.world3d || {}, t = m.terrain, x1 = t.x0 + (t.n - 1) * t.res, z1 = t.z0 + (t.n - 1) * t.res;
+      SEEDW.reg = { id: 'seed', name: 'Ganze Welt mit unerkundeten Gebieten (Seed)', lazy: true, bounds: [t.x0, x1, t.z0, z1], center: w.center || [0, 0], pieceCount: w.pieceCount || 0, res: t.res, nx: t.n, nz: t.n,
+        types: w.types || [], owners: w.owners || [], pieces: w.pieces || {}, labels: w.labels || [], chests: w.chests || [], builders: w.builders || [], topTypes: w.topTypes || [], natureModels: w.natureModels, nature: {} };
+      SEEDW.regS = S; return SEEDW.reg;
+    }
+    function loadSeedMeta() {
+      const sd = S.world && S.world.seed; if (!sd || SEEDW.seed === sd || !/^[\w-]+$/.test(sd) || location.protocol === 'file:') return;
+      SEEDW.seed = sd; SEEDW.meta = null; SEEDW.data = null; SEEDW.reg = null;
+      fetch('weltkarte/' + sd + '.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((m) => { if (m && m.seed === sd && SEEDW.seed === sd && m.terrain) { SEEDW.meta = m; three.fillSelect(); } }).catch(() => { });
+    }
+    async function prepSeed(r) {
+      if (r.H16) return;
+      const t = SEEDW.meta.terrain, n = t.n, RS = t.res, X0 = t.x0, Z0 = t.z0, N = n * n;
+      if (!SEEDW.data) {
+        const res = await fetch('weltkarte/' + t.file); if (!res.ok) throw new Error('HTTP ' + res.status);
+        const b = new Uint8Array(await res.arrayBuffer()), u = (b[0] === 0x1f && b[1] === 0x8b) ? fflate.gunzipSync(b) : b;
+        SEEDW.data = { H: new Int16Array(u.buffer.slice(u.byteOffset, u.byteOffset + N * 2)), B: u.slice(N * 2, N * 3), F: u.slice(N * 3, N * 4) };
+      }
+      const { B, F } = SEEDW.data, H = new Int16Array(SEEDW.data.H), MK = new Uint8Array(N), ex = new Uint8Array(N);
+      // erkundete Gebiete: echte Höhen aus dem Spielstand (mit Terraforming), damit Basen richtig stehen
+      const w = S.world3d; let HW = null, MW = null;
+      if (w && w.h) { const hu = b64u8(w.h); HW = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2); MW = w.mask ? b64u8(w.mask) : null; }
+      const R2 = (Math.abs(X0) + RS) * (Math.abs(X0) + RS);
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const k = j * n + i, x = X0 + i * RS, z = Z0 + j * RS; MK[k] = x * x + z * z <= R2 ? 1 : 0;
+        if (HW) { const wi = Math.round((x - w.bounds[0]) / w.res), wj = Math.round((z - w.bounds[2]) / w.res); if (wi >= 0 && wj >= 0 && wi < w.nx && wj < w.nz) { const wk = wj * w.nx + wi; if (!MW || MW[wk]) { H[k] = HW[wk]; ex[k] = 1; } } }
+      }
+      // Natur: erkundet aus dem Spielstand, sonst Bäume aus der Walddichte des Weltgenerators
+      const nat = {}; Object.entries((w && w.nature) || {}).forEach(([kk, a]) => (nat[kk] = a.slice()));
+      const KIND = { 1: ['tree_beech', 'tree_birch'], 4: ['tree_fir', 'tree_fir_s'], 2: ['tree_swamp', 'tree_swamp'], 5: ['tree_oak', 'tree_birch'], 9: ['tree_ygg', 'tree_ygg'], 3: ['tree_fir_s', 'tree_fir_s'] };
+      const rnd = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); };
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const k = j * n + i; if (ex[k] || !MK[k] || F[k] < 40 || H[k] < 320) continue;
+        const kd = KIND[B[k]]; if (!kd || rnd(i, j) * 255 > F[k]) continue;
+        const r2 = rnd(j + 7.1, i - 3.3), x = X0 + i * RS + (r2 - 0.5) * RS * 0.9, z = Z0 + j * RS + (rnd(i + 1.7, j + 9.2) - 0.5) * RS * 0.9;
+        (nat[kd[r2 < 0.7 ? 0 : 1]] || (nat[kd[r2 < 0.7 ? 0 : 1]] = [])).push(x, H[k] / 10 - 0.3, z, r2 * 360, 0.8 + r2 * 0.5);
+      }
+      r.nature = nat; r.H16 = H; r.MK = MK; r.lazy = false;
+      r.bio = (x, z) => { const i = Math.round((x - X0) / RS), j = Math.round((z - Z0) / RS); return (i < 0 || j < 0 || i >= n || j >= n) ? 0 : B[j * n + i]; };
+    }
+    const areas = () => { const sr = seedRegion(); return (S.world3d ? [S.world3d] : []).concat(S.regions, sr ? [sr] : []); };
+    const livePlayers = () => { const L = (LIVE || (S.live && S.live.players) || []).slice(); let P = []; try { P = three.peerList().filter((p) => !p.web); } catch (e) { } const have = new Set(L.map((p) => p.name)); P.forEach((p) => { if (!have.has(p.name)) L.push(p); }); return L; };
     // Biome → Grundfarbe (ohne Biomdaten: klassisches Grün)
+    // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
+    const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
+      ['deaths', '✝', '#ff6b5a', 'Tode'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
+      ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
+      ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager']];
+    const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
+    const LOCK = {}; Object.values((g.VW_DATA && g.VW_DATA.locations) || {}).forEach((l) => { if (l[2]) LOCK[l[0]] = l[2]; });
+    const locCat = (l) => LOCK[l.k] || l.c || 'b';
     const FOG = 110; // Abdunklung unerkundeter Gebiete auf der fertigen Weltkarte (0–255)
     const BIO_COL = [null, [111, 154, 69], [92, 86, 52], [196, 202, 208], [52, 86, 50], [190, 172, 88], [92, 52, 42], [226, 236, 244], null, [84, 82, 104]];
     let BIOU = null, BIOS = null;
@@ -263,11 +318,14 @@
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
         drawLayers();
         ctx.font = '12px system-ui,sans-serif'; ctx.textAlign = 'center';
-        if (ML.dungeons) S.locations.forEach((l) => { if (!l.c) return; const [x, y] = toS(l.x, l.z); ctx.fillStyle = l.v ? '#c9935a' : 'rgba(201,147,90,.6)'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.rect(x - 3.5, y - 3.5, 7, 7); ctx.fill(); ctx.stroke(); if (view.s > 0.35) { ctx.fillStyle = '#f1dcc3'; ctx.fillText(T(l.n), x, y - 7); } });
-        S.locations.forEach((l) => { if (l.c) return; const [x, y] = toS(l.x, l.z); ctx.fillStyle = l.v ? '#e8584a' : 'rgba(200,200,200,.55)'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.fill(); if (view.s > 0.12 || l.k === 'StartTemple') { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
-        S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
-        livePlayers().forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d9ffe3'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(p.name, x, y + 18); ctx.font = '12px system-ui,sans-serif'; });
-        S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const rr = Math.max(5, Math.min(14, 3 + Math.sqrt(b.pieces) / 8)); ctx.fillStyle = hover === i ? '#ffd27a' : '#e0a854'; ctx.strokeStyle = '#1b1408'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(T(b.name), x, y - rr - 4); ctx.font = '12px system-ui,sans-serif'; });
+        S.locations.forEach((l) => { const c = locCat(l); if (!ML['L_' + c]) return; const [x, y] = toS(l.x, l.z); const st = LOCSTY[c] || LOCSTY.d; const a = l.v ? 1 : 0.6;
+          ctx.globalAlpha = a; ctx.fillStyle = st[0]; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.lineWidth = 1.5; ctx.beginPath();
+          if (st[1] === 'tri') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.closePath(); } else if (st[1] === 'dot') ctx.arc(x, y, 3.5, 0, Math.PI * 2); else if (st[1] === 'dia') { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); } else ctx.rect(x - 3.5, y - 3.5, 7, 7);
+          ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
+          if ((st[2] && view.s > 0.12) || l.k === 'StartTemple' || view.s > 0.35) { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
+        if (ML.portals) S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
+        if (ML.players) livePlayers().forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d9ffe3'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(p.name, x, y + 18); ctx.font = '12px system-ui,sans-serif'; });
+        if (ML.bases) S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const rr = Math.max(5, Math.min(14, 3 + Math.sqrt(b.pieces) / 8)); ctx.fillStyle = hover === i ? '#ffd27a' : '#e0a854'; ctx.strokeStyle = '#1b1408'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(T(b.name), x, y - rr - 4); ctx.font = '12px system-ui,sans-serif'; });
       }
       const ptr = new Map(); let pd = 0, moved = 0;
       cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; });
@@ -283,7 +341,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { portals: true, deaths: false, heat: false, seed: true, dungeons: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -319,10 +377,12 @@
         draw();
       }
       function layersChanged() {
-        $$('[data-ml]').forEach((b) => b.classList.toggle('on', !!ML[b.dataset.ml]));
-        const sb = $('[data-ml="seed"]'); sb.hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
-        const nd = (S.locations || []).filter((l) => l.c).length; $('[data-ml="dungeons"]').hidden = !nd;
-        const hb = $('[data-ml="heat"]'); hb.hidden = !EX.days.length;
+        $$('[data-ml]').forEach((b) => (b.checked = !!ML[b.dataset.ml]));
+        const cnt = {}; (S.locations || []).forEach((l) => { const c = 'L_' + locCat(l); cnt[c] = (cnt[c] || 0) + 1; });
+        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length;
+        $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_')) lb.hidden = !cnt[k]; });
+        $('[data-fk="seed"]').hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
+        $('[data-fk="heat"]').hidden = !EX.days.length;
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
         if (EX.days.length && !$('.hPl').options.length) {
           const names = new Set(); Promise.resolve(heatDays(7)).then((ds) => { ds.forEach((d) => Object.keys(d.players || {}).forEach((n) => names.add(n))); $('.hPl').innerHTML = '<option value="">Alle Spieler</option>' + [...names].sort().map((n) => `<option>${esc(n)}</option>`).join(''); });
@@ -330,12 +390,12 @@
         const info = [];
         if (ML.portals) { const N = portalNet(); info.push(`Portal-Netz: ${fmt(N.pairs.length)} Verbindungen` + (N.single.length ? ` · ohne Partner: ${N.single.map(esc).join(', ')}` : '') + (N.multi.length ? ` · mehr als 2 gleiche Namen: ${N.multi.map(esc).join(', ')}` : '') + (N.untagged ? ` · ${N.untagged} ohne Namen` : '')); }
         if (ML.seed && seedSrc) info.push(T('Ganze Welt mit Höhen, Flüssen und Wäldern') + ' · ' + T('Quelle') + ': ' + esc(seedSrc));
-        if (ML.dungeons && nd) info.push(T('Dungeons') + ': ' + fmt(nd) + ' · ' + T('hell = schon erkundet'));
         if (ML.deaths) { const D = allDeaths(); info.push(`Tode: ${fmt(D.length)} erfasst` + (D.some((d) => d.open) ? ` · rot = Grabstein liegt noch` : '')); }
         baseInfo = info.join('<br>'); $('.mlInfo').innerHTML = baseInfo;
         if (ML.heat) refreshHeat(); else draw();
       }
-      $$('[data-ml]').forEach((b) => (b.onclick = () => { ML[b.dataset.ml] = !ML[b.dataset.ml]; try { localStorage.setItem('vw-maplayers', JSON.stringify(ML)); } catch (e) { } layersChanged(); }));
+      $('.vw-filter').innerHTML = FILTERS.map(([k, ic, col, de]) => `<label data-fk="${k}"><input type="checkbox" data-ml="${k}"><span class="ic" style="color:${col}">${ic}</span><span>${de}</span><span class="n"></span></label>`).join('');
+      $$('[data-ml]').forEach((b) => (b.onchange = () => { ML[b.dataset.ml] = b.checked; try { localStorage.setItem('vw-maplayers', JSON.stringify(ML)); } catch (e) { } layersChanged(); }));
       $('.hPl').onchange = refreshHeat; $('.hDays').onchange = refreshHeat;
 
       function pick(sx, sy) { let best = null, bd = 16; S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = i; } }); return best; }
@@ -555,10 +615,10 @@
         if (fly) toggleFly(false);
         const prevRegId = reg && reg.id;
         let c = reg ? W(reg.center[0], 34, reg.center[1]) : new THREE.Vector3();
-        if (reg && reg.id === 'world' && S.bases[0] && v !== 'top') c = W(S.bases[0].center[0], 34, S.bases[0].center[1]);
+        if (reg && (reg.id === 'world' || reg.id === 'seed') && S.bases[0] && v !== 'top') c = W(S.bases[0].center[0], 34, S.bases[0].center[1]);
         if (v === 'top') { tgt.copy(c); dist = Math.max(reg.bounds[1] - reg.bounds[0], reg.bounds[3] - reg.bounds[2]) * 1.15; pit = 1.52; yaw = 0; }
         else if (v === 'near') { tgt.copy(c); dist = 140; pit = 0.55; yaw = -0.9; }
-        else { tgt.copy(c); dist = reg.id === 'world' ? 1600 : Math.max(160, Math.max(reg.bounds[1] - reg.bounds[0], reg.bounds[3] - reg.bounds[2]) * 0.8); pit = 0.9; yaw = -0.6; }
+        else { tgt.copy(c); dist = reg.id === 'world' ? 1600 : reg.id === 'seed' ? 3200 : Math.max(160, Math.max(reg.bounds[1] - reg.bounds[0], reg.bounds[3] - reg.bounds[2]) * 0.8); pit = 0.9; yaw = -0.6; }
         $$('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
       }
       $$('[data-v]').forEach((b) => (b.onclick = () => views(b.dataset.v)));
@@ -584,10 +644,10 @@
         const LIN = Q.detail === 'valheim';
         skyTex.encoding = LIN ? THREE.sRGBEncoding : THREE.LinearEncoding; skyTex.needsUpdate = true;
         if (LIN) { scene.fog.color.convertSRGBToLinear(); sun.color.convertSRGBToLinear(); if (hemi) { hemi.color.convertSRGBToLinear(); hemi.groundColor.convertSRGBToLinear(); } water.material.color.convertSRGBToLinear(); }
-        const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF;
+        const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF; if (r.id === 'seed') { scene.fog.near = 6000 * RF; scene.fog.far = 32000 * RF; }
         // Gelände
         { const SPN = g.VW_DATA && g.VW_DATA.pieces; if (SPN) r.types.forEach((t) => { const sp = SPN[t[0]]; if (sp) { t[1] = sp[1]; t[2] = sp[2]; t[3] = sp[3]; t[4] = sp[4]; t[5] = sp[5]; } }); } // ältere Snapshots: aktuelle Maße nehmen
-        const NX = r.nx, NZ = r.nz, RS = r.res; const hu = b64u8(r.h); const H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2);
+        const NX = r.nx, NZ = r.nz, RS = r.res; let H = r.H16; if (!H) { const hu = b64u8(r.h); H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2); } const bio = r.bio || bioAt;
         TER = { H, NX, NZ, RS, X0, Z0 };
         const hAt = (i, j) => H[Math.min(NZ - 1, Math.max(0, j)) * NX + Math.min(NX - 1, Math.max(0, i))] / 10;
         const tg = new THREE.BufferGeometry(), pos = new Float32Array(NX * NZ * 3), col = new Float32Array(NX * NZ * 3);
@@ -601,7 +661,7 @@
           pos[k * 3] = x - CX; pos[k * 3 + 1] = h - WL; pos[k * 3 + 2] = -(z - CZ);
           const sl = Math.hypot(hAt(i + 1, j) - hAt(i - 1, j), hAt(i, j + 1) - hAt(i, j - 1)) / (2 * RS), e = h - WL;
           if (e < 0) tmp.copy(cSea).lerp(cSand, THREE.MathUtils.smoothstep(e, -7, 0)); // unter Wasser: Meeresgrund → Sand
-          else { const b3 = BIO3[bioAt(x, z)]; const nz = noise(x, z);
+          else { const b3 = BIO3[bio(x, z)]; const nz = noise(x, z);
               if (b3) { c3a.setHex(b3[0]); c3b.setHex(b3[1]); tmp.copy(c3a).lerp(c3b, THREE.MathUtils.smoothstep(nz, -0.2, 0.6)); } else tmp.copy(cG).lerp(cG2, Math.min(1, Math.max(0, e - 2) / 25));
               const nd = noise(x * 3.1 + 500, z * 3.1 - 300); if (nd > 0.55) tmp.lerp(cDirt, Math.min(0.35, (nd - 0.55) * 1.6)); // Erdflecken
             tmp.lerp(cSand, 1 - THREE.MathUtils.smoothstep(e, 0.4, 2.4)); } // Strand weich ins Land
@@ -611,7 +671,7 @@
           if (LIN) tmp.convertSRGBToLinear();
           col[k * 3] = tmp.r; col[k * 3 + 1] = tmp.g; col[k * 3 + 2] = tmp.b;
         }
-        const MK = r.mask ? b64u8(r.mask) : null;
+        const MK = r.MK || (r.mask ? b64u8(r.mask) : null);
         const idx = new Uint32Array((NX - 1) * (NZ - 1) * 6); let t = 0;
         for (let j = 0; j < NZ - 1; j++) for (let i = 0; i < NX - 1; i++) { const a = j * NX + i, b = a + 1, c = a + NX, d = c + 1; if (MK && !(MK[a] | MK[b] | MK[c] | MK[d])) continue; idx[t++] = a; idx[t++] = b; idx[t++] = c; idx[t++] = b; idx[t++] = d; idx[t++] = c; }
         tg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); tg.setAttribute('color', new THREE.BufferAttribute(col, 3)); tg.setIndex(new THREE.BufferAttribute(idx.subarray(0, t), 1)); tg.computeVertexNormals();
@@ -1031,7 +1091,7 @@
       const H0 = makeHero(0x6d4a2b), HERO = H0.g, legL = H0.legL, legR = H0.legR, armL = H0.armL, armR = H0.armR; HERO.visible = false; scene.add(HERO);
 
       // ---- Mitspieler im Browser: Position und Name laufen über einen öffentlichen MQTT-Broker (kein Server nötig, nichts am Spielserver)
-      const MP = { cli: null, loading: false, me: Math.random().toString(36).slice(2, 10), peers: new Map(), lastPub: 0, lastMsg: '' };
+      const MP = { cli: null, loading: false, me: Math.random().toString(36).slice(2, 10), peers: new Map(), lastPub: 0, lastMsg: '', mine: new Map() };
       const mpRoom = () => 'vwelt/' + (location.host + location.pathname).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 60) + '/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
       const NAME_IN = $('.walkName');
       let myName = ''; try { myName = localStorage.getItem('vw-walk-name') || ''; } catch (e) { }
@@ -1048,12 +1108,12 @@
       }
       const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
       function onPeer(topic, msg) {
-        const id = topic.split('/').pop(); if (id === MP.me) return;
+        const id = topic.split('/').pop(); if (id === MP.me || MP.mine.has(id)) return;
         let d = null; try { d = msg && msg.length ? JSON.parse(new TextDecoder().decode(msg)) : null; } catch (e) { }
         let P = MP.peers.get(id);
         if (!d) { if (P) { scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id); invalidate(); } return; }
         if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
-        Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = '🧍 ' + P.n; invalidate();
+        Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, g: !!d.g, seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n; invalidate();
       }
       function mpPublish(now, moving) {
         if (!MP.cli || !MP.cli.connected) return;
@@ -1061,6 +1121,17 @@
         const j = JSON.stringify(d); if (j === MP.lastMsg && now - MP.lastPub < 3000) return; if (now - MP.lastPub < 120) return;
         MP.cli.publish(mpRoom() + '/p/' + MP.me, j, { qos: 0 }); MP.lastMsg = j; MP.lastPub = now;
       }
+      // Spieler aus dem eigenen Spiel (Mod) für alle Besucher der Karte veröffentlichen
+      function pubGame(list) {
+        mpStart(); if (!MP.cli || !MP.cli.connected) return; const now = performance.now();
+        (list || []).forEach((p) => {
+          if (!p || !p.name) return; const id = 'g' + [...p.name].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) | 0, 7).toString(36).replace('-', 'm');
+          const o = MP.mine.get(id), r = o ? Math.atan2(p.x - o.x, p.z - o.z) : 0, mv = o ? Math.hypot(p.x - o.x, p.z - o.z) > 0.3 : false;
+          const d = { n: p.name, x: +(+p.x).toFixed(2), y: +(+p.y).toFixed(2), z: +(+p.z).toFixed(2), r: mv ? +(-r + Math.PI).toFixed(2) : (o ? o.r : 0), m: mv ? 1 : 0, g: 1 };
+          MP.mine.set(id, Object.assign({}, d, { t: now })); MP.cli.publish(mpRoom() + '/p/' + id, JSON.stringify(d), { qos: 0 });
+        });
+      }
+      const peerList = () => [...MP.peers.values()].map((P) => ({ name: P.n, x: P.tx, y: P.ty, z: P.tz, web: !P.g }));
       function mpLeave() { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + MP.me, '', { qos: 0 }); MP.lastMsg = ''; }
       function mpTick(dt) {
         if (!MP.peers.size) return; const now = performance.now(); let moved = false; const pr = pane.getBoundingClientRect();
@@ -1363,10 +1434,14 @@
       function stop() { running = false; }
       // Basis-Auswahl
       const sel = $('.reg');
-      function fillSelect() { sel.innerHTML = areas().map((r, i) => `<option value="${i}">${r.id === 'world' ? '🌍 Ganze Welt (alle erkundeten Gebiete)' : esc(r.name) + ' (' + fmt(r.pieceCount) + ' Teile, Detail)'}</option>`).join(''); }
+      function fillSelect() { const A = areas(); sel.innerHTML = A.map((r, i) => `<option value="${i}">${r.id === 'world' ? '🌍 Ganze Welt (alle erkundeten Gebiete)' : r.id === 'seed' ? '🗺 ' + esc(r.name) : esc(r.name) + ' (' + fmt(r.pieceCount) + ' Teile, Detail)'}</option>`).join(''); if (reg) { const i = A.findIndex((x) => x.id === reg.id); if (i >= 0) sel.value = i; } }
       sel.onchange = () => selectRegion(+sel.value);
-      function selectRegion(i, keepCam) { const A = areas(); if (!A[i]) return; sel.value = i; load(A[i], keepCam); applyLayers(); }
-      return { start, stop, selectRegion, fillSelect, addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
+      function selectRegion(i, keepCam) {
+        const A = areas(), r = A[i]; if (!r) return; sel.value = i;
+        if (r.lazy && !r.H16) { const st = $('.vw-status'), prev = st.textContent; st.textContent = T('Lade Gelände der ganzen Welt …'); prepSeed(r).then(() => { st.textContent = prev; if (+sel.value === i) { load(r, keepCam); applyLayers(); } }).catch((e) => { st.textContent = 'Gelände nicht ladbar: ' + e.message; }); return; }
+        load(r, keepCam); applyLayers();
+      }
+      return { start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
     })();
 
     $('.w3d').onclick = () => { setTab('3d'); three.selectRegion(0); };
@@ -1478,7 +1553,7 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     function apply(newSnap, keep) {
       const prevTab = tab, prevReg = three.regionId, cam = keep ? three.state : null;
       S = newSnap; STOCK = null; $('.vw-title').textContent = S.world.name + (S.world.seed ? ' · ' + S.world.seed : '');
-      map.build(); map.layersChanged(); three.fillSelect(); kisten.fill();
+      map.build(); map.layersChanged(); three.fillSelect(); kisten.fill(); loadSeedMeta();
       if (keep && prevReg) { const i = areas().findIndex((r) => r.id === prevReg); if (i >= 0) { three.selectRegion(i, true); three.state = cam; } }
       setTab(prevTab);
     }
@@ -1488,6 +1563,22 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     if (snap.plans && snap.plans.length) three.setPlans(snap.plans);
     requestAnimationFrame(() => { map.build(); map.draw(); });
     function updateLive(players) { LIVE = players; three.drawPlayers(); if (tab === 'map') map.draw(); }
+    // ---- Eigenes Spiel live (Mod „Valheim Welt Live“ auf diesem PC): Position auf der Online-Karte zeigen und an andere Besucher schicken
+    let GL = { on: false, timer: 0, fails: 0, url: 'http://localhost:8686' };
+    async function gamePoll() {
+      try { const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500); const l = await (await fetch(GL.url + '/api/players', { cache: 'no-store', signal: ctl.signal })).json(); clearTimeout(to);
+        GL.fails = 0; updateLive(l); three.pubGame(l); $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
+      } catch (e) { GL.fails++; $('.gameLink').textContent = '🎮 ' + T('Spiel nicht erreichbar – läuft Valheim mit dem Mod?'); if (GL.fails > 3) LIVE = null; }
+    }
+    function gameLink(on) {
+      GL.on = on; clearInterval(GL.timer); try { localStorage.setItem('vw-gamelink', on ? '1' : ''); } catch (e) { }
+      $('.gameLink').classList.toggle('on', on);
+      if (on) { const u = new URLSearchParams(location.search).get('mod'); if (u) GL.url = u.replace(/\/+$/, ''); three.mpStart(); gamePoll(); GL.timer = setInterval(gamePoll, 1500); }
+      else { $('.gameLink').textContent = '🎮 ' + T('Mein Spiel live zeigen (Mod)'); LIVE = null; map.draw(); }
+    }
+    $('.gameLink').onclick = () => gameLink(!GL.on);
+    if (location.protocol === 'file:') $('.gameLink').hidden = true; else { let a = ''; try { a = localStorage.getItem('vw-gamelink'); } catch (e) { } if (a) gameLink(true); }
+    setInterval(() => { try { if (tab === 'map' && three.peerList().some((p) => !p.web)) map.draw(); } catch (e) { } }, 2000); // Mitspieler aus dem Spiel bewegen sich
     return { update: (s) => { LIVE = null; apply(s, true); }, setStatus, setTab, open3d, getPlans: () => three.getPlans(), updateLive };
   }
   g.VWViewer = { mount };

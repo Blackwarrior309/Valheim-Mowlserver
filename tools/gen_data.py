@@ -27,11 +27,17 @@ except FileNotFoundError: META={}
 for _k,_m in META.items():
     if _m.get('de'): PN[_k]=_m['de']
 LOC={'StartTemple':'Spawn','Eikthyrnir':'Eikthyr','GDKing':'Der Älteste','Bonemass':'Knochenmasse','Dragonqueen':'Moder','GoblinKing':'Yagluth','Mistlands_DvergrBossEntrance1':'Die Königin','FaderLocation':'Fader','Vendor_BlackForest':'Haldor (Händler)','Hildir_camp':'Hildir','BogWitch_Camp':'Moorhexe'}
-# Dungeons und weitere Orte (Kartenebene „Dungeons“); Kategorie 'd'
-DUN={'Crypt2':'Grabkammer','Crypt3':'Grabkammer','Crypt4':'Grabkammer','TrollCave02':'Trollhöhle','SunkenCrypt4':'Versunkene Krypta','MountainCave02':'Frosthöhle',
-     'Mistlands_DvergrTownEntrance1':'Befallene Mine','Mistlands_DvergrTownEntrance2':'Befallene Mine','CharredFortress':'Festung (Aschelande)','MorgenHole1':'Morgen-Höhle','MorgenHole2':'Morgen-Höhle','MorgenHole3':'Morgen-Höhle',
-     'Hildir_crypt':'Hildir: Rauchige Gruft','Hildir_cave':'Hildir: Heulende Höhle','Hildir_plainsfortress':'Hildir: Festung','GoblinCamp2':'Fulingdorf','WoodVillage1':'Draugr-Dorf','WoodVillage2':'Draugr-Dorf'}
-out={'locations':dict([(str(stable(k)),[k,v]) for k,v in LOC.items()]+[(str(stable(k)),[k,v,'d']) for k,v in DUN.items()]),'prefabs':{str(stable(n)):n for n in sorted(names)},'pieces':{k:list(v[:5])+([META[k]['yoff']] if k in META and 'yoff' in META[k] else []) for k,v in T.items()},
+# Orte aus dem Spielstand mit Kategorie für den Kartenfilter:
+# s Spawn · b Bosse · t Händler · q Quests · d Dungeons · h Feindliche Siedlungen · n Spawner/Nester · m Material · v Dvergr-Lager
+LOCC={'StartTemple':'s','Vendor_BlackForest':'t','Hildir_camp':'t','BogWitch_Camp':'t'}
+DUN={'d':{'Crypt2':'Grabkammer','Crypt3':'Grabkammer','Crypt4':'Grabkammer','TrollCave02':'Trollhöhle','SunkenCrypt4':'Versunkene Krypta','MountainCave02':'Frosthöhle',
+          'Mistlands_DvergrTownEntrance1':'Befallene Mine','Mistlands_DvergrTownEntrance2':'Befallene Mine','CharredFortress':'Festung (Aschelande)','MorgenHole1':'Morgen-Höhle','MorgenHole2':'Morgen-Höhle','MorgenHole3':'Morgen-Höhle'},
+     'q':{'Hildir_crypt':'Hildir: Rauchige Gruft','Hildir_cave':'Hildir: Heulende Höhle','Hildir_plainsfortress':'Hildir: Festung'},
+     'h':{'GoblinCamp2':'Fulingdorf','WoodVillage1':'Draugr-Dorf','WoodVillage2':'Draugr-Dorf','CharredFortress':None},
+     'n':{'Greydwarf_camp1':'Grauzwerg-Nest','DrakeNest01':'Drachennest'},
+     'm':{'TarPit1':'Teergrube','TarPit2':'Teergrube','TarPit3':'Teergrube','Mistlands_Giant1':'Riesenskelett','Mistlands_Giant2':'Riesenskelett'},
+     'v':{'Mistlands_GuardTower1_new':'Dvergr-Turm','Mistlands_GuardTower2_new':'Dvergr-Turm','Mistlands_GuardTower3_new':'Dvergr-Turm','Mistlands_Harbour1':'Dvergr-Hafen','Mistlands_Excavation1':'Dvergr-Grabung','Mistlands_Excavation2':'Dvergr-Grabung','Mistlands_Excavation3':'Dvergr-Grabung'}}
+out={'locations':dict([(str(stable(k)),[k,v,LOCC.get(k,'b')]) for k,v in LOC.items()]+[(str(stable(k)),[k,v,c]) for c,d in DUN.items() for k,v in d.items() if v]),'prefabs':{str(stable(n)):n for n in sorted(names)},'pieces':{k:list(v[:5])+([META[k]['yoff']] if k in META and 'yoff' in META[k] else []) for k,v in T.items()},
  'nature':{str(stable(n)):k for k,v in NAT.items() for n in v.split()},'ground':[stable(n) for n in GROUND],
  'items':{str(stable(k)):v for k,v in NAMES.items()},'containers':{str(stable(k)):v for k,v in CONT.items()},'pieceNames':PN}
 js='/* Generiert von tools/gen_data.py – Namens- und Bauteil-Tabellen (inoffiziell) */\n(function(g){g.VW_DATA='+json.dumps(out,ensure_ascii=False,separators=(',',':'))+';})(typeof self!=="undefined"?self:globalThis);\n'

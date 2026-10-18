@@ -66,7 +66,26 @@ yy, xx = np.mgrid[0:n, 0:n]; cx = (xx + 0.5) * st - EXT; cz = EXT - (yy + 0.5) *
 alpha = np.where(np.hypot(cx, cz) <= EXT, 255, 0).astype(np.uint8)
 img = Image.fromarray(np.dstack([np.clip(rgb, 0, 255).astype(np.uint8), alpha]), 'RGBA').resize((PX, PX), Image.LANCZOS)
 os.makedirs(out, exist_ok=True)
+# Gelände für die 3D-Ansicht: 24-m-Raster, Int16 Höhe (dm) + Uint8 Biom (Viewer-Codes) + Uint8 Wald (0–255), gzip
+TR = 24; TN = int(2 * EXT / TR) + 1
+src_i = np.clip(np.round((np.arange(TN) * TR) / st).astype(int), 0, n - 1)  # Spalten (x) im Bild
+src_j = np.clip(np.round((np.arange(TN) * TR) / st).astype(int), 0, n - 1)  # z aufsteigend
+Hn = H[::-1]  # Zeilen wieder z aufsteigend
+Hs = blur(Hn, 1)[np.ix_(src_j, src_i)]
+Bs = B[::-1][np.ix_(src_j, src_i)]
+fo_n = fo[::-1] * (Hn > 31)
+k = max(1, int(round(TR / st)))
+pad = np.pad(fo_n, k, mode='edge'); acc = np.zeros_like(fo_n)
+for dy in range(-k // 2, k // 2 + 1):
+    for dx in range(-k // 2, k // 2 + 1): acc += pad[k + dy:k + dy + n, k + dx:k + dx + n]
+Fs = (acc / ((k // 2 * 2 + 1) ** 2))[np.ix_(src_j, src_i)]
+BMAP = np.zeros(1024, np.uint8)
+for gb, vb in {1: 1, 2: 2, 4: 3, 8: 4, 16: 5, 32: 6, 64: 7, 256: 8, 512: 9}.items(): BMAP[gb] = vb
+blob = np.clip(np.round(Hs * 10), -32768, 32767).astype('<i2').tobytes() + BMAP[Bs].tobytes() + np.clip(Fs * 255, 0, 255).astype(np.uint8).tobytes()
+open(f'{out}/{seed}-gelaende.bin', 'wb').write(gzip.compress(blob, 9))
+print('Gelände', TN, 'x', TN, os.path.getsize(f'{out}/{seed}-gelaende.bin') // 1024, 'KB', 'Waldzellen', int((Fs > 0.5).sum()))
+
 img.save(f'{out}/{seed}.webp', 'WEBP', quality=82, method=6)
-json.dump({'seed': seed, 'version': M.get('WorldVersion'), 'x0': -EXT, 'z0': -EXT, 'size': 2 * EXT, 'px': PX, 'image': f'{seed}.webp',
+json.dump({'seed': seed, 'version': M.get('WorldVersion'), 'x0': -EXT, 'z0': -EXT, 'size': 2 * EXT, 'px': PX, 'image': f'{seed}.webp', 'terrain': {'file': f'{seed}-gelaende.bin', 'res': TR, 'n': TN, 'x0': -EXT, 'z0': -EXT},
            'source': 'valheim-map.world (All Data, Generator ' + str(M.get('GeneratorVersion')) + ')'}, open(f'{out}/{seed}.json', 'w'), ensure_ascii=False, indent=1)
 print(seed, f'{out}/{seed}.webp', os.path.getsize(f'{out}/{seed}.webp') // 1024, 'KB')
