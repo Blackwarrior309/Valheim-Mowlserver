@@ -197,7 +197,7 @@
       r.bio = (x, z) => { const i = Math.round((x - X0) / RS), j = Math.round((z - Z0) / RS); return (i < 0 || j < 0 || i >= n || j >= n) ? 0 : B[j * n + i]; };
     }
     const areas = () => { const sr = seedRegion(); return (S.world3d ? [S.world3d] : []).concat(S.regions, sr ? [sr] : []); };
-    const livePlayers = () => { const L = (LIVE || (S.live && S.live.players) || []).slice(); let P = []; try { P = three.peerList().filter((p) => !p.web); } catch (e) { } const have = new Set(L.map((p) => p.name)); P.forEach((p) => { if (!have.has(p.name)) L.push(p); }); return L; };
+    const livePlayers = () => { const L = (LIVE || (S.live && S.live.players) || []).slice(); let P = []; try { P = three.peerList().filter((p) => !p.web); } catch (e) { } const have = new Set(L.map((p) => p.name)); P.forEach((p) => { if (!have.has(p.name)) L.push(Object.assign({ peer: true }, p)); }); return L; };
     // Biome → Grundfarbe (ohne Biomdaten: klassisches Grün)
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
@@ -819,13 +819,19 @@
         $$('.pc', PL).forEach((el, i) => { el.textContent = Math.round(all[i].x) + ' / ' + Math.round(all[i].z); });
         PL.onclick = (e) => { const d = e.target.closest('.r'); if (!d) return; const p = livePlayers()[+d.dataset.i]; if (!p) return; const inside = reg && p.x >= reg.bounds[0] && p.x <= reg.bounds[1] && p.z >= reg.bounds[2] && p.z <= reg.bounds[3]; if (!inside) { const ri = areas().findIndex((r) => p.x >= r.bounds[0] && p.x <= r.bounds[1] && p.z >= r.bounds[2] && p.z <= r.bounds[3]); if (ri >= 0) selectRegion(ri); } if (fly) toggleFly(false); tgt.copy(W(p.x, p.y, p.z)); dist = 45; pit = 0.6; };
         invalidate();
-        if (!reg) return; const [X0, X1, Z0, Z1] = reg.bounds;
+        // Online-Spieler als laufende Figuren (wie im Laufmodus); Spieler, die schon über MQTT als Figur kommen, nicht doppelt
+        const seen = new Set(), now = performance.now();
         all.forEach((p) => {
-          if (p.x < X0 || p.x > X1 || p.z < Z0 || p.z > Z1) return;
-          const v = W(p.x, p.y, p.z); const b = new THREE.Mesh(plBody, plMat); b.position.set(v.x, v.y + 0.9, v.z); b.renderOrder = 11; plG.add(b);
-          const r = new THREE.Mesh(plRing, plMat); r.position.set(v.x, v.y + 0.1, v.z); r.renderOrder = 11; plG.add(r);
-          const d = document.createElement('div'); d.className = 'vw-lbl pl'; d.textContent = '● ' + p.name; LB.appendChild(d); plLab.push({ d, v: new THREE.Vector3(v.x, v.y + 2.6, v.z) });
+          if (p.peer) return; seen.add(p.name); let O = OP.get(p.name);
+          if (!O) { const h = makeHero(COLS[[...p.name].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); O = { h, x: p.x, y: p.y, z: p.z, tx: p.x, ty: p.y, tz: p.z, r: 0, anim: 0, run: 0, t: now }; OP.set(p.name, O); }
+          const dx = p.x - O.tx, dz = p.z - O.tz, d = Math.hypot(dx, dz); if (d > 0.15) O.r = Math.atan2(dx, -dz);
+          if (d > 60) { O.x = p.x; O.y = p.y; O.z = p.z; } // Teleport (Portal): springen statt gleiten
+          O.run = d > 0.15 ? Math.min(2, d / Math.max(0.3, (now - O.t) / 1000) / 4) : 0; O.tx = p.x; O.ty = p.y; O.tz = p.z; O.t = now;
+          const r = new THREE.Mesh(plRing, plMat); r.renderOrder = 11; plG.add(r); O.ring = r;
+          const dv = document.createElement('div'); dv.className = 'vw-lbl pl'; dv.textContent = '● ' + p.name; LB.appendChild(dv); O.lab = { d: dv, v: new THREE.Vector3() }; plLab.push(O.lab);
         });
+        for (const [n, O] of OP) if (!seen.has(n)) { scene.remove(O.h.g); OP.delete(n); }
+        opTick(0);
       }
       // ---- Baupläne (.vwplan): als Modell einblenden, verschieben, drehen
       const planG = new THREE.Group(); scene.add(planG);
@@ -1088,6 +1094,22 @@
       // Figur aus einfachen Formen (eigenes Modell, kein Spiel-Asset)
       const HERO_MATS = []; let heroLin = false;
       function heroColors(lin) { if (lin === heroLin) return; heroLin = lin; HERO_MATS.forEach((m) => { m.color.setHex(m.userData.hex); if (lin) m.color.convertSRGBToLinear(); }); }
+      const OP = new Map(); // Online-Spieler-Figuren
+      function opTick(dt) {
+        if (!OP.size) return; let moved = false; const k = dt ? Math.min(1, dt * 4) : 0;
+        for (const O of OP.values()) {
+          if (k) { O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (O.tz - O.z) * k; }
+          let dr = O.r - O.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); O.h.g.rotation.y += dr * (dt ? Math.min(1, dt * 8) : 1);
+          const going = Math.abs(O.tx - O.x) + Math.abs(O.tz - O.z) > 0.05;
+          if (going) { O.anim += dt * (O.run > 1.2 ? 13 : 9); moved = true; } else O.anim *= 0.85;
+          const sw = Math.sin(O.anim) * (going ? 0.7 : 0); O.h.legL.rotation.x = sw; O.h.legR.rotation.x = -sw; O.h.armL.rotation.x = -sw * 0.8; O.h.armR.rotation.x = sw * 0.8;
+          const inside = reg && O.x >= reg.bounds[0] - 50 && O.x <= reg.bounds[1] + 50 && O.z >= reg.bounds[2] - 50 && O.z <= reg.bounds[3] + 50;
+          O.h.g.visible = !!inside; O.h.g.position.set(O.x - CX, O.y - WL, CZ - O.z);
+          if (O.ring) { O.ring.visible = !!inside; O.ring.position.set(O.x - CX, O.y - WL + 0.1, CZ - O.z); }
+          if (O.lab) { O.lab.v.set(O.x - CX, O.y - WL + 2.6, CZ - O.z); O.lab.out = !inside; }
+        }
+        if (moved) invalidate();
+      }
       function makeHero(tunicCol) {
         const G = new THREE.Group();
         const hm = (c) => { const m = new THREE.MeshLambertMaterial({ color: c }); m.userData.hex = c; if (heroLin) m.color.convertSRGBToLinear(); HERO_MATS.push(m); return m; };
@@ -1291,7 +1313,7 @@
         if (!running) return;
         const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
         if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit();
-        mpTick(dt);
+        mpTick(dt); opTick(dt);
         if (bigArea) { scene.fog.far = Math.max(14000 * ({ near: 0.5, mid: 1, far: 2 }[Q.range] || 1), (fly ? 0 : dist) * 2.2); scene.fog.near = scene.fog.far * 0.2; }
         cam.updateMatrixWorld();
         const key = cam.matrixWorld.elements.map((v) => v.toFixed(3)).join(',');
@@ -1303,7 +1325,7 @@
           const r = pane.getBoundingClientRect();
           const place = (l, vis) => { l.d.style.display = vis ? 'block' : 'none'; if (vis) { l.d.style.left = ((pv2.x + 1) / 2 * r.width) + 'px'; l.d.style.top = ((1 - pv2.y) / 2 * r.height) + 'px'; } };
           labels.forEach((l) => { pv2.copy(l.v).project(cam); const d = fly ? l.v.distanceTo(cam.position) : dist; place(l, showLbl && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && d < (l.k === 'bed' || l.k === 'tomb' ? (fly ? 60 : 220) : (fly ? 150 : 380))); });
-          plLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
+          plLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, !l.out && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           chLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && (fly ? l.v.distanceTo(cam.position) < 120 : dist < 260)); });
         }
         requestAnimationFrame(frame);
