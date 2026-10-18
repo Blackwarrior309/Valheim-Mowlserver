@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+- Live player cards in map, 3D and player lists, with follow, go-to and view switching.
+- Local character health, stamina, eitr, equipped items and held items in `/api/players`.
+- Persisted per-world observed playtime, deaths, foot distance and session visits. These counters start when this version begins recording; they are not historical character totals.
+- `Spieler.ShareDetails` controls the additional local API fields and collection. Live browser sharing forwards these details when enabled.
+
+
 ## 0.4.0
 - In-game chest search (F7): type an item name – nearby chests get a label with the amount, all chests appear as map pins, the recipe shows every ingredient with how much is stored.
 - Optional `LiveMapUrl`: also finds chests far away, using your live map's world file.

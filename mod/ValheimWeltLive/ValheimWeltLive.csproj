@@ -4,6 +4,7 @@
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
     <AssemblyName>ValheimWeltLive</AssemblyName>
+    <Version>0.5.0</Version>
     <LangVersion>latest</LangVersion>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -20,6 +21,7 @@
     <Reference Include="assembly_utils"><HintPath>$(Managed)\assembly_utils.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(Managed)\UnityEngine.JSONSerializeModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(ValheimDir)\BepInEx\core\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="netstandard"><HintPath>$(Managed)\netstandard.dll</HintPath><Private>false</Private></Reference>

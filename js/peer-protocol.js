@@ -1,6 +1,7 @@
 /* Bounded wire validation; empty payload alone means departure. */
 (function (g) {
   'use strict';
+  const cards = typeof module !== 'undefined' && module.exports ? require('./player-card.js') : g.VWPlayerCard;
   function decode(room, topic, bytes) {
     const prefix = room + '/p/';
     if (typeof topic !== 'string' || !topic.startsWith(prefix)) return null;
@@ -13,7 +14,7 @@
         Math.abs(d.x) > 20000 || Math.abs(d.z) > 20000 || Math.abs(d.y) >= 5000 ||
         typeof d.n !== 'string' || d.n.length > 24 || ![undefined, 0, 1, false, true].includes(d.m) ||
         ![undefined, 0, 1, false, true].includes(d.g)) return null;
-    return { id, data: { ...d, r: Math.atan2(Math.sin(d.r), Math.cos(d.r)) } };
+    return { id, data: { ...d, details: cards ? cards.details(d.details) : null, r: Math.atan2(Math.sin(d.r), Math.cos(d.r)) } };
   }
   const api = { decode, ttl: 20000, limit: 64 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

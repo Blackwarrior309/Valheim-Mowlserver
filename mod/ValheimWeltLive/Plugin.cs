@@ -24,10 +24,10 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.4.0";
+        public const string Version = "0.5.0";
         static bool loggedFile;
 
-        ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths;
+        ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails;
         ConfigEntry<int> cfgPort, cfgWorldSeconds, cfgTrackSeconds, cfgTrackDays;
         ConfigEntry<float> cfgPlayerSeconds;
         ConfigEntry<string> cfgFilePath;
@@ -63,6 +63,8 @@ namespace ValheimWeltLive
             cfgTrackSeconds = Config.Bind("Spuren", "PositionIntervalSeconds", 10, "Seconds between recorded positions.");
             cfgTrackDays = Config.Bind("Spuren", "KeepDays", 3, "Days of position files kept on the server (the live map copies them to GitHub).");
             cfgDeaths = Config.Bind("Spuren", "RecordDeaths", true, "Server: record every new tombstone (tode.csv next to the dump file) – also deaths whose tombstone is looted before the next save.");
+            cfgDetails = Config.Bind("Spieler", "ShareDetails", true, "Include local player health, stamina, eitr, equipment and recorded world statistics in /api/players. Shared with map visitors when live game sharing is enabled.");
+            LoadPlayerStats();
             webRoot = Path.Combine(Path.GetDirectoryName(Info.Location) ?? ".", "web");
             // Kisten-Suche im Spiel (nur auf Spieler-Rechnern, nicht auf dedizierten Servern)
             if (!Application.isBatchMode)
@@ -79,12 +81,14 @@ namespace ValheimWeltLive
 
         void OnDestroy()
         {
+            SavePlayerStats();
             try { http?.Stop(); http?.Close(); } catch { }
         }
 
         void Update()
         {
-            if (ZNet.instance == null || ZDOMan.instance == null) return;
+            if (statsNetwork != ZNet.instance) { statsSession = null; statsNetwork = ZNet.instance; }
+            if (ZNet.instance == null || ZDOMan.instance == null) { statsSession = null; return; }
             float t = Time.realtimeSinceStartup;
             if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } }
             if (!biomeBusy && WorldGenerator.instance != null && ZNet.instance != null && (biomeGrid == null || biomeWorld != ZNet.instance.GetWorldName())) StartCoroutine(BuildBiomes());
@@ -192,18 +196,66 @@ namespace ValheimWeltLive
         string CollectPlayers()
         {
             var sb = new StringBuilder("["); bool first = true; var seen = new HashSet<string>();
-            Action<string, Vector3> Add = (n, p) =>
+            Action<string, Vector3, Player> Add = (n, p, character) =>
             {
                 if (string.IsNullOrEmpty(n) || !seen.Add(n)) return;
                 if (!first) sb.Append(','); first = false;
-                sb.Append("{\"name\":").Append(Json(n)).Append(",\"x\":").Append(F(p.x)).Append(",\"y\":").Append(F(p.y)).Append(",\"z\":").Append(F(p.z)).Append('}');
+                sb.Append("{\"name\":").Append(Json(n)).Append(",\"x\":").Append(F(p.x)).Append(",\"y\":").Append(F(p.y)).Append(",\"z\":").Append(F(p.z));
+                if (character == Player.m_localPlayer && character != null && cfgDetails.Value) AppendDetails(sb, character);
+                sb.Append('}');
             };
-            if (Player.m_localPlayer != null) Add(Player.m_localPlayer.GetPlayerName(), Player.m_localPlayer.transform.position);
-            foreach (var pl in Player.GetAllPlayers()) if (pl != null) Add(pl.GetPlayerName(), pl.transform.position);
-            if (ZNet.instance.IsServer()) foreach (var peer in ZNet.instance.GetPeers()) if (peer != null && peer.m_refPos != Vector3.zero) Add(peer.m_playerName, peer.m_refPos);
+            if (Player.m_localPlayer != null) Add(Player.m_localPlayer.GetPlayerName(), Player.m_localPlayer.transform.position, Player.m_localPlayer);
+            foreach (var pl in Player.GetAllPlayers()) if (pl != null) Add(pl.GetPlayerName(), pl.transform.position, pl);
+            if (ZNet.instance.IsServer()) foreach (var peer in ZNet.instance.GetPeers()) if (peer != null && peer.m_refPos != Vector3.zero) Add(peer.m_playerName, peer.m_refPos, null);
             // Mitspieler, die ihre Position teilen (auch weit weg, im Multiplayer)
-            try { foreach (var pi in ZNet.instance.GetPlayerList()) if (pi.m_publicPosition && pi.m_position != Vector3.zero) Add(pi.m_name, pi.m_position); } catch { }
+            try { foreach (var pi in ZNet.instance.GetPlayerList()) if (pi.m_publicPosition && pi.m_position != Vector3.zero) Add(pi.m_name, pi.m_position, null); } catch { }
             return sb.Append(']').ToString();
+        }
+
+        // Local, world-specific observation statistics. Never infer remote stamina/equipment.
+        [Serializable] public class PlayerStats { public string world, name; public double playedSeconds, distance; public int deaths, visits; public long since; }
+        [Serializable] public class PlayerStatsFile { public List<PlayerStats> players = new List<PlayerStats>(); }
+        PlayerStatsFile playerStats = new PlayerStatsFile();
+        ZNet statsNetwork; PlayerStats statsSession; Player statsCharacter; float statsTime, statsSaved; Vector3 statsPosition; bool statsDead;
+        string StatsPath => Path.Combine(Paths.ConfigPath, "ValheimWeltLive", "player-stats.json");
+        void LoadPlayerStats() { try { if (File.Exists(StatsPath)) playerStats = JsonUtility.FromJson<PlayerStatsFile>(File.ReadAllText(StatsPath)) ?? new PlayerStatsFile(); if (playerStats.players == null) playerStats.players = new List<PlayerStats>(); } catch (Exception e) { Logger.LogWarning("Player statistics: " + e.Message); } }
+        void SavePlayerStats() { try { Directory.CreateDirectory(Path.GetDirectoryName(StatsPath)); string tmp = StatsPath + ".tmp"; File.WriteAllText(tmp, JsonUtility.ToJson(playerStats)); if (File.Exists(StatsPath)) File.Replace(tmp, StatsPath, null); else File.Move(tmp, StatsPath); } catch (Exception e) { Logger.LogWarning("Player statistics: " + e.Message); } }
+        PlayerStats SamplePlayer(Player p) {
+            string world = ZNet.instance.GetWorldName(), name = p.GetPlayerName();
+            try { var w = typeof(ZNet).GetField("m_world", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)?.GetValue(ZNet.instance) as World; if (w != null) world += "|" + w.m_seedName; } catch { }
+            float now = Time.realtimeSinceStartup; bool dead = p.IsDead();
+            if (statsSession == null || statsSession.world != world || statsSession.name != name) {
+                statsSession = playerStats.players.Find(x => x.world == world && x.name == name);
+                if (statsSession == null) { statsSession = new PlayerStats { world = world, name = name, since = Unix() }; playerStats.players.Add(statsSession); }
+                statsSession.visits++; statsTime = now; statsPosition = p.transform.position; statsCharacter = p; statsDead = dead; SavePlayerStats();
+            } else {
+                float dt = now - statsTime; Vector3 delta = p.transform.position - statsPosition;
+                if (dt > 0 && dt <= 10) {
+                    statsSession.playedSeconds += dt;
+                    // Only grounded foot travel. Exclude portals, respawn and large jumps.
+                    if (p == statsCharacter && !dead && !statsDead && p.IsOnGround() && !p.IsSwimming() && p.GetStandingOnShip() == null && !p.IsTeleporting() && delta.magnitude <= 15f * dt) statsSession.distance += new Vector2(delta.x, delta.z).magnitude;
+                    if (dead && !statsDead) statsSession.deaths++;
+                }
+                statsTime = now; statsPosition = p.transform.position; statsCharacter = p; statsDead = dead;
+            }
+            if (now - statsSaved > 30) { statsSaved = now; SavePlayerStats(); }
+            return statsSession;
+        }
+        static string EquippedName(ItemDrop.ItemData item) { if (item == null) return ""; return WeltSuche.L(item.m_shared.m_name); }
+        static ItemDrop.ItemData Hand(Player p, string field) { for (Type t = p.GetType(); t != null; t = t.BaseType) { var f = t.GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly); if (f != null) return f.GetValue(p) as ItemDrop.ItemData; } return null; }
+        void AppendDetails(StringBuilder sb, Player p) {
+            try {
+                var stats = SamplePlayer(p); var d = new StringBuilder(",\"details\":{");
+                d.Append("\"health\":").Append(F(p.GetHealth())).Append(",\"maxHealth\":").Append(F(p.GetMaxHealth()));
+                d.Append(",\"stamina\":").Append(F(p.GetStamina())).Append(",\"maxStamina\":").Append(F(p.GetMaxStamina()));
+                d.Append(",\"eitr\":").Append(F(p.GetEitr())).Append(",\"maxEitr\":").Append(F(p.GetMaxEitr()));
+                d.Append(",\"playedSeconds\":").Append(F((float)stats.playedSeconds)).Append(",\"distance\":").Append(F((float)stats.distance));
+                d.Append(",\"deaths\":").Append(stats.deaths).Append(",\"visits\":").Append(stats.visits).Append(",\"since\":").Append(stats.since);
+                d.Append(",\"left\":").Append(Json(EquippedName(Hand(p, "m_leftItem")))).Append(",\"right\":").Append(Json(EquippedName(Hand(p, "m_rightItem"))));
+                d.Append(",\"equipment\":["); bool first = true;
+                foreach (var item in p.GetInventory().GetAllItems()) if (item.m_equipped) { if (!first) d.Append(','); first = false; d.Append("{\"slot\":").Append(Json(item.m_shared.m_itemType.ToString())).Append(",\"name\":").Append(Json(EquippedName(item))).Append('}'); }
+                sb.Append(d.Append("]}"));
+            } catch (Exception e) { Logger.LogDebug("Player details: " + e.Message); }
         }
 
         // ---------------- Welt-Dump (VWD1) ----------------

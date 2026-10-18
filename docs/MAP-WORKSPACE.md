@@ -123,3 +123,14 @@ Im sichtbaren Tab sendet eine laufende Browserfigur spätestens alle drei Sekund
 Nur leere MQTT-Nachrichten melden Figuren ab. Ungültiges JSON, falsche Topics, zu große Nachrichten und ungültige Koordinaten werden ignoriert. Es werden höchstens 64 entfernte Figuren gehalten; Positionsupdates derselben Figur werden auf höchstens eines pro 60 ms begrenzt. Beim Entfernen werden ihre Grafikressourcen freigegeben. Der öffentliche Broker bleibt ein unverbindlicher Präsenzdienst ohne Identitätsprüfung; seine Verfügbarkeit hängt vom Betreiber ab.
 
 Prüfung: `node --test tools/test-multiplayer.cjs` simuliert Wiederverbinden, Tabwechsel, erneuten Verbindungsversuch, ungültige Nachrichten und Aufräumen ohne 3D-Animationsschleife.
+
+
+## Spielerkarte (Live-Mod 0.5.0)
+
+Ein Klick auf einen Spielermarker in der 2D-Karte, eine Figur oder deren Namensschild in 3D oder einen Eintrag in der Spielerliste öffnet dieselbe Karte. Sie bleibt beim Ansichtswechsel offen. Leben, Ausdauer, Eitr, Ausrüstung und beide Hände aktualisieren sich mit den Live-Daten. „Folgen“ führt die Kamera nach, „Gehe zu“ zentriert sie einmalig, „Ansicht wechseln“ wechselt zwischen Karte und 3D am Spieler. Manuelles Ziehen/Zoomen, Schließen oder Offlinegehen beendet das Folgen. Es gibt keinen Spiel-Teleport.
+
+Der Mod liefert Detailwerte ausschließlich für den eigenen lokalen Charakter. Jeder Spieler, der seine Werte teilen möchte, benötigt den aktuellen Client-Mod und die aktive Funktion „Mein Spiel live zeigen“. Ein dedizierter Server und die Weltdatei kennen diese lokalen Vitalwerte und Gegenstände nicht zuverlässig. Reine Browserfiguren und ältere Clients zeigen dafür „–“. Bei Übertragungsausfall wechselt die Karte in den Offlinezustand und deaktiviert die Positionsaktionen. Die Teilen-Datei enthält ebenfalls die Spielerkarte.
+
+`Spieler.ShareDetails` (Standard `true`) steuert die zusätzlichen API-Felder und ihre Erfassung. Über die aktive Spiel-Freigabe werden sie an die Besucher desselben MQTT-Kartenraums weitergereicht. Statistikdaten liegen lokal in `BepInEx/config/ValheimWeltLive/player-stats.json`, getrennt nach Weltname, Seed und Spielername. Spielzeit, Tode und zurückgelegte Fußstrecke werden ab Erfassungsbeginn beobachtet; Besuche zählen Spieleintritt/Sitzungen. Das sind keine rückwirkenden Charakter-Gesamtwerte. Schifffahrt, Schwimmen, Teleports und Sprünge durch Wiederbelebung werden nicht als Fußstrecke gezählt. Messintervalle und Spielabstürze können kleine Abweichungen verursachen; die Datei wird ungefähr alle 30 Sekunden und beim Beenden gespeichert.
+
+Installation: Valheim beenden, die neue `ValheimWeltLive.dll` anstelle der vorhandenen DLL im Mod-Ordner ablegen und das Spiel neu starten. Für die Webfunktionen auch den mitgelieferten `web`-Ordner aktualisieren oder die aktuelle öffentliche Karte benutzen. Keine DLLs unter `valheim_Data/Managed` ersetzen.

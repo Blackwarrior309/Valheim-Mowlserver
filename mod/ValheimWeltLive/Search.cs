@@ -89,7 +89,7 @@ namespace ValheimWeltLive
         // ---------- Suche ----------
         // Localization liegt in einer anderen Spiel-DLL – per Reflection aufrufen
         static object locInst; static System.Reflection.MethodInfo locFn;
-        static string L(string token)
+        internal static string L(string token)
         {
             try
             {

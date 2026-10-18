@@ -36,7 +36,7 @@
 .vw-tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px;z-index:6}
 .vw-lbl{position:absolute;transform:translate(-50%,-100%);font-size:11.5px;padding:2px 6px;border-radius:6px;white-space:nowrap;pointer-events:none;background:rgba(15,20,24,.78);color:#f1e6cf;border:1px solid rgba(216,162,74,.6);z-index:2}
 .vw-lbl.bed{border-color:rgba(120,180,255,.6)}.vw-lbl.tomb{border-color:rgba(255,120,120,.7)}
-.vw-lbl.pl{border-color:#4cc36b;background:rgba(10,40,20,.85);color:#d9ffe3;z-index:3}.vw-lbl.ch{border-color:#ffc83d;background:rgba(40,30,8,.88);pointer-events:auto;cursor:pointer}
+.vw-lbl.pl{pointer-events:auto;cursor:pointer;border-color:#4cc36b;background:rgba(10,40,20,.85);color:#d9ffe3;z-index:3}.vw-lbl.ch{border-color:#ffc83d;background:rgba(40,30,8,.88);pointer-events:auto;cursor:pointer}
 .vw-cres{margin-top:6px;font-size:12.5px}.vw-cres .r{display:flex;justify-content:space-between;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;border-bottom:1px solid var(--line)}
 .vw-cres .r:hover{background:var(--chip)}.vw-cres .r span:last-child{color:var(--acc);white-space:nowrap;font-variant-numeric:tabular-nums}
 .vw-chest{position:absolute;right:12px;top:12px;width:290px;max-width:calc(100% - 32px);max-height:calc(100% - 24px);overflow:auto;background:var(--panel);border:1px solid var(--acc);border-radius:12px;padding:12px 14px;z-index:4}
@@ -64,6 +64,7 @@
 .vw-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}.vw-card.hit{border-color:var(--acc)}
 .vw-card .lab{font-weight:600;overflow-wrap:anywhere}.vw-card .lab.none{color:var(--mut);font-style:italic;font-weight:500}.vw-card .meta{color:var(--mut);font-size:11.5px;margin:2px 0 6px}
 .vw-card .more{background:none;border:0;padding:0;color:var(--acc);font-size:12px;margin-top:4px}
+.vw-player-card{position:absolute;right:16px;top:110px;z-index:30;width:min(320px,calc(100% - 32px));max-height:calc(100% - 140px);overflow:auto;padding:16px;box-sizing:border-box;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 8px 30px #0005}.vw-player-card>button{float:right}.vw-player-card h2{margin-top:0}.vw-player-card h3{margin:12px 0 5px}.vw-player-card .row{margin-top:12px;flex-wrap:wrap}
 .vw-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .vw-maplist .b{display:flex;justify-content:space-between;gap:8px;padding:6px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:6px}.vw-maplist .b:hover{background:var(--chip)}
 .vw-legend{position:absolute;right:12px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;z-index:3}
@@ -210,7 +211,14 @@
       r.bio = (x, z) => { const i = Math.round((x - X0) / RS), j = Math.round((z - Z0) / RS); return (i < 0 || j < 0 || i >= n || j >= n) ? 0 : B[j * n + i]; };
     }
     const areas = () => { const sr = seedRegion(); return (S.world3d ? [S.world3d] : []).concat(S.regions, sr ? [sr] : []); };
-    const livePlayers = () => { const L = (LIVE || (S.live && S.live.players) || []).slice(); let P = []; try { P = three.peerList().filter((p) => !p.web); } catch (e) { } const have = new Set(L.map((p) => p.name)); P.forEach((p) => { if (!have.has(p.name)) L.push(Object.assign({ peer: true }, p)); }); return L; };
+    const livePlayers = () => {
+      const L = (LIVE || (S.live && S.live.players) || []).slice(); let peers = [];
+      try { peers = three.peerList(); } catch (e) { }
+      // Fresh peer details replace a stale snapshot, while a local API remains authoritative.
+      const merged = new Map(L.map(p => [g.VWPlayerCard.key(p), p]));
+      for (const p of peers) { const k = g.VWPlayerCard.key(p), old = merged.get(k); if (!old || LIVE === null && !old.peer || old.peer && !old.details && p.details) merged.set(k, { ...p, peer: true }); }
+      return [...merged.values()];
+    };
     // Biome → Grundfarbe (ohne Biomdaten: klassisches Grün)
     // Rohstoff-Vorkommen aus dem Spielstand (nur Unabgebautes): [Art, Farbe, Name]
     const RES_K = [['copper', '#d9824a', 'Kupfer'], ['tin', '#c9cfd4', 'Zinn'], ['silver', '#eef3ff', 'Silber'], ['obsidian', '#3b2a55', 'Obsidian'], ['tar', '#15110e', 'Teer'], ['scrap', '#8a6a4a', 'Schrott'],
@@ -372,7 +380,7 @@
         if (ML.bases) S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const rr = Math.max(5, Math.min(14, 3 + Math.sqrt(b.pieces) / 8)); ctx.fillStyle = hover === i ? '#ffd27a' : '#e0a854'; ctx.strokeStyle = '#1b1408'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(T(b.name), x, y - rr - 4); ctx.font = '12px system-ui,sans-serif'; });
       }
       const ptr = new Map(); let pd = 0, moved = 0;
-      cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; });
+      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; });
       cv.addEventListener('pointermove', (e) => {
         const p = ptr.get(e.pointerId); const r = cv.getBoundingClientRect();
         if (!p) { const hit = pick(e.clientX - r.left, e.clientY - r.top); if (hit !== hover) { hover = hit; cv.style.cursor = hit != null ? 'pointer' : ''; draw(); } return; }
@@ -381,9 +389,9 @@
         else { view.cx -= dx / view.s; view.cz += dy / view.s; }
         draw();
       });
-      const up = (e) => { ptr.delete(e.pointerId); pd = 0; if (moved < 5 && e.type === 'pointerup') { const r = cv.getBoundingClientRect(); const hit = pick(e.clientX - r.left, e.clientY - r.top); if (hit != null) open3d(hit); } };
+      const up = (e) => { ptr.delete(e.pointerId); pd = 0; if (moved < 5 && e.type === 'pointerup') { const r = cv.getBoundingClientRect(); const px = e.clientX - r.left, py = e.clientY - r.top; const player = ML.players && livePlayers().find(p => { const [x,y] = toS(p.x,p.z); return Math.hypot(x-px,y-py) < 14; }); if (player) { openPlayer(player); return; } const hit = pick(px, py); if (hit != null) open3d(hit); } };
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-      cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
+      cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
       let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, pins: true, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
@@ -446,7 +454,7 @@
       function pick(sx, sy) { let best = null, bd = 16; S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = i; } }); return best; }
       addEventListener('resize', draw);
       function focus(P) { if (!P || !P.length) return; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; P.forEach((p) => { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }); view.cx = (x0 + x1) / 2; view.cz = (z0 + z1) / 2; const r = cv.getBoundingClientRect(); if (r.width) view.s = Math.max(0.02, Math.min(4, Math.min(r.width / Math.max(80, x1 - x0), r.height / Math.max(80, z1 - z0)) * 0.8)); draw(); }
-      return { build, draw, layersChanged, focus };
+      return { build, draw, layersChanged, focus, follow: p => { view.cx = p.x; view.cz = p.z; draw(); } };
     })();
 
     // ================= 3D =================
@@ -921,10 +929,10 @@
       function drawPlayers() {
         plG.clear(); plLab.forEach((l) => l.d.remove()); plLab = [];
         const all = livePlayers(); $('.plOnline').hidden = !all.length;
-        const PL = $('.plList'), names = all.map((p) => p.name).join('|');
-        if (PL.dataset.names !== names) { PL.dataset.names = names; PL.innerHTML = all.map((p, i) => `<div class="r" data-i="${i}"><span>● ${esc(p.name)}</span><span class="pc"></span></div>`).join(''); }
+        const PL = $('.plList'), names = all.map((p) => g.VWPlayerCard.key(p)).join('|');
+        if (PL.dataset.names !== names) { PL.dataset.names = names; PL.innerHTML = all.map((p, i) => `<button class="r" data-i="${i}" style="width:100%"><span>● ${esc(p.name)}</span><span class="pc"></span></button>`).join(''); }
         $$('.pc', PL).forEach((el, i) => { el.textContent = Math.round(all[i].x) + ' / ' + Math.round(all[i].z); });
-        PL.onclick = (e) => { const d = e.target.closest('.r'); if (!d) return; const p = livePlayers()[+d.dataset.i]; if (!p) return; const inside = reg && p.x >= reg.bounds[0] && p.x <= reg.bounds[1] && p.z >= reg.bounds[2] && p.z <= reg.bounds[3]; if (!inside) { const ri = areas().findIndex((r) => p.x >= r.bounds[0] && p.x <= r.bounds[1] && p.z >= r.bounds[2] && p.z <= r.bounds[3]); if (ri >= 0) selectRegion(ri); } if (fly) toggleFly(false); tgt.copy(W(p.x, p.y, p.z)); dist = 45; pit = 0.6; };
+        PL.onclick = (e) => { const d = e.target.closest('[data-i]'); if (d) openPlayer(livePlayers()[+d.dataset.i]); };
         invalidate();
         // Online-Spieler als laufende Figuren (wie im Laufmodus); Spieler, die schon über MQTT als Figur kommen, nicht doppelt
         const seen = new Set(), now = performance.now();
@@ -935,9 +943,9 @@
           if (d > 60) { O.x = p.x; O.y = p.y; O.z = p.z; } // Teleport (Portal): springen statt gleiten
           O.run = d > 0.15 ? Math.min(2, d / Math.max(0.3, (now - O.t) / 1000) / 4) : 0; O.tx = p.x; O.ty = p.y; O.tz = p.z; O.t = now;
           const r = new THREE.Mesh(plRing, plMat); r.renderOrder = 11; plG.add(r); O.ring = r;
-          const dv = document.createElement('div'); dv.className = 'vw-lbl pl'; dv.textContent = '● ' + p.name; LB.appendChild(dv); O.lab = { d: dv, v: new THREE.Vector3() }; plLab.push(O.lab);
+          const dv = document.createElement('div'); dv.className = 'vw-lbl pl'; dv.textContent = '● ' + p.name; dv.onclick = () => openPlayer(p); dv.setAttribute('role', 'button'); dv.tabIndex = 0; dv.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlayer(p); } }; LB.appendChild(dv); O.lab = { d: dv, v: new THREE.Vector3() }; plLab.push(O.lab);
         });
-        for (const [n, O] of OP) if (!seen.has(n)) { scene.remove(O.h.g); OP.delete(n); }
+        for (const [n, O] of OP) if (!seen.has(n)) { scene.remove(O.h.g); disposeHero(O.h); OP.delete(n); }
         opTick(0);
       }
       // ---- Baupläne (.vwplan): als Modell einblenden, verschieben, drehen
@@ -1048,11 +1056,14 @@
       // ---- Eingabe (Orbit)
       const ptrs = new Map(); let drag = null, pd = 0, downAt = null;
       cv.addEventListener('contextmenu', (e) => e.preventDefault());
-      cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
+      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
       const pUp = (e) => {
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
           if (areaPick) { const hit = rayHit(e, true); if (hit) { const p = { x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }; if (!areaFirst) { areaFirst = p; areaPick(p, null); } else { const fn = areaPick, first = areaFirst; areaPick = null; areaFirst = null; cv.style.cursor = ''; fn(first, p); } } return; }
+          const rect = cv.getBoundingClientRect(); mv.set((e.clientX-rect.left)/rect.width*2-1, -(e.clientY-rect.top)/rect.height*2+1); ray.setFromCamera(mv,cam);
+          const heroes = [...OP.entries()].map(([name,O]) => ({p:livePlayers().find(p => p.name === name), h:O.h.g})).concat([...MP.peers.entries()].map(([id,P]) => ({p:peerList().find(p => p.id === id), h:P.h.g}))).filter(o => o.p && o.h.visible);
+          const hits = ray.intersectObjects(heroes.map(o=>o.h),true); if (!SEL.active && hits.length) { let obj=hits[0].object; while(obj && !heroes.some(o=>o.h===obj)) obj=obj.parent; const hero=heroes.find(o=>o.h===obj); if(hero) { openPlayer(hero.p); return; } }
           const h = rayHit(e);
           if (SEL.active) { if (h && h.instanceId != null) SEL.click(h.object, h.instanceId, e.shiftKey || downAt.shift); }
           else if (h && h.object.userData.cat === 'chest') { const k = chestAt(arrAt(h)); if (k >= 0) openChest(k, false); }
@@ -1068,7 +1079,7 @@
         if (ptrs.size === 2) { const a = [...ptrs.values()]; const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); if (pd) dist *= pd / d; pd = d; pan(dx / 2, dy / 2); }
         else if (drag && (drag.b === 2 || drag.shift)) pan(dx, dy); else { yaw -= dx * 0.006; pit += dy * 0.005; }
       });
-      cv.addEventListener('wheel', (e) => { e.preventDefault(); if (walk) { wdist = Math.max(0, Math.min(14, (wdist < 0.6 && e.deltaY > 0 ? 1.2 : wdist * Math.exp(e.deltaY * 0.0016)))); if (wdist < 0.6) wdist = 0; invalidate(); return; } if (fly) { fspd = Math.max(2, Math.min(200, fspd * Math.exp(-e.deltaY * 0.0015))); return; } dist *= Math.exp(e.deltaY * 0.0012); }, { passive: false });
+      cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); if (walk) { wdist = Math.max(0, Math.min(14, (wdist < 0.6 && e.deltaY > 0 ? 1.2 : wdist * Math.exp(e.deltaY * 0.0016)))); if (wdist < 0.6) wdist = 0; invalidate(); return; } if (fly) { fspd = Math.max(2, Math.min(200, fspd * Math.exp(-e.deltaY * 0.0015))); return; } dist *= Math.exp(e.deltaY * 0.0012); }, { passive: false });
       const ray = new THREE.Raycaster(), mv = new THREE.Vector2();
       function rayHit(e, withTerrain) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const objs = pickList.filter((m) => m.visible); if (withTerrain) objs.push(terrain); return ray.intersectObjects(objs)[0]; }
       const arrAt = (h) => { const a = h.object.userData.arr, o = h.instanceId * 6; return [a[o], a[o + 1], a[o + 2], a[o + 3], a[o + 4], a[o + 5]]; };
@@ -1302,9 +1313,9 @@
         if (packet.leave) { removePeer(id); return; }
         if (!P && MP.peers.size >= g.VWPeerProtocol.limit) return;
         const now = performance.now(); if (P && now - P.seen < 60) return;
-        if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
+        if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); lab.onclick = () => openPlayer(peerList().find(p => p.id === id)); lab.setAttribute('role', 'button'); lab.tabIndex = 0; lab.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); lab.click(); } }; P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
         if (Math.hypot(d.x - P.x, d.y - P.y, d.z - P.z) > 50) { P.x = d.x; P.y = d.y; P.z = d.z; }
-        Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, g: !!d.g, seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n; invalidate();
+        Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, g: !!d.g, details: g.VWPlayerCard.details(d.details), seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n; invalidate();
       }
       function mpPublish(now, moving) {
         if (!MP.cli || !MP.cli.connected || document.hidden) return;
@@ -1319,16 +1330,18 @@
         (list || []).forEach((p) => {
           if (!p || typeof p.name !== 'string' || !g.VWTools.point(p) || !Number.isFinite(p.y)) return; const id = 'g' + MP.me + '_' + [...p.name].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) | 0, 7).toString(36).replace('-', 'm');
           const o = MP.mine.get(id), r = o ? Math.atan2(p.x - o.x, p.z - o.z) : 0, mv = o ? Math.hypot(p.x - o.x, p.z - o.z) > 0.3 : false;
-          const d = { n: p.name.slice(0, 24), x: +(+p.x).toFixed(2), y: +(+p.y).toFixed(2), z: +(+p.z).toFixed(2), r: mv ? +(-r + Math.PI).toFixed(2) : (o ? o.r : 0), m: mv ? 1 : 0, g: 1 };
+          const d = { n: p.name.slice(0, 24), x: +(+p.x).toFixed(2), y: +(+p.y).toFixed(2), z: +(+p.z).toFixed(2), r: mv ? +(-r + Math.PI).toFixed(2) : (o ? o.r : 0), m: mv ? 1 : 0, g: 1, details: g.VWPlayerCard.details(p.details) };
           MP.mine.set(id, Object.assign({}, d, { t: now })); MP.cli.publish(mpRoom() + '/p/' + id, JSON.stringify(d), { qos: 0 });
         });
       }
-      const peerList = () => [...MP.peers.values()].map((P) => ({ name: P.n, x: P.tx, y: P.ty, z: P.tz, web: !P.g }));
+      const peerList = () => [...MP.peers.entries()].map(([id, P]) => ({ id, details: P.details, name: P.n, x: P.tx, y: P.ty, z: P.tz, web: !P.g }));
+      function disposeHero(h) {
+        const resources = new Set(); h.g.traverse(o => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) resources.add(m); });
+        resources.forEach(r => { const i = HERO_MATS.indexOf(r); if (i >= 0) HERO_MATS.splice(i, 1); r.dispose(); });
+      }
       function removePeer(id) {
         const P = MP.peers.get(id); if (!P) return;
-        scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id);
-        const resources = new Set(); P.h.g.traverse(o => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) resources.add(m); });
-        resources.forEach(r => { const i = HERO_MATS.indexOf(r); if (i >= 0) HERO_MATS.splice(i, 1); r.dispose(); }); invalidate();
+        scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id); disposeHero(P.h); invalidate();
       }
       function mpLeave() { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + MP.me, '', { qos: 0 }); MP.lastMsg = ''; MP.lastPub = -Infinity; }
       setInterval(() => {
@@ -1340,8 +1353,10 @@
       listen(document, 'visibilitychange', () => { if (document.hidden) mpLeave(); else { MP.lastPub = -Infinity; if (walk) mpPublish(performance.now(), false); } });
       function mpTick(dt) {
         if (!MP.peers.size) return; const now = performance.now(); let moved = false; const pr = pane.getBoundingClientRect();
+        const visiblePeers = new Set(livePlayers().filter(p => p.peer).map(p => p.id));
         for (const [id, P] of MP.peers) {
           if (now - P.seen > g.VWPeerProtocol.ttl) { removePeer(id); moved = true; continue; }
+          if (!visiblePeers.has(id)) { P.h.g.visible = false; P.lab.style.display = 'none'; continue; }
           const k = 1 - Math.exp(-Math.min(dt, 1) * 8); P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; P.z += (P.tz - P.z) * k;
           let dr = P.tr - P.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); P.h.g.rotation.y += dr * k;
           const inside = reg && P.x >= reg.bounds[0] - 50 && P.x <= reg.bounds[1] + 50 && P.z >= reg.bounds[2] - 50 && P.z <= reg.bounds[3] + 50;
@@ -1656,12 +1671,19 @@
         const A = areas(), i = A.findIndex((r) => r.id === p.region); const chosen = i >= 0 ? i : A.findIndex((r) => !['world', 'seed'].includes(r.id) && contains(r));
         return Promise.resolve(selectRegion(chosen >= 0 ? chosen : 0)).then(() => { if (destroyed || !reg) return; tgt.copy(W(p.x, p.y == null ? WL : p.y, p.z)); dist = p.dist || 65; yaw = p.yaw == null ? yaw : p.yaw; pit = p.pit == null ? 0.7 : p.pit; invalidate(); });
       }
+      let followingLoad = false;
+      function focusPlayer(p) { if (walk) toggleWalk(false); if (fly) toggleFly(false); return focusAt({ ...p, y: Number.isFinite(p.y) ? p.y : WL, dist: 45, pit: 0.6 }); }
+      function followPlayer(p) {
+        if (followingLoad) return;
+        if (tab !== '3d' || !reg || p.x < reg.bounds[0] || p.x > reg.bounds[1] || p.z < reg.bounds[2] || p.z > reg.bounds[3]) { followingLoad = true; Promise.resolve(focusPlayer(p)).finally(() => { followingLoad = false; }); return; }
+        tgt.copy(W(p.x, Number.isFinite(p.y) ? p.y : WL, p.z)); invalidate();
+      }
       function capture() { if (!reg) return null; return { region: reg.id, camera: { x: tgt.x + CX, y: tgt.y + WL, z: CZ - tgt.z, dist, yaw, pit } }; }
       function dispose() {
         running = false; originalRevision++; if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
         const resources = new Set(); scene.traverse((o) => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) { resources.add(m); for (const v of Object.values(m)) if (v && v.isTexture) resources.add(v); } }); resources.forEach((r) => r.dispose()); ren.dispose(); ren.forceContextLoss();
       }
-      return { drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
+      return { focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
     })();
 
     $('.w3d').onclick = () => { setTab('3d'); three.selectRegion(0); };
@@ -1893,7 +1915,7 @@
 <div class="vw-grid"><div class="vw-panel"><h2 style="margin-top:0">Bosse</h2><table>${bossAll.map((b) => `<tr><td>${BOSS[b]}</td><td class="n">${S.bosses.includes(b) ? '✔' : '–'}</td></tr>`).join('')}</table>
 <h2>Welt-Einstellungen</h2><div class="sub">${mods}</div></div>
 <div class="vw-panel"><h2 style="margin-top:0">Charaktere (wer hat gebaut)</h2><table>${S.characters.map((c) => `<tr><td>${esc(c.name || '?')}${c.account ? ' <span class="sub">· ' + esc(c.account) + '</span>' : ''}${c.steam ? '<br><span class="sub">' + esc(c.steam) + '</span>' : ''}</td><td class="n">${fmt(c.pieces)}</td></tr>`).join('')}</table>
-<h2>Spieler auf dem Server</h2><table>${S.players.map((p) => `<tr><td>${esc(p.name)}${p.platform ? '<br><span class="sub">' + esc(p.platform) + '</span>' : ''}</td></tr>`).join('') || '<tr><td class="sub">–</td></tr>'}</table></div></div>
+<h2>Spieler auf dem Server</h2><table>${S.players.map((p) => `<tr><td><button class="playerOpen" data-name="${esc(p.name)}">${esc(p.name)}</button>${p.platform ? '<br><span class="sub">' + esc(p.platform) + '</span>' : ''}</td></tr>`).join('') || '<tr><td class="sub">–</td></tr>'}</table></div></div>
 ${board()}
 <div class="sub" style="margin-top:16px">Snapshot vom ${new Date(S.created).toLocaleString(LOC())} · Format v${S.version}${(S.warnings || []).length ? '<br>Hinweise: ' + S.warnings.map(esc).join(' · ') : ''}<br>Inoffizieller Fan-Viewer, nicht mit Iron Gate verbunden.</div>`;
     }
@@ -1943,7 +1965,23 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     if (g.VW_I18N) g.VW_I18N.onChange(() => { try { info(); if (tab === 'map') map.draw(); } catch (e) { } });
     if (snap.plans && snap.plans.length) three.setPlans(snap.plans);
     requestAnimationFrame(() => { map.build(); map.draw(); });
-    function updateLive(players) { LIVE = players; three.drawPlayers(); if (tab === 'map') map.draw(); }
+    function playerRoster() {
+      const live = livePlayers().map(p => ({ ...p, online: LIVE !== null || !!p.peer }));
+      const names = new Set(live.filter(p => !p.web).map(p => p.name));
+      for (const p of S.players || []) if (!names.has(p.name)) live.push({ ...p, online: false });
+      return live;
+    }
+    const playerCard = g.VWPlayerCard.create({ root: R, players: playerRoster,
+      go: p => tab === 'map' ? map.focus([p]) : three.focusPlayer(p),
+      switchView: p => { if (tab === '3d') { setTab('map'); map.focus([p]); } else three.focusPlayer(p); },
+      follow: p => tab === 'map' ? map.follow(p) : three.followPlayer(p)
+    });
+    listen(R, 'click', e => { const b = e.target.closest('.playerOpen'); if (b) openPlayer(playerRoster().find(p => p.name === b.dataset.name)); });
+    function openPlayer(p) { if (p) playerCard.open(p); }
+    function stopFollowing() { playerCard.stop(); }
+    let playerPeerSignature = '';
+    setInterval(() => { playerCard.tick(); const signature = JSON.stringify(three.peerList()); if (signature !== playerPeerSignature) { playerPeerSignature = signature; three.drawPlayers(); if (tab === 'map') map.draw(); } }, 1000);
+    function updateLive(players) { LIVE = players; playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }
     // ---- Eigenes Spiel live (Mod „Valheim Welt Live“ auf diesem PC): Position auf der Online-Karte zeigen und an andere Besucher schicken
     let GL = { on: false, timer: 0, fails: 0, url: 'http://localhost:8686' };
     async function gamePoll() {
@@ -1960,7 +1998,7 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     $('.gameLink').onclick = () => gameLink(!GL.on);
     if (location.protocol === 'file:') $('.gameLink').hidden = true; else { let a = ''; try { a = localStorage.getItem('vw-gamelink'); } catch (e) { } if (a) gameLink(true); }
     setInterval(() => { try { if (tab === 'map' && three.peerList().some((p) => !p.web)) map.draw(); } catch (e) { } }, 2000); // Mitspieler aus dem Spiel bewegen sich
-    function destroy() { if (destroyed) return; destroyed = true; if (workspace) workspace.destroy(); timers.forEach((id) => g.clearInterval(id)); timeouts.forEach((id) => g.clearTimeout(id)); frames.forEach((id) => g.cancelAnimationFrame(id)); cleanup.forEach((f) => f()); three.dispose(); R.remove(); }
+    function destroy() { if (destroyed) return; destroyed = true; if (workspace) workspace.destroy(); playerCard.destroy(); timers.forEach((id) => g.clearInterval(id)); timeouts.forEach((id) => g.clearTimeout(id)); frames.forEach((id) => g.cancelAnimationFrame(id)); cleanup.forEach((f) => f()); three.dispose(); R.remove(); }
     return { update: (s) => { if (!destroyed) { LIVE = null; apply(s, true); } }, destroy, setStatus, setTab, open3d, getPlans: () => three.getPlans(), getWorkspace: () => workspace && workspace.exportData(), updateLive };
   }
   g.VWViewer = { mount };
