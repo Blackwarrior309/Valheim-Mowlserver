@@ -40,7 +40,7 @@
     }
     async function read(name, entry) {
       if (!pending.has(name)) pending.set(name, (async () => {
-        let geometry, mats = [];
+        let geometry, door, mats = [];
         try {
           const d = await json(entry.file + '?v=' + encodeURIComponent(entry.version));
           if (d.version !== 1 || !d.positions.length || d.positions.length % 3 || !d.indices.length) throw new Error('Ungültiges Modell');
@@ -54,9 +54,10 @@
           // Sequential materials ensure partial loads can be disposed on error.
           for (const spec of d.materials) mats.push(await material(spec));
           if (disposed) throw new Error('Viewer geschlossen');
-          models.set(name, { geometry, materials: mats });
+          door = g.VWDoors && g.VWDoors.split(d, THREE);
+          models.set(name, { geometry, door, materials: mats });
         } catch (e) {
-          if (geometry) geometry.dispose(); mats.forEach((m) => m.dispose());
+          if (geometry) geometry.dispose(); if (door) { door.leaf.dispose(); door.frame.dispose(); } mats.forEach((m) => m.dispose());
           if (!disposed) console.warn('Valheim-Grafik: Ersatzmodell für', name, e);
         }
       })());
@@ -73,7 +74,7 @@
       }));
       return names.filter((n) => models.has(n)).length;
     }
-    function dispose() { disposed = true; models.forEach((m) => { m.geometry.dispose(); m.materials.forEach((v) => v.dispose()); }); textures.forEach((p) => p.then((t) => t.dispose()).catch(() => {})); models.clear(); textures.clear(); pending.clear(); }
+    function dispose() { disposed = true; models.forEach((m) => { m.geometry.dispose(); if (m.door) { m.door.leaf.dispose(); m.door.frame.dispose(); } m.materials.forEach((v) => v.dispose()); }); textures.forEach((p) => p.then((t) => t.dispose()).catch(() => {})); models.clear(); textures.clear(); pending.clear(); }
     return { prepare, get: (name) => models.get(name), dispose };
   }
   g.VWValheimAssets = { create };

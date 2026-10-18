@@ -720,7 +720,7 @@
         const keys = new Set(changeDef.added.map((p) => [p.name, [p.x, p.y, p.z].join(','), p.yaw].join('|')));
         for (const im of Object.values(meshes).flat()) { const a = im.userData.arr;
           for (let i = 0; i < a.length; i += 6) if (keys.has([reg.types[a[i + 4]][0], [a[i], a[i + 1], a[i + 2]].join(','), a[i + 3]].join('|'))) im.setColorAt(i / 6, tmp.setHex(0x33ff66));
-          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          if (im.instanceColor) im.instanceColor.needsUpdate = true; if (im.userData.frame) im.userData.frame.instanceColor = im.instanceColor;
         }
       }
       function drawChanges(data = changeDef, mode = changeMode) {
@@ -757,6 +757,7 @@
       }
       function clear() {
         if (content) { scene.remove(content); content.traverse((o) => { if (o.userData.original) return; if (o.geometry && !Object.values(geos).includes(o.geometry) && o.geometry !== box && !Object.values(SHAPES).includes(o.geometry)) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material)) o.material.dispose(); }); }
+        if (typeof OBB !== 'undefined') { OBB = []; GRID = new Map(); DOORS = []; }
         labels.forEach((l) => l.d.remove()); labels = []; meshes = {}; pickList = []; clearMarkers(); $('.vw-chest').hidden = true;
       }
       function load(r, keepCam) {
@@ -814,7 +815,7 @@
           for (let k = 0; k < n; k++) { const o = k * 6; const ty = r.types[arr[o + 4]]; const shape = Q.detail === 'valheim' && originals && originals.get(ty[0]) ? 'original:' + ty[0] : detailed ? shapeOf(ty[0]) : 'box'; const sk = shape + '@' + Math.floor(arr[o] / 128) + ',' + Math.floor(arr[o + 2] / 128); (groups[sk] || (groups[sk] = [])).push(o); }
           for (const [sk, idxs] of Object.entries(groups)) {
             const shape = sk.split('@')[0], original = shape.startsWith('original:') && originals.get(shape.slice(9));
-            const im = new THREE.InstancedMesh(original ? original.geometry : SHAPES[shape], original ? original.materials : pieceMat(cat, pmode), idxs.length); im.castShadow = true; im.receiveShadow = true;
+            const im = new THREE.InstancedMesh(original ? (original.door ? original.door.leaf : original.geometry) : SHAPES[shape], original ? original.materials : pieceMat(cat, pmode), idxs.length); im.castShadow = true; im.receiveShadow = true;
             const sub = new Array(idxs.length * 6), bounds = new THREE.Box3();
             idxs.forEach((o, k) => {
               for (let j = 0; j < 6; j++) sub[k * 6 + j] = arr[o + j];
@@ -825,12 +826,14 @@
               else sv.set(ty[1], ty[2], ty[3]);
               q.setFromEuler(eu); m4.compose(pv, q, sv); im.setMatrixAt(k, m4); bounds.expandByPoint(pv);
             });
-            im.userData = { cat, arr: sub, original: !!original, bounds: bounds.expandByScalar(40) }; (meshes[cat] || (meshes[cat] = [])).push(im); content.add(im); pickList.push(im);
+            im.userData = { cat, arr: sub, original: !!original, doorModel: original && original.door, bounds: bounds.expandByScalar(40) };
+            if (idxs.some(o => /door|gate|grate/i.test(r.types[arr[o+4]][0]) && !/portal|cloth|drawbridge/i.test(r.types[arr[o+4]][0]))) im.userData.closedMatrices = im.instanceMatrix.array.slice();
+            if (original && original.door && original.door.frame.index.count) { const frame = new THREE.InstancedMesh(original.door.frame, original.materials, idxs.length); frame.instanceMatrix.copy(im.instanceMatrix); frame.castShadow = frame.receiveShadow = true; frame.userData.original = true; frame.frustumCulled = false; content.add(frame); im.userData.frame = frame; } (meshes[cat] || (meshes[cat] = [])).push(im); content.add(im); pickList.push(im);
           }
         }
         recolor(colorMode);
         heroColors(Q.detail === 'valheim');
-        if (typeof walk !== 'undefined' && walk) { buildColliders(); if (reg.id !== prevRegId && !teleporting) spawn(); } // Laufmodus bleibt bei Neuladen (Live-Update, Originalgrafik) aktiv
+        if (typeof walk !== 'undefined' && (walk || doorStates.size)) { buildColliders(); if (walk && reg.id !== prevRegId && !teleporting) spawn(); } // Laufmodus bleibt bei Neuladen (Live-Update, Originalgrafik) aktiv
         // Natur
         natG = new THREE.Group(); content.add(natG);
         let N = r.nature || {};
@@ -1107,7 +1110,7 @@
         else { const f = fdir(); tgt.copy(fp).addScaledVector(f, 40); dist = 40; yaw = Math.atan2(-f.x, -f.z); pit = Math.max(0.08, Math.asin(-f.y)); }
       }
       FB.onclick = () => toggleFly();
-      const kd = (e) => { if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.code === 'KeyF' && !walk) { toggleFly(); return; } if (e.code === 'KeyG') { toggleWalk(); return; } if (walk && e.code === 'KeyE') { interact(); return; } if (e.code === 'Escape' && walk && document.pointerLockElement !== cv) { toggleWalk(false); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if ((fly || walk) && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
+      const kd = (e) => { if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.code === 'KeyF' && !walk) { toggleFly(); return; } if (e.code === 'KeyG') { toggleWalk(); return; } if (walk && e.code === 'KeyE') { e.preventDefault(); if (!e.repeat) interact(); return; } if (e.code === 'Escape' && walk && document.pointerLockElement !== cv) { toggleWalk(false); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if ((fly || walk) && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
       const ku = (e) => { keys[e.code] = false; };
       addEventListener('keydown', kd); addEventListener('keyup', ku); addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
       let jid = null;
@@ -1142,6 +1145,7 @@
       let walk = false, wyaw = 0, wpit = 0.25, wdist = 4.5, vy = 0, onGround = false, anim = 0, lockLook = false, wmsg = '', wmsgT = 0;
       const pos = new THREE.Vector3(), WB = $('.walkBtn'), ACT = $('.vw-act2'), PROMPT = $('.vw-prompt');
       let OBB = [], GRID = new Map(), DOORS = [], TER = null;
+      const doorStates = new Map();
       const GS = 4, gkey = (x, z) => Math.floor(x / GS) + ',' + Math.floor(z / GS);
       const iq = new THREE.Quaternion(), lv = new THREE.Vector3(), ld = new THREE.Vector3();
       function terrainY(x, z) { // Szenen-Koordinaten → Geländehöhe (bilinear)
@@ -1152,6 +1156,7 @@
       }
       function buildColliders() { // aus den gezeichneten Bauteilen: orientierte Boxen in einem 4-m-Raster
         OBB = []; GRID = new Map(); DOORS = [];
+        for (const im of pickList) if (im.userData.closedMatrices) { im.instanceMatrix.array.set(im.userData.closedMatrices); im.instanceMatrix.needsUpdate = true; }
         pickList.forEach((im) => {
           const a = im.userData.arr; if (!a) return;
           for (let k = 0; k < a.length / 6; k++) {
@@ -1174,11 +1179,30 @@
             const r = Math.hypot(h.x, h.y, h.z);
             const ramp = /stair|ladder/i.test(nm); // Treppen/Leitern: begehbare Rampe statt Klotz
               const b = { c, q: qq, iq: qq.clone().invert(), h, r, door, portal, chest, ramp, rampAxis, rampSign, open: false, pass: cloth, im, k, ty };
+            if (door) {
+              const model = im.userData.doorModel, m0 = new THREE.Matrix4(); im.getMatrixAt(k,m0);
+              b.m0=m0; b.c0=c.clone(); b.q0=qq.clone(); b.axis=new THREE.Vector3(0,1,0).transformDirection(m0);
+              b.pivot=model ? new THREE.Vector3().fromArray(model.pivot).applyMatrix4(m0) : new THREE.Vector3(h.x,0,0).applyQuaternion(qq).add(c);
+              b.stateKey=[nm,a[o],a[o+1],a[o+2],a[o+3]].join('|');
+              const state=doorStates.get(b.stateKey); b.open=!!(state && state.open); b.angle=state ? state.angle : 0; b.goal=b.angle;
+              if(model) for(const box of model.colliders.filter(v=>!v.moving)) { const matrix=m0.clone().multiply(new THREE.Matrix4().fromArray(box.matrix)), scale=new THREE.Vector3(), center=new THREE.Vector3(), rotation=new THREE.Quaternion(); matrix.decompose(center,rotation,scale); const half=new THREE.Vector3().fromArray(box.size).multiply(new THREE.Vector3(Math.abs(scale.x),Math.abs(scale.y),Math.abs(scale.z))).multiplyScalar(0.5); const frameBox={c:center,q:rotation,iq:rotation.clone().invert(),h:half,r:half.length(),pass:false,ty,ownerDoor:b}; OBB.push(frameBox); (b.frames || (b.frames=[])).push(frameBox); }
+            }
             OBB.push(b); if (door || portal || chest) DOORS.push(b);
-            const x0 = Math.floor((c.x - r) / GS), x1 = Math.floor((c.x + r) / GS), z0 = Math.floor((c.z - r) / GS), z1 = Math.floor((c.z + r) / GS);
-            for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const kk = gx + ',' + gz; let l = GRID.get(kk); if (!l) GRID.set(kk, (l = [])); l.push(b); }
           }
         });
+        for (const b of OBB) {
+          const radius=b.door ? b.r + b.c0.distanceTo(b.pivot)*2 : b.r;
+          for(let gx=Math.floor((b.c.x-radius)/GS);gx<=Math.floor((b.c.x+radius)/GS);gx++) for(let gz=Math.floor((b.c.z-radius)/GS);gz<=Math.floor((b.c.z+radius)/GS);gz++) {const key=gx+','+gz;if(!GRID.has(key))GRID.set(key,[]);GRID.get(key).push(b);}
+        }
+        for (const b of DOORS) if(b.door && b.angle) poseDoor(b,b.angle);
+      }
+      function poseDoor(b,angle) {
+        const delta=g.VWDoors.delta(THREE,b.pivot,b.axis,angle); b.im.setMatrixAt(b.k,delta.clone().multiply(b.m0)); b.im.instanceMatrix.needsUpdate=true;
+        b.c.copy(b.c0).applyMatrix4(delta); b.q.copy(new THREE.Quaternion().setFromAxisAngle(b.axis,angle)).multiply(b.q0); b.iq.copy(b.q).invert();
+        shadowFresh=false; shadowPasses=2; invalidate();
+      }
+      function doorTick() {
+        const now=performance.now(); for(const b of DOORS) if(b.door && b.busy) { const elapsed=(now-b.since)/1000;b.angle=g.VWDoors.angle(b.from,b.goal,elapsed); poseDoor(b,b.angle);if(elapsed>=0.45){b.busy=false;b.angle=b.goal;} }
       }
       const near = (x, z) => GRID.get(gkey(x, z)) || [];
       function rayBox(b, o, d, tmax) { // Strahl gegen orientierte Box → Abstand oder null
@@ -1195,7 +1219,7 @@
       function groundY(x, z, fromY) { // höchste begehbare Fläche unter fromY
         let g = terrainY(x, z); const o = new THREE.Vector3(x, fromY, z);
         for (const b of near(x, z)) {
-          if (b.pass || (b.door && b.open)) continue; if (Math.abs(b.c.x - x) > b.r || Math.abs(b.c.z - z) > b.r) continue;
+          if (b.pass) continue; if (Math.abs(b.c.x - x) > b.r || Math.abs(b.c.z - z) > b.r) continue;
           if (b.ramp) { // Höhe auf der Schräge; Steigrichtung unbekannt → die Richtung nehmen, die unter den Füßen liegt
             lv.set(x - b.c.x, 0, z - b.c.z).applyQuaternion(b.iq); if (Math.abs(lv.x) > b.h.x + 0.1 || Math.abs(lv.z) > b.h.z + 0.05) continue;
               const axis = b.rampAxis, t = Math.max(0, Math.min(1, (lv[axis] * b.rampSign + b.h[axis]) / (2 * b.h[axis]))), y0 = b.c.y - b.h.y, H2 = 2 * b.h.y;
@@ -1211,7 +1235,7 @@
       const RAD = 0.35, STEP = 0.55, HEIGHT = 1.8;
       function pushOut(p) { // seitliche Kollision: Körper als Säule aus drei Kugeln
         for (let it = 0; it < 2; it++) for (const b of near(p.x, p.z)) {
-          if (b.pass || b.ramp || (b.door && b.open)) continue; if (Math.abs(b.c.x - p.x) > b.r + RAD || Math.abs(b.c.z - p.z) > b.r + RAD) continue;
+          if (b.pass || b.ramp) continue; if (Math.abs(b.c.x - p.x) > b.r + RAD || Math.abs(b.c.z - p.z) > b.r + RAD) continue;
           for (const hy of [STEP + 0.15, 1.0, 1.6]) {
             lv.set(p.x, p.y + hy, p.z).sub(b.c).applyQuaternion(b.iq);
             const cx = Math.max(-b.h.x, Math.min(b.h.x, lv.x)), cy = Math.max(-b.h.y, Math.min(b.h.y, lv.y)), cz = Math.max(-b.h.z, Math.min(b.h.z, lv.z));
@@ -1375,7 +1399,7 @@
       HL.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffc83d, transparent: true, opacity: 0.2, depthWrite: false })));
       HL.renderOrder = 5; let hlFor = null;
       function highlight(b) {
-        if (b === hlFor) return; hlFor = b; HL.visible = !!b; invalidate(); if (!b) return;
+        if (b === hlFor && !(b && b.door && b.busy)) return; hlFor = b; HL.visible = !!b; invalidate(); if (!b) return;
         HL.position.copy(b.c); HL.quaternion.copy(b.q); HL.scale.set(b.h.x * 2 + 0.08, b.h.y * 2 + 0.08, b.h.z * 2 + 0.08);
       }
       function say(t) { wmsg = t; wmsgT = performance.now(); }
@@ -1387,7 +1411,7 @@
         for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
         placeAt(tgt.x, tgt.z);
       }
-      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
+      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
         if (on && !reg) return;
@@ -1408,9 +1432,14 @@
       function lookWalk(dx, dy) { wyaw -= dx * 0.0042; wpit = Math.max(-1.2, Math.min(1.35, wpit + dy * 0.0035)); }
       cv.addEventListener('click', () => { if (walk && innerWidth > 760 && document.pointerLockElement !== cv && cv.requestPointerLock) cv.requestPointerLock(); });
       listen(document, 'mousemove', (e) => { if (walk && document.pointerLockElement === cv) lookWalk(e.movementX, e.movementY); });
-      function target() { // Tür/Portal/Kiste vor der Figur
-        const f = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw)); let best = null, bd = 2.6;
-        for (const b of DOORS) { const dx = b.c.x - pos.x, dz = b.c.z - pos.z; if (Math.abs(dx) > 4 || Math.abs(dz) > 4) continue; const d = Math.hypot(dx, dz); if (Math.abs(b.c.y - (pos.y + 1)) > 2.6) continue; const sc = Math.max(0, d - Math.max(b.h.x, b.h.z) * 0.6) - 0.6 * (dx * f.x + dz * f.z) / (d || 1); if (sc < bd) { bd = sc; best = b; } }
+      function target() {
+        const origin=pos.clone().add(new THREE.Vector3(0,1.55,0));
+        const direction=new THREE.Vector3(Math.sin(wyaw)*Math.cos(wpit),-Math.sin(wpit),Math.cos(wyaw)*Math.cos(wpit));
+        let best=null, distance=3;
+        for(const b of DOORS) for(const surface of [b,...(b.frames || [])]) { const hit=rayBox(surface,origin,direction,3); if(hit!==null && hit<distance) {best=b;distance=hit;} }
+        if(!best) return null;
+        // Never operate a door/chest through a solid wall or a different door.
+        for(const b of OBB) if(b!==best && b.ownerDoor!==best && !b.pass && !b.portal) { if(b.c.distanceTo(origin)>b.r+3) continue;const hit=rayBox(b,origin,direction,distance);if(hit!==null && hit+0.04<distance)return null; }
         return best;
       }
       function portalOf(b) { const wx = b.c.x + CX, wz = CZ - b.c.z; let me = null, md = 6; (S.portals || []).forEach((p) => { const d = Math.hypot(p.x - wx, p.z - wz); if (d < md) { md = d; me = p; } }); return me; }
@@ -1419,15 +1448,14 @@
         if (!best) { say('Hier ist keine Tür, Kiste oder Portal.'); return; }
         if (best.chest) { const a = best.im.userData.arr, o = best.k * 6, k = chestAt([a[o], a[o + 1], a[o + 2]]); if (k >= 0) { if (document.pointerLockElement === cv) document.exitPointerLock(); openChest(k, false); } else say('Kiste ist leer'); return; }
         if (best.door) {
-          best.open = !best.open; const m = new THREE.Matrix4(); best.im.getMatrixAt(best.k, m);
-          if (!best.m0) best.m0 = m.clone();
-          if (best.open) { // um die Kante (Scharnier) aufschwingen
-            const hinge = new THREE.Vector3(-best.h.x, 0, 0).applyQuaternion(best.q).add(best.c), side = lv.copy(pos).sub(best.c).applyQuaternion(best.iq).z > 0 ? -1 : 1, rot = new THREE.Matrix4().makeRotationY(Math.PI / 2 * side);
-            const t = new THREE.Matrix4().makeTranslation(hinge.x, hinge.y, hinge.z).multiply(rot).multiply(new THREE.Matrix4().makeTranslation(-hinge.x, -hinge.y, -hinge.z));
-            best.im.setMatrixAt(best.k, t.multiply(best.m0));
-          } else best.im.setMatrixAt(best.k, best.m0);
-          best.im.instanceMatrix.needsUpdate = true; say(best.open ? 'Tür geöffnet' : 'Tür geschlossen'); invalidate(); return;
+          if (best.busy) return;
+          best.open = !best.open;
+          best.from=best.angle || 0; best.goal=best.open ? g.VWDoors.opening(THREE,best.pivot,best.c0,best.axis,pos) : 0;
+          best.since=performance.now(); best.busy=true;
+          doorStates.set(best.stateKey,{open:best.open,angle:best.goal});
+          say(best.open ? 'Tür geöffnet' : 'Tür geschlossen'); invalidate(); return;
         }
+
         // Portal: Gegenstück mit gleichem Namen suchen
         const P = S.portals || [], me = portalOf(best);
         if (!me) { say('Portal ohne Namen'); return; }
@@ -1463,7 +1491,7 @@
         if (pos.y <= floor) { pos.y = floor; vy = 0; onGround = true; } else onGround = pos.y - floor < 0.05;
         pushOut(pos);
         // Kopf stößt an Decke
-        if (vy > 0) { const up = new THREE.Vector3(0, 1, 0), o = new THREE.Vector3(pos.x, pos.y + 1.2, pos.z); for (const b of near(pos.x, pos.z)) { if (b.pass || b.ramp || (b.door && b.open)) continue; const t = rayBox(b, o, up, 0.7); if (t !== null) { vy = 0; break; } } }
+        if (vy > 0) { const up = new THREE.Vector3(0, 1, 0), o = new THREE.Vector3(pos.x, pos.y + 1.2, pos.z); for (const b of near(pos.x, pos.z)) { if (b.pass || b.ramp) continue; const t = rayBox(b, o, up, 0.7); if (t !== null) { vy = 0; break; } } }
         // Figur
         if (l > 0.05) { const want = Math.atan2(mv.x, mv.z), cur = HERO.rotation.y; let d = want - cur; d = Math.atan2(Math.sin(d), Math.cos(d)); HERO.rotation.y = cur + d * Math.min(1, dt * 12); anim += dt * (run ? 13 : 9) * Math.min(1, l); }
         else anim *= 0.85;
@@ -1474,14 +1502,14 @@
         const head = pos.clone(); head.y += 1.62;
         const dir = new THREE.Vector3(-Math.sin(wyaw) * Math.cos(wpit), Math.sin(wpit), -Math.cos(wyaw) * Math.cos(wpit));
         let cd = wdist;
-        if (cd > 0.3) { for (const kx of [-1, 0, 1]) for (const kz of [-1, 0, 1]) for (const b of near(head.x + kx * GS, head.z + kz * GS)) { if (b.pass || (b.door && b.open)) continue; const t = rayBox(b, head, dir, cd); if (t !== null && t > 0.05) cd = Math.max(0.3, t - 0.2); } }
+        if (cd > 0.3) { for (const kx of [-1, 0, 1]) for (const kz of [-1, 0, 1]) for (const b of near(head.x + kx * GS, head.z + kz * GS)) { if (b.pass) continue; const t = rayBox(b, head, dir, cd); if (t !== null && t > 0.05) cd = Math.max(0.3, t - 0.2); } }
         const cp = head.clone().addScaledVector(dir, cd); cp.y = Math.max(cp.y, terrainY(cp.x, cp.z) + 0.25);
-        const first = cd < 0.6; HERO.visible = !first; CROSS.hidden = !first;
+        const first = cd < 0.6; HERO.visible = !first; CROSS.hidden = false;
         cam.position.copy(first ? head : cp);
         if (first) cam.lookAt(head.clone().addScaledVector(dir, -1)); else cam.lookAt(head.x, head.y - 0.1, head.z);
         if (pos.distanceTo(prev) > 0 || Math.abs(vy) > 0) invalidate();
         const tg = target(); let hint = ''; highlight(tg);
-        if (tg) { if (tg.chest) hint = 'Kiste öffnen'; else if (tg.door) hint = tg.open ? 'Tür schließen' : 'Tür öffnen'; else { const pp = portalOf(tg); hint = pp && pp.tag ? 'Portal „' + pp.tag + '“ benutzen' : 'Portal (ohne Namen)'; } }
+        if (tg) { if (tg.chest) hint = 'Kiste öffnen'; else if (tg.door) hint = tg.busy ? 'Tür bewegt sich …' : tg.open ? 'Tür schließen' : 'Tür öffnen'; else { const pp = portalOf(tg); hint = pp && pp.tag ? 'Portal „' + pp.tag + '“ benutzen' : 'Portal (ohne Namen)'; } }
         PROMPT.hidden = !hint; if (hint) PROMPT.innerHTML = `<b class="key">${innerWidth > 760 ? 'E' : '✋'}</b> ${esc(hint)}`;
         const msg = performance.now() - wmsgT < 2500 ? `<br><b style="color:var(--acc)">${esc(wmsg)}</b>` : '';
         HUD.innerHTML = `<b>Laufen</b> · ${first ? 'Ich-Perspektive' : '3rd Person'}${msg}<br><span class="m sub">Joystick = laufen · ziehen = umsehen · ✋ = Tür/Portal</span><span class="k sub">WASD laufen · Shift rennen · Leertaste springen · Shift+Leertaste hoch springen · E Tür/Kiste/Portal · Mausrad Abstand · Klick = Maus fangen · G/Esc beenden</span>`;
@@ -1495,12 +1523,13 @@
       function frame() {
         if (!running || destroyed) return;
         const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+        doorTick();
         if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit();
         mpTick(dt); opTick(dt);
         if (bigArea) { scene.fog.far = Math.max(14000 * ({ near: 0.5, mid: 1, far: 2 }[Q.range] || 1), (fly ? 0 : dist) * 2.2); scene.fog.near = scene.fog.far * 0.2; }
         cam.updateMatrixWorld();
         viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-        for (const im of pickList) { const bounds = im.userData.bounds; im.visible = layerState[0] && (!['roof', 'droof'].includes(im.userData.cat) || layerState[1]) && (!bounds || viewFrustum.intersectsBox(bounds)); }
+        for (const im of pickList) { const bounds = im.userData.bounds; im.visible = layerState[0] && (!['roof', 'droof'].includes(im.userData.cat) || layerState[1]) && (!bounds || viewFrustum.intersectsBox(bounds)); if (im.userData.frame) im.userData.frame.visible = im.visible; }
         const key = cam.matrixWorld.elements.map((v) => v.toFixed(3)).join(',');
         if (key !== lastKey) { lastKey = key; lastMove = now; dirty = Math.max(dirty, 1); if (bigArea) shadowFresh = false; }
         if (sun.castShadow && (!shadowFresh || shadowPasses > 0) && now - lastMove > 350 && !fly) { refreshShadow(); if (shadowPasses > 0) shadowPasses--; }

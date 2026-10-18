@@ -10,7 +10,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test tools/test-map-tools.cjs tools/test-multiplayer.cjs tools/test-player-card.cjs
+      - run: node --test tools/test-map-tools.cjs tools/test-multiplayer.cjs tools/test-player-card.cjs tools/test-doors.cjs
       - run: node tools/test-graphics.cjs
       - name: JavaScript syntax
         run: for file in js/*.js; do node --check "$file"; done
