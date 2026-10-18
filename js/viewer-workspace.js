@@ -3,8 +3,9 @@
   'use strict';
   const T = g.VWTools;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uuid = () => g.crypto.randomUUID ? g.crypto.randomUUID() : [...g.crypto.getRandomValues(new Uint8Array(16))].map((n) => n.toString(16).padStart(2, '0')).join('');
   function mount(root, api) {
-    const $ = (s) => root.querySelector(s), actor = crypto.randomUUID();
+    const $ = (s) => root.querySelector(s), actor = uuid();
     const world = T.worldKey(api.snapshot()), storageKey = 'vw-workspace:' + world;
     const undo = [];
     let records = {}, client = null, closed = false, comparison = null, baseline = null, historyBase = null;
@@ -90,7 +91,7 @@
       $('.wsCancel').hidden = false; $('.wsPickInfo').textContent = 'Erste Ecke anklicken (Escape bricht ab).';
       api.pick((a, b) => {
         if (!b) { $('.wsPickInfo').textContent = a ? 'Zweite Ecke anklicken.' : 'Markierung abgebrochen.'; if (!a) $('.wsCancel').hidden = true; return; }
-        try { change('room', T.room({ id: editing || crypto.randomUUID(), name, min: [Math.min(a.x, b.x), low, Math.min(a.z, b.z)], max: [Math.max(a.x, b.x), high, Math.max(a.z, b.z)] })); editing = null; editSave.hidden = true; $('.wsPickInfo').textContent = 'Bereich gespeichert. Kisten wurden automatisch zugeordnet.'; }
+        try { change('room', T.room({ id: editing || uuid(), name, min: [Math.min(a.x, b.x), low, Math.min(a.z, b.z)], max: [Math.max(a.x, b.x), high, Math.max(a.z, b.z)] })); editing = null; editSave.hidden = true; $('.wsPickInfo').textContent = 'Bereich gespeichert. Kisten wurden automatisch zugeordnet.'; }
         catch (e) { $('.wsPickInfo').textContent = e.message; }
         $('.wsCancel').hidden = true;
       });
@@ -103,7 +104,7 @@
     } catch (e) { report(e.message); } };
     $('.wsFromPlan').onclick = () => { const needs = api.selectedMaterials(); if (!needs.length) { report('Zuerst in 3D Bauteile auswählen.'); return; } $('.wsNeeds').value = needs.map(([n, c]) => n + ';' + c).join('\n'); api.openChests(); };
     $('.wsBlueprint').onchange = async (e) => { try { const f = e.target.files[0]; if (!f) return; if (f.size > 4e6) throw new Error('Bauplan zu groß.'); const result = api.blueprintMaterials(await f.text()); if (result.unknown.length) throw new Error('Unbekannte Baukosten für: ' + result.unknown.join(', ')); if (!result.needs.length) throw new Error('Bauplan enthält keine bekannten Bauteile.'); $('.wsNeeds').value = result.needs.map(([n, c]) => n + ';' + c).join('\n'); $('.wsProjectName').value = f.name.replace(/\.blueprint$/i, ''); } catch (err) { report(err.message); } };
-    $('.wsPeerLink').onclick = async () => { const u = new URL(location.href); u.searchParams.set('room', crypto.randomUUID()); const current = api.camera(); const link = current ? T.share(u.href, world, current.camera, current.region) : u.href; $('.wsLink').hidden = false; $('.wsLink').value = link; $('.wsJoin').hidden = false; $('.wsJoin').href = link; report('Einladungsraum erstellt. Zum Wechseln beitreten und den Link an Mitspieler weitergeben.'); try { await navigator.clipboard.writeText(link); } catch (e) { } };
+    $('.wsPeerLink').onclick = async () => { const u = new URL(location.href); u.searchParams.set('room', uuid()); const current = api.camera(); const link = current ? T.share(u.href, world, current.camera, current.region) : u.href; $('.wsLink').hidden = false; $('.wsLink').value = link; $('.wsJoin').hidden = false; $('.wsJoin').href = link; report('Einladungsraum erstellt. Zum Wechseln beitreten und den Link an Mitspieler weitergeben.'); try { await navigator.clipboard.writeText(link); } catch (e) { } };
     $('.wsShare').onclick = async () => { const s = api.camera(); if (!s) return; const link = T.share(location.href, world, s.camera, s.region); $('.wsLink').hidden = false; $('.wsLink').value = link; try { await navigator.clipboard.writeText(link); $('.wsShare').textContent = '✓ Link kopiert'; } catch (e) { $('.wsLink').select(); } };
     $('.wsBase').onclick = () => { baseline = api.snapshot(); historyBase = null; $('.wsDiffInfo').textContent = 'Stand vom ' + new Date(baseline.created).toLocaleString() + ' gemerkt. Weitere Live-Updates werden verglichen.'; };
     function showDiff() { if (historyBase) comparison = T.diffMaps(historyBase, T.pieceMap(api.snapshot())); if (baseline) { comparison = T.diff(baseline, api.snapshot()); $('.wsDiffInfo').textContent = comparison.added.length + ' neu · ' + comparison.removed.length + ' entfernt'; } api.changes(comparison, $('.wsDiff').value); }
@@ -114,7 +115,8 @@
         if (!api.history || !g.VW_HISTORY) throw new Error('Kein Server-Verlauf verfügbar. Alternativ einen älteren .vwelt-Stand laden.');
         const response = await fetch(api.history + 'index.json', { cache: 'no-store' }); if (!response.ok) throw new Error('Verlauf nicht erreichbar.');
         const index = await response.json(), historySnapshot = api.snapshot(), end = Math.min(Date.now(), Date.parse(historySnapshot.created) || Date.now()), cutoff = end - 86400000;
-        const entries = (index.entries || []).slice().sort((a, b) => a.t - b.t).filter((e, i) => i > 0 && e.t > cutoff && e.t <= end + 1000);
+        const ordered = (index.entries || []).slice().sort((a, b) => a.t - b.t); if (!ordered.length || ordered[0].t > end + 1000) throw new Error('Kein passender Verlauf zu diesem Snapshot vorhanden.');
+        const entries = ordered.filter((e, i) => i > 0 && e.t > cutoff && e.t <= end + 1000);
         if (entries.length > 400) throw new Error('Zu viele Verlaufseinträge; bitte eine Vergleichsdatei verwenden.');
         const events = [];
         for (const e of entries) { if (closed) return; if (!/^e\/[a-zA-Z0-9_.-]+$/.test(e.f)) throw new Error('Ungültiger Verlaufspfad.'); const r = await fetch(api.history + e.f); if (!r.ok) throw new Error('Verlaufseintrag fehlt.'); const raw = g.fflate.gunzipSync(new Uint8Array(await r.arrayBuffer())); events.push(g.VW_HISTORY.decodeEvent(JSON.parse(new TextDecoder().decode(raw)))); }
