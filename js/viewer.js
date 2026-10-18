@@ -214,7 +214,7 @@
     // Biome → Grundfarbe (ohne Biomdaten: klassisches Grün)
     // Rohstoff-Vorkommen aus dem Spielstand (nur Unabgebautes): [Art, Farbe, Name]
     const RES_K = [['copper', '#d9824a', 'Kupfer'], ['tin', '#c9cfd4', 'Zinn'], ['silver', '#eef3ff', 'Silber'], ['obsidian', '#3b2a55', 'Obsidian'], ['tar', '#15110e', 'Teer'], ['scrap', '#8a6a4a', 'Schrott'],
-      ['giant', '#9aa3ad', 'Riesenreste'], ['tissue', '#e07aa0', 'Weichgewebe'], ['blackcore', '#5a3b8a', 'Schwarzer Kern'], ['chitin', '#7fc7b8', 'Chitin'], ['flametal', '#ff6a2a', 'Flammenmetall']];
+      ['giant', '#9aa3ad', 'Riesenreste'], ['tissue', '#e07aa0', 'Weichgewebe'], ['blackcore', '#5a3b8a', 'Schwarzer Kern'], ['surtling', '#ffb23d', 'Surtlingkern'], ['chitin', '#7fc7b8', 'Chitin'], ['flametal', '#ff6a2a', 'Flammenmetall']];
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
       ['deaths', '✝', '#ff6b5a', 'Tode'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
@@ -294,16 +294,25 @@
       }
       // ---- Ganze Welt aus dem Seed (js/worldgen.js): wird zeilenweise im Hintergrund berechnet
       // Liegt eine fertige Weltkarte (Höhen, Flüsse, Wälder; tools/weltkarte.py) unter weltkarte/<Seed>.json, wird die genommen.
-      const SEED_RES = 24, SEED_N = Math.ceil(21000 / SEED_RES); let seedImg = null, seedFor = '', seedJob = 0, seedBox = [-10500, -10500, 21000], seedSrc = '';
+      const SEED_RES = 24, SEED_N = Math.ceil(21000 / SEED_RES); let SEEDRES = null, seedResF = null, seedImg = null, seedFor = '', seedJob = 0, seedBox = [-10500, -10500, 21000], seedSrc = '';
       function buildSeed() {
         const sd = S.world && S.world.seed; if (!sd || seedFor === sd) return; seedFor = sd; clearTimeout(seedJob); seedSrc = '';
         const calc = () => { if (seedFor === sd && !seedSrc) calcSeed(sd); };
         if (!/^[\w-]+$/.test(sd) || location.protocol === 'file:') return calc();
         fetch('weltkarte/' + sd + '.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((m) => {
           if (!m || m.seed !== sd || seedFor !== sd) return calc();
+          if (m.resources) fetch('weltkarte/' + m.resources).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j && j.seed === sd && seedFor === sd) { SEEDRES = j.resources || null; seedResF = null; layersChanged(); } }).catch(() => { });
           const im = new Image(); im.onload = () => { if (seedFor !== sd) return; clearTimeout(seedJob); seedImg = im; seedBox = [m.x0, m.z0, m.size]; seedSrc = m.source || 'Weltkarte'; layersChanged(); }; im.onerror = calc; im.src = 'weltkarte/' + (m.image || sd + '.webp');
           calc(); // bis das Bild da ist: Biome berechnen
         }).catch(calc);
+      }
+      function seedRes() {
+        if (!SEEDRES) return null; if (seedResF && seedResF.S === S) return seedResF.r;
+        const gen = (S.locations || []).filter((l) => l.v), R2 = {};
+        Object.entries(SEEDRES).forEach(([k, a]) => { const own = (S.resources && S.resources[k]) || [], out = [];
+          for (let i = 0; i < a.length; i += 3) { const x = a[i], z = a[i + 1]; if (gen.some((l) => Math.abs(l.x - x) < 40 && Math.abs(l.z - z) < 40)) continue; let near = false; for (let j = 0; j < own.length && !near; j += 3) near = Math.abs(own[j] - x) < 150 && Math.abs(own[j + 1] - z) < 150; if (!near) out.push(x, z, a[i + 2]); }
+          if (out.length) R2[k] = out; });
+        seedResF = { S, r: R2 }; return R2;
       }
       function calcSeed(sd) {
         if (!g.VWWorldGen) return; seedBox = [-10500, -10500, 21000];
@@ -347,6 +356,8 @@
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
         drawLayers(); drawRoute2d(ctx, toS, view.s);
         ctx.font = '12px system-ui,sans-serif'; ctx.textAlign = 'center';
+        { const SR = ML.seed ? seedRes() : null; if (SR) { ctx.textAlign = 'center'; RES_K.forEach(([k, col]) => { const a = SR[k]; if (!a || !ML['R_' + k]) return; ctx.lineWidth = 2.5; ctx.strokeStyle = col; ctx.fillStyle = 'rgba(0,0,0,.35)';
+          for (let i = 0; i < a.length; i += 3) { const [x, y] = toS(a[i], a[i + 1]); if (x < -20 || y < -20 || x > 5000 || y > 5000) continue; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill(); ctx.stroke(); if (view.s > 0.12 && a[i + 2] > 1) { ctx.font = 'bold 10px system-ui,sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('×' + a[i + 2], x, y - 8); ctx.fillStyle = 'rgba(0,0,0,.35)'; } } }); ctx.font = '12px system-ui,sans-serif'; } }
         RES_K.forEach(([k, col]) => { const a = S.resources && S.resources[k]; if (!a || !ML['R_' + k]) return; const r = view.s > 0.6 ? 4 : view.s > 0.2 ? 3 : 2; ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1;
           for (let i = 0; i < a.length; i += 3) { const [x, y] = toS(a[i], a[i + 1]); if (x < -10 || y < -10 || x > 5000 || y > 5000) continue; ctx.beginPath(); ctx.moveTo(x, y - r - 1); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r + 1); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fill(); ctx.stroke(); if (a[i + 2] === 1 && r > 2) { ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.strokeStyle = 'rgba(0,0,0,.7)'; } } });
         S.locations.forEach((l) => { const c = locCat(l); if (!ML['L_' + c]) return; const [x, y] = toS(l.x, l.z); const st = LOCSTY[c] || LOCSTY.d; const a = l.v ? 1 : 0.6;
@@ -412,8 +423,8 @@
       function layersChanged() {
         $$('[data-ml]').forEach((b) => (b.checked = !!ML[b.dataset.ml]));
         const cnt = {}; (S.locations || []).forEach((l) => { const c = 'L_' + locCat(l); cnt[c] = (cnt[c] || 0) + 1; });
-        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; Object.entries(S.resources || {}).forEach(([k, a]) => (cnt['R_' + k] = a.length / 3)); cnt.pins = (S.pins || []).length;
-        $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_') || k.startsWith('R_')) lb.hidden = !cnt[k]; }); const fh = $('.vw-filter .fh'); if (fh) fh.hidden = !Object.keys(S.resources || {}).length;
+        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; Object.entries(S.resources || {}).forEach(([k, a]) => (cnt['R_' + k] = a.length / 3)); const SRc = ML.seed ? seedRes() : null; if (SRc) Object.entries(SRc).forEach(([k, a]) => { let n = 0; for (let i = 2; i < a.length; i += 3) n += a[i]; cnt['R_' + k] = (cnt['R_' + k] || 0) + n; }); cnt.pins = (S.pins || []).length;
+        $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_') || k.startsWith('R_')) lb.hidden = !cnt[k]; }); const fh = $('.vw-filter .fh'); if (fh) fh.hidden = !Object.keys(S.resources || {}).length && !SRc;
         $('[data-fk="seed"]').hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
         $('[data-fk="heat"]').hidden = !EX.days.length; $('[data-fk="pins"]').hidden = !(S.pins || []).length;
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
@@ -422,6 +433,7 @@
         }
         const info = [];
         if (ML.portals) { const N = portalNet(); info.push(`Portal-Netz: ${fmt(N.pairs.length)} Verbindungen` + (N.single.length ? ` · ohne Partner: ${N.single.map(esc).join(', ')}` : '') + (N.multi.length ? ` · mehr als 2 gleiche Namen: ${N.multi.map(esc).join(', ')}` : '') + (N.untagged ? ` · ${N.untagged} ohne Namen` : '')); }
+        if (SRc && RES_K.some(([k]) => ML['R_' + k] && SRc[k])) info.push(T('Rohstoffe: ausgefüllt = im Spielstand, hohl = laut Seed in unerkundeten Orten (Anzahl daneben)'));
         if (ML.seed && seedSrc) info.push(T('Ganze Welt mit Höhen, Flüssen und Wäldern') + ' · ' + T('Quelle') + ': ' + esc(seedSrc));
         if (ML.deaths) { const D = allDeaths(); info.push(`Tode: ${fmt(D.length)} erfasst` + (D.some((d) => d.open) ? ` · rot = Grabstein liegt noch` : '')); }
         baseInfo = info.join('<br>'); $('.mlInfo').innerHTML = baseInfo;

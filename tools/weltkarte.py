@@ -86,6 +86,26 @@ open(f'{out}/{seed}-gelaende.bin', 'wb').write(gzip.compress(blob, 9))
 print('Gelände', TN, 'x', TN, os.path.getsize(f'{out}/{seed}-gelaende.bin') // 1024, 'KB', 'Waldzellen', int((Fs > 0.5).sum()))
 
 img.save(f'{out}/{seed}.webp', 'WEBP', quality=82, method=6)
-json.dump({'seed': seed, 'version': M.get('WorldVersion'), 'x0': -EXT, 'z0': -EXT, 'size': 2 * EXT, 'px': PX, 'image': f'{seed}.webp', 'terrain': {'file': f'{seed}-gelaende.bin', 'res': TR, 'n': TN, 'x0': -EXT, 'z0': -EXT},
+# Rohstoffe in Orten laut Seed (aus locations.json): Art → [x, z, Anzahl, …]; Erz-Vorkommen (Kupfer, Zinn, Silber …) sind Vegetation und fehlen dort
+import re
+RESL = {}
+def addr(k, x, z, n): RESL.setdefault(k, []).extend([round(x), round(z), int(n)])
+for l in json.loads(rd('data/locations.json')):
+    pf = l.get('PrefabName', ''); x, _, zz = [float(v) for v in l['Position'].strip('()').split(',')]
+    cnt = {}
+    for it in (l.get('ImportantContents') or []):
+        fn = it.get('FriendlyName', '') or ''; c = it.get('Count', 1) or 1
+        if re.search('mudpile', fn + it.get('Icon', ''), re.I): cnt['scrap'] = cnt.get('scrap', 0) + c
+        elif fn.startswith('Pickable: Tar'): cnt['tar'] = cnt.get('tar', 0) + c
+        elif fn.startswith('Pickable: SurtlingCore'): cnt['surtling'] = cnt.get('surtling', 0) + c
+        elif fn.startswith('Pickable: BlackCore'): cnt['blackcore'] = cnt.get('blackcore', 0) + c
+    for it in (l.get('RandomContents') or []):  # zufällig gewählte Teile im Dungeon: je Schlammhaufen ein Eintrag
+        if re.match(r'mudpile', it.get('Name', '') or '', re.I): cnt['scrap'] = cnt.get('scrap', 0) + 1
+    if pf.startswith('Mistlands_Giant'): cnt['giant'] = 1
+    if pf == 'LeviathanLava': cnt['flametal'] = 1
+    for k, n in cnt.items(): addr(k, x, zz, n)
+json.dump({'seed': seed, 'resources': RESL}, open(f'{out}/{seed}-rohstoffe.json', 'w'), separators=(',', ':'))
+print('Rohstoffe aus Orten:', {k: len(v) // 3 for k, v in RESL.items()})
+json.dump({'seed': seed, 'resources': f'{seed}-rohstoffe.json', 'version': M.get('WorldVersion'), 'x0': -EXT, 'z0': -EXT, 'size': 2 * EXT, 'px': PX, 'image': f'{seed}.webp', 'terrain': {'file': f'{seed}-gelaende.bin', 'res': TR, 'n': TN, 'x0': -EXT, 'z0': -EXT},
            'source': 'valheim-map.world (All Data, Generator ' + str(M.get('GeneratorVersion')) + ')'}, open(f'{out}/{seed}.json', 'w'), ensure_ascii=False, indent=1)
 print(seed, f'{out}/{seed}.webp', os.path.getsize(f'{out}/{seed}.webp') // 1024, 'KB')
