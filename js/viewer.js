@@ -145,6 +145,7 @@
       <h2>Färbung</h2><div class="row"><button class="cMat on">Material</button><button class="cOwn">Erbauer</button></div><div class="legend" style="margin-top:8px"></div>
       <h2>Gebaut von</h2><table class="own"></table>
       <h2>Häufigste Bauteile</h2><table class="top"></table>
+      <div class="slOnline" hidden><h2>🛏 Schlafen</h2><div class="slBox"></div></div>
       <div class="sub" style="margin-top:10px">Ziehen = drehen · Rechtsklick/2 Finger = verschieben · Mausrad = Zoom · Doppelklick = hinzoomen · Kiste anklicken = Inhalt.<br><span data-en="Terrain is estimated from trees and rocks. The graphics setting controls object detail.">Gelände ist aus Bäumen und Steinen geschätzt. Die Grafikeinstellung bestimmt die Modelldetails.</span></div>
     </div>
     <div class="vw-tip" hidden></div><div class="vw-chest" hidden></div>
@@ -942,6 +943,12 @@
         if (PL.dataset.names !== names) { PL.dataset.names = names; PL.innerHTML = all.map((p, i) => `<button class="r" data-i="${i}" style="width:100%"><span>● ${esc(p.name)}</span><span class="pc"></span></button>`).join(''); }
         $$('.pc', PL).forEach((el, i) => { el.textContent = Math.round(all[i].x) + ' / ' + Math.round(all[i].z); });
         PL.onclick = (e) => { const d = e.target.closest('[data-i]'); if (d) openPlayer(livePlayers()[+d.dataset.i]); };
+        /* Wer schläft, wer fehlt noch: „im Bett“ kennt der Mod nur von dir selbst und Mitspielern in deiner Nähe */
+        const game = all.filter((p) => !p.web); const known = game.some((p) => p.details); $('.slOnline').hidden = !known;
+        if (known) { const sl = game.filter((p) => p.details && p.details.inBed), miss = game.filter((p) => !(p.details && p.details.inBed)), far = (p) => !p.details;
+          const li = (p, ic) => `<div class="r" style="display:flex;justify-content:space-between;gap:8px"><span>${ic} ${esc(p.name)}</span><span class="sub">${p.details && p.details.dead ? 'tot' : far(p) ? 'unbekannt (zu weit weg)' : ''}</span></div>`;
+          const html = `<div class="sub" style="margin-bottom:4px">${sl.length} von ${game.length} im Bett${!miss.length ? ' – alle schlafen 🌙' : ''}</div>` + sl.map((p) => li(p, '😴')).join('') + (miss.length ? `<div class="sub" style="margin:6px 0 2px">Fehlt noch:</div>` + miss.map((p) => li(p, '⏳')).join('') : '');
+          const SB = $('.slBox'); if (SB.innerHTML !== html) SB.innerHTML = html; }
         invalidate();
         // Online-Spieler als laufende Figuren (wie im Laufmodus); Spieler, die schon über MQTT als Figur kommen, nicht doppelt
         const seen = new Set(), now = performance.now();
@@ -1064,14 +1071,27 @@
 
       // ---- Eingabe (Orbit)
       const ptrs = new Map(); let drag = null, pd = 0, downAt = null, grab = null;
-      /* Online-Wikinger mit der Maus packen: nur hier im Viewer, im Spiel bewegt sich nichts */
-      function opAt(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const L = [...OP.values()].filter((O) => O.h.g.visible); const hits = ray.intersectObjects(L.map((O) => O.h.g), true); if (!hits.length) return null; let o = hits[0].object; while (o && !L.some((O) => O.h.g === o)) o = o.parent; return L.find((O) => O.h.g === o) || null; }
-      function grabMove(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const h = ray.intersectObject(terrain)[0]; if (!h) return; const O = grab.O; O.held = true; O.fall = null; O.wait = 0; O.ret = false; O.gy = h.point.y + WL; O.x = h.point.x + CX; O.z = CZ - h.point.z; O.y = O.gy + 2.2; cv.style.cursor = 'grabbing'; invalidate(); }
+      /* Wikinger mit der Maus packen und werfen: Mod-Figuren nur hier im Viewer; Mitspieler im Laufmodus sehen es auch bei sich (über MQTT) */
+      function opAt(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam);
+        const L = [...OP.values()].filter((O) => O.h.g.visible).map((O) => ({ O, h: O.h.g })).concat([...MP.peers.entries()].filter(([, P]) => P.h.g.visible).map(([id, P]) => ({ id, P, h: P.h.g })));
+        const hits = ray.intersectObjects(L.map((o) => o.h), true); if (!hits.length) return null; let o = hits[0].object; while (o && !L.some((x) => x.h === o)) o = o.parent; return L.find((x) => x.h === o) || null; }
+      function grabSend(id, d) { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/t/' + id, JSON.stringify(Object.assign({ from: MP.me, n: myName }, d)), { qos: 0 }); }
+      function grabMove(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const h = ray.intersectObject(terrain)[0]; if (!h) return;
+        const gy = h.point.y + WL, x = h.point.x + CX, z = CZ - h.point.z, now = performance.now(); cv.style.cursor = 'grabbing'; invalidate();
+        if (grab.O) { const O = grab.O; O.held = true; O.fall = null; O.wait = 0; O.ret = false; O.gy = gy; O.x = x; O.z = z; O.y = gy + 2.2; return; }
+        const P = grab.P; P.fly = null; P.ov = { x, y: gy + 2.2, z }; grab.hist.push([now, x, gy + 2.2, z]); while (grab.hist.length > 2 && now - grab.hist[0][0] > 150) grab.hist.shift();
+        if (!P.g && now - grab.sent > 90) { grab.sent = now; grabSend(grab.id, { s: 'hold', x: +x.toFixed(2), y: +(gy + 2.2).toFixed(2), z: +z.toFixed(2) }); } }
+      function grabRelease(G) {
+        if (G.O) { G.O.held = false; G.O.fall = { vy: 0 }; invalidate(); return; }
+        const P = G.P, o = P.ov; if (!o) return; const a = G.hist[0], b = G.hist[G.hist.length - 1], t = Math.max(0.03, (b[0] - a[0]) / 1000);
+        const cl = (v) => Math.max(-25, Math.min(25, v)), vx = cl((b[1] - a[1]) / t), vz = cl((b[3] - a[3]) / t), vy = Math.min(14, 3 + Math.hypot(vx, vz) * 0.35);
+        P.ov = null; P.fly = { x: o.x, y: o.y, z: o.z, vx, vy, vz, t: 0 }; invalidate();
+        if (!P.g) grabSend(G.id, { s: 'throw', x: +o.x.toFixed(2), y: +o.y.toFixed(2), z: +o.z.toFixed(2), vx: +vx.toFixed(2), vy: +vy.toFixed(2), vz: +vz.toFixed(2) }); }
       cv.addEventListener('contextmenu', (e) => e.preventDefault());
-      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!walk && !fly && !areaPick && !SEL.active && e.button === 0 && ptrs.size === 1) { const O = opAt(e); if (O) grab = { O, x0: e.clientX, y0: e.clientY, moved: false }; } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
+      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!walk && !fly && !areaPick && !SEL.active && e.button === 0 && ptrs.size === 1) { const H = opAt(e); if (H) grab = Object.assign(H, { x0: e.clientX, y0: e.clientY, moved: false, hist: [], sent: 0 }); } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
       const pUp = (e) => {
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
-        if (grab) { const G = grab; grab = null; cv.style.cursor = 'grab'; if (G.moved) { G.O.held = false; G.O.fall = { vy: 0 }; invalidate(); return; } }
+        if (grab) { const G = grab; grab = null; cv.style.cursor = 'grab'; if (G.moved) { grabRelease(G); return; } }
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
           if (areaPick) { const hit = rayHit(e, true); if (hit) { const p = { x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }; if (!areaFirst) { areaFirst = p; areaPick(p, null); } else { const fn = areaPick, first = areaFirst; areaPick = null; areaFirst = null; cv.style.cursor = ''; fn(first, p); } } return; }
           const rect = cv.getBoundingClientRect(); mv.set((e.clientX-rect.left)/rect.width*2-1, -(e.clientY-rect.top)/rect.height*2+1); ray.setFromCamera(mv,cam);
@@ -1357,7 +1377,7 @@
         const go = () => { if (destroyed) { MP.loading = false; return; } try {
           const c = g.mqtt.connect(url, { clientId: 'vw_' + MP.me, clean: true, connectTimeout: 15000, reconnectPeriod: 4000, keepalive: 30, will: { topic: mpRoom() + '/p/' + MP.me, payload: '', qos: 0, retain: false } });
           MP.cli = c; MP.loading = false;
-          c.on('connect', () => { c.subscribe(mpRoom() + '/p/+', (err) => { if (err) { mpStatus('Abonnement fehlgeschlagen', true); return; } mpStatus('verbunden', false); MP.lastPub = -Infinity; MP.lastMsg = ''; if (walk && !document.hidden) mpPublish(performance.now(), false); }); });
+          c.on('connect', () => { c.subscribe([mpRoom() + '/p/+', mpRoom() + '/t/' + MP.me], (err) => { if (err) { mpStatus('Abonnement fehlgeschlagen', true); return; } mpStatus('verbunden', false); MP.lastPub = -Infinity; MP.lastMsg = ''; if (walk && !document.hidden) mpPublish(performance.now(), false); }); });
           c.on('reconnect', () => mpStatus('verbinde erneut …', true));
           c.on('offline', () => mpStatus('Verbindung unterbrochen', true));
           c.on('close', () => mpStatus('Verbindung unterbrochen', true));
@@ -1368,6 +1388,7 @@
       const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
       function onPeer(topic, msg) {
         if (destroyed) return;
+        if (topic === mpRoom() + '/t/' + MP.me) { onGrabbed(msg); return; }
         const packet = g.VWPeerProtocol.decode(mpRoom(), topic, msg); if (!packet) return;
         const { id, data: d } = packet; if (id === MP.me || MP.mine.has(id)) return;
         let P = MP.peers.get(id);
@@ -1377,6 +1398,18 @@
         if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); lab.onclick = () => openPlayer(peerList().find(p => p.id === id)); lab.setAttribute('role', 'button'); lab.tabIndex = 0; lab.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); lab.click(); } }; P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
         if (Math.hypot(d.x - P.x, d.y - P.y, d.z - P.z) > 50) { P.x = d.x; P.y = d.y; P.z = d.z; }
         Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, g: !!d.g, details: g.VWPlayerCard.details(d.details), seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n; invalidate();
+      }
+      /* Ich werde von jemandem gepackt oder geworfen (nur im Laufmodus) */
+      let grabbedBy = null, flingV = null;
+      function onGrabbed(msg) {
+        if (!walk || !msg || msg.length > 512) return; let d; try { d = JSON.parse(new TextDecoder().decode(msg)); } catch (e) { return; }
+        if (!d || (d.s !== 'hold' && d.s !== 'throw') || !['x', 'y', 'z'].every((k) => Number.isFinite(d[k]) && Math.abs(d[k]) < 20000)) return;
+        if (Math.hypot(d.x - (pos.x + CX), d.z - (CZ - pos.z)) > 150) return; /* nur in der Nähe */
+        const who = String(d.n || 'Jemand').slice(0, 24); const now = performance.now();
+        if (!grabbedBy || now - grabbedBy.t > 2000) say('🤚 ' + who + ' hat dich gepackt!');
+        if (d.s === 'hold') { grabbedBy = { x: d.x, y: d.y, z: d.z, t: now }; flingV = null; return; }
+        const c = (v) => (Number.isFinite(v) ? Math.max(-25, Math.min(25, v)) : 0);
+        grabbedBy = null; pos.set(d.x - CX, d.y - WL, CZ - d.z); vy = Math.min(14, c(d.vy)); onGround = false; flingV = { x: c(d.vx), z: -c(d.vz) }; say('💨 ' + who + ' hat dich geworfen!');
       }
       function mpPublish(now, moving) {
         if (!MP.cli || !MP.cli.connected || document.hidden) return;
@@ -1418,12 +1451,16 @@
         for (const [id, P] of MP.peers) {
           if (now - P.seen > g.VWPeerProtocol.ttl) { removePeer(id); moved = true; continue; }
           if (!visiblePeers.has(id)) { P.h.g.visible = false; P.lab.style.display = 'none'; continue; }
-          const k = 1 - Math.exp(-Math.min(dt, 1) * 8); P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; P.z += (P.tz - P.z) * k;
-          let dr = P.tr - P.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); P.h.g.rotation.y += dr * k;
+          const k = 1 - Math.exp(-Math.min(dt, 1) * 8); let thrown = false;
+          if (P.ov) { P.x = P.ov.x; P.y = P.ov.y; P.z = P.ov.z; thrown = true; P.anim += dt * 7; const w = Math.sin(P.anim); P.h.legL.rotation.x = w * 0.5; P.h.legR.rotation.x = -w * 0.5; P.h.armL.rotation.x = P.h.armR.rotation.x = -2.7 + w * 0.25; P.h.g.rotation.z = w * 0.12; }
+          else if (P.fly) { const F = P.fly; F.t += dt; F.vy -= 18 * dt; F.x += F.vx * dt; F.y += F.vy * dt; F.z += F.vz * dt; const gy = groundY(F.x - CX, CZ - F.z, F.y - WL + 1) + WL; P.h.g.rotation.z = 0; P.h.g.rotation.x = Math.min(1.2, F.t * 3);
+            if ((F.vy < 0 && F.y <= gy) || F.t > 4) { F.y = Math.max(F.y, gy); P.fly = null; P.h.g.rotation.x = 0; P.tx = F.x; P.ty = F.y; P.tz = F.z; P.hold = now + (P.g ? 0 : 1500); } P.x = F.x; P.y = F.y; P.z = F.z; thrown = true; P.h.armL.rotation.x = P.h.armR.rotation.x = -2.4; }
+          if (thrown) moved = true; else { P.h.g.rotation.z = P.h.g.rotation.x = 0; if (!(P.hold > now)) { P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; P.z += (P.tz - P.z) * k; } }
+          let dr = P.tr - P.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); if (!thrown) P.h.g.rotation.y += dr * k;
           const inside = reg && P.x >= reg.bounds[0] - 50 && P.x <= reg.bounds[1] + 50 && P.z >= reg.bounds[2] - 50 && P.z <= reg.bounds[3] + 50;
           P.h.g.visible = !!inside; P.h.g.position.set(P.x - CX, P.y - WL, CZ - P.z);
           if (P.run) { P.anim += dt * 9; moved = true; } else P.anim *= 0.85;
-          const sw = Math.sin(P.anim) * (P.run ? 0.7 : 0); P.h.legL.rotation.x = sw; P.h.legR.rotation.x = -sw; P.h.armL.rotation.x = -sw * 0.8; P.h.armR.rotation.x = sw * 0.8;
+          const sw = Math.sin(P.anim) * (P.run ? 0.7 : 0); if (!thrown) P.h.legL.rotation.x = sw, P.h.legR.rotation.x = -sw, P.h.armL.rotation.x = -sw * 0.8, P.h.armR.rotation.x = sw * 0.8; 
           if (Math.abs(P.tx - P.x) + Math.abs(P.tz - P.z) > 0.01) moved = true;
           pv2.set(P.x - CX, P.y - WL + 2.2, CZ - P.z).project(cam); const vis = inside && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05;
           P.lab.style.display = vis ? 'block' : 'none'; if (vis) { P.lab.style.left = ((pv2.x + 1) / 2 * pr.width) + 'px'; P.lab.style.top = ((1 - pv2.y) / 2 * pr.height) + 'px'; }
@@ -1448,7 +1485,7 @@
         for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
         placeAt(tgt.x, tgt.z);
       }
-      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
+      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
         if (on && !reg) return;
@@ -1518,7 +1555,9 @@
         const l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; }
         const sp = (run ? 7 : 4) * dt, fw = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw)), rt = new THREE.Vector3(-Math.cos(wyaw), 0, Math.sin(wyaw));
         const mv = fw.clone().multiplyScalar(mz).addScaledVector(rt, mx);
-        const prev = pos.clone(); pos.addScaledVector(mv, sp * (l > 0 ? 1 : 0) / (l > 1 ? 1 : 1));
+        const held = grabbedBy && performance.now() - grabbedBy.t < 1500;
+        const prev = pos.clone(); if (!held) pos.addScaledVector(mv, sp * (l > 0 ? 1 : 0) / (l > 1 ? 1 : 1));
+        if (flingV) { pos.x += flingV.x * dt; pos.z += flingV.z * dt; if (onGround) { flingV.x *= 0.8; flingV.z *= 0.8; if (Math.hypot(flingV.x, flingV.z) < 0.3) flingV = null; } }
         // Schwerkraft, Stufen, Wasser
         let g = groundY(pos.x, pos.z, pos.y + STEP); const water = -1.3;
         for (const [ox, oz] of [[RAD, 0], [-RAD, 0], [0, RAD], [0, -RAD]]) g = Math.max(g, groundY(pos.x + ox, pos.z + oz, pos.y + STEP)); // Füße als Scheibe: kleine Fugen überbrücken
@@ -1526,6 +1565,7 @@
         vy -= 18 * dt; pos.y += vy * dt;
         const floor = Math.max(g, water);
         if (pos.y <= floor) { pos.y = floor; vy = 0; onGround = true; } else onGround = pos.y - floor < 0.05;
+        if (held) { pos.set(grabbedBy.x - CX, grabbedBy.y - WL, CZ - grabbedBy.z); vy = 0; onGround = false; }
         pushOut(pos);
         // Kopf stößt an Decke
         if (vy > 0) { const up = new THREE.Vector3(0, 1, 0), o = new THREE.Vector3(pos.x, pos.y + 1.2, pos.z); for (const b of near(pos.x, pos.z)) { if (b.pass || b.ramp) continue; const t = rayBox(b, o, up, 0.7); if (t !== null) { vy = 0; break; } } }
@@ -1534,6 +1574,7 @@
         else anim *= 0.85;
         const sw = Math.sin(anim) * (l > 0.05 ? 0.7 : 0) * (onGround ? 1 : 0.3);
         legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw * 0.8; armR.rotation.x = sw * 0.8;
+        if (held || flingV) { const w = Math.sin(performance.now() / 90); legL.rotation.x = w * 0.5; legR.rotation.x = -w * 0.5; armL.rotation.x = armR.rotation.x = -2.6 + w * 0.2; }
         HERO.position.copy(pos); mpPublish(performance.now(), l > 0.05 || !onGround);
         // Kamera: hinter dem Kopf, Mausrad = Abstand bis in die Ich-Perspektive; nicht durch Wände
         const head = pos.clone(); head.y += 1.62;

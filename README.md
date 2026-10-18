@@ -18,6 +18,11 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 ## Changelog
 
+**19.10.2026**
+- 3D: Wikinger mit der Maus packen und werfen. Mitspieler im Laufmodus sehen das bei sich („… hat dich gepackt!“) und fliegen wirklich; Mod-Figuren nur im eigenen Viewer.
+- 3D-Menü unten: „🛏 Schlafen“ – wer im Bett liegt und wer noch fehlt (braucht Mod 0.6.2; „im Bett“ ist nur für dich und Mitspieler in deiner Nähe bekannt).
+- Betten: auch Ashwood- und Heubett werden erkannt; Lag-Diagnose läuft wieder.
+
 **18.10.2026**
 - 2D-Karte: neue Ebene „Betten“ 🛏 mit Besitzername (im Filter ein-/ausschaltbar).
 - Neuer Tab „⤓ Dungeon“ (nur sichtbar mit Mod 0.6.1 auf dem eigenen PC): Grundriss der Krypta/Höhle, in der du gerade bist – besuchte Räume, Gegner mit Sternen und HP, Truhen mit Inhalt, Surtlingkerne, Schrotthaufen, Mitspieler.

@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.6.1";
+        public const string Version = "0.6.2";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails;
@@ -250,6 +250,7 @@ namespace ValheimWeltLive
                 d.Append("\"health\":").Append(F(p.GetHealth())).Append(",\"maxHealth\":").Append(F(p.GetMaxHealth()));
                 d.Append(",\"stamina\":").Append(F(p.GetStamina())).Append(",\"maxStamina\":").Append(F(p.GetMaxStamina()));
                 d.Append(",\"eitr\":").Append(F(p.GetEitr())).Append(",\"maxEitr\":").Append(F(p.GetMaxEitr()));
+                if (p.InBed()) d.Append(",\"inBed\":true"); if (p.IsDead()) d.Append(",\"dead\":true");
                 d.Append(",\"playedSeconds\":").Append(F((float)stats.playedSeconds)).Append(",\"distance\":").Append(F((float)stats.distance));
                 d.Append(",\"deaths\":").Append(stats.deaths).Append(",\"visits\":").Append(stats.visits).Append(",\"since\":").Append(stats.since);
                 d.Append(",\"left\":").Append(Json(EquippedName(Hand(p, "m_leftItem")))).Append(",\"right\":").Append(Json(EquippedName(Hand(p, "m_rightItem"))));
