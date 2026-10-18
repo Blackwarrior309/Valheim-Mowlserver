@@ -227,7 +227,7 @@
     // Sammeln
     const GROUND = new Set(D.ground), NAT = D.nature, PREF = D.prefabs, SPEC = D.pieces, CONT = D.containers;
     const H_PORTAL = new Set(['portal_wood', 'portal_stone', 'portal'].map(stable));
-    const H_BED = new Set(['bed', 'piece_bed02'].map(stable)), H_SIGN = stable('sign'), H_TOMB = stable('Player_tombstone'), H_MAPT = stable('piece_cartographytable'), K_DATA = stable('data');
+    const H_BED = new Set(['bed', 'piece_bed02', 'ashwood_bed', 'piece_bed_hay'].map(stable)), H_SIGN = stable('sign'), H_TOMB = stable('Player_tombstone'), H_MAPT = stable('piece_cartographytable'), K_DATA = stable('data');
     let gx = new Float32Array(1 << 16), gn = 0; // Bodenpunkte x,y,z
     const gCells = new Set(), alt = []; // Ersatz-Bodenpunkte für Gebiete ohne bekannte Pflanzen (z. B. Aschelande)
     const pushG = (x, y, z) => { if (gn * 3 + 3 > gx.length) { const t = new Float32Array(gx.length * 2); t.set(gx); gx = t; } gx[gn * 3] = x; gx[gn * 3 + 1] = y; gx[gn * 3 + 2] = z; gn++; };

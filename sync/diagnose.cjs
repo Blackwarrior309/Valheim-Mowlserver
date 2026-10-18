@@ -10,7 +10,7 @@ const D = globalThis.VW_DATA, PREF = D.prefabs, ITEMS = D.items;
 const dir = process.argv[2]; const files = [];
 (function walk(d) { for (const n of fs.readdirSync(d)) { const p = path.join(d, n); if (fs.statSync(p).isDirectory()) walk(p); else files.push(p); } })(dir);
 const chunks = files.filter((f) => f.endsWith('.chunk'));
-const H_TAMED = stable('tamed'), H_CREATOR = stable('creator'), H_OWNERNAME = stable('ownerName'), BEDS = new Set(['bed', 'piece_bed02'].map(stable)); const beds = [];
+const H_TAMED = stable('tamed'), H_CREATOR = stable('creator'), H_OWNERNAME = stable('ownerName'), BEDS = new Set(['bed', 'piece_bed02', 'ashwood_bed', 'piece_bed_hay'].map(stable)); const beds = [];
 const FISH = new Set(Array.from({ length: 14 }, (_, i) => stable('Fish' + (i + 1)))); // Fische schwimmen als „Gegenstände“ im Meer – keine liegengelassenen Sachen
 const zone = new Map(), byPrefab = new Map(); let total = 0, built = 0, drops = 0, tamed = 0, interior = 0;
 const dropZ = new Map(), tameZ = new Map(), tameKind = new Map(), fires = new Map(), ships = [], smelt = new Map();
