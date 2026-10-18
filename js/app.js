@@ -115,7 +115,7 @@
     try {
       viewer && viewer.setStatus('Erzeuge Teilen-Datei …');
       const get = (p) => fetch(p).then((r) => { if (!r.ok) throw new Error(p + ' nicht ladbar'); return r.text(); });
-      const [three, ff, data, view, i18n, rec, wgen, tools, ws] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => ''), get('js/worldgen.js').catch(() => ''), get('js/map-tools.js'), get('js/viewer-workspace.js')]);
+      const [three, ff, data, view, i18n, rec, wgen, tools, ws, peers] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => ''), get('js/worldgen.js').catch(() => ''), get('js/map-tools.js'), get('js/viewer-workspace.js'), get('js/peer-protocol.js')]);
       const js = (s) => s.replace(/<\/script/gi, '<\\/script');
       const title = (current.world.name || 'Valheim-Welt') + ' – Valheim-Welt';
       const html = `<!doctype html>
@@ -131,6 +131,7 @@
 <script>${js(data)}</script>
 <script>${js(rec)}</script>
 <script>${js(wgen)}</script>
+<script>${js(peers)}</script>
 <script>${js(tools)}</script>
 <script>${js(ws)}</script>
 <script>${js(view)}</script>
