@@ -7,6 +7,7 @@
     const out = {};
     for (const k of numbers) if (Number.isFinite(raw[k]) && raw[k] >= 0 && raw[k] <= 1e12) out[k] = raw[k];
     for (const k of ['left', 'right']) if (typeof raw[k] === 'string') out[k] = raw[k].slice(0, 80);
+    for (const k of ['remote', 'dead', 'inBed']) if (raw[k] === true) out[k] = true;
     if (Array.isArray(raw.equipment)) out.equipment = raw.equipment.slice(0, 12).filter(x => x && typeof x.name === 'string' && typeof x.slot === 'string').map(x => ({name:x.name.slice(0, 80), slot:x.slot.slice(0, 32)}));
     while (out.equipment && out.equipment.length && new TextEncoder().encode(JSON.stringify(out)).length > 1300) out.equipment.pop();
     return out;
@@ -30,7 +31,7 @@
       if (!online) stop(); buttons.forEach(b => b.disabled = !online || !Number.isFinite(p.x) || !Number.isFinite(p.z));
       const number = k => d[k] == null ? '–' : Math.round(d[k]).toLocaleString('de-DE');
       const vital = (label, k, max) => `<div><b>${label}</b> ${number(k)} / ${number(max)}${d[k] != null && d[max] > 0 ? `<meter min="0" max="${d[max]}" value="${Math.min(d[k],d[max])}" aria-label="${label}" style="width:100%"></meter>` : ''}</div>`;
-      const html = `<h2>${escape(p.name)}</h2><div class="sub">${p.web ? 'Browserfigur' : online ? 'Live-Spieler' : 'Offline / letzter Weltstand'}</div>` +
+      const html = `<h2>${escape(p.name)}</h2><div class="sub">${p.web ? 'Browserfigur' : online ? 'Live-Spieler' : 'Offline / letzter Weltstand'}${d.remote ? ' · in der Nähe gesehen (Werte vom Spiel übers Netz)' : ''}${d.dead ? ' · ✝ tot' : ''}${d.inBed ? ' · 🛏 schläft' : ''}</div>` +
         vital('Leben','health','maxHealth') + vital('Ausdauer','stamina','maxStamina') + vital('Eitr','eitr','maxEitr') +
         `<h3>Ausrüstung</h3>${Array.isArray(d.equipment) ? d.equipment.map(x => `<div>${escape(x.slot)}: ${escape(x.name)}</div>`).join('') || '<div>Keine</div>' : '<div>–</div>'}` +
         `<div>Linke Hand: ${d.left == null ? '–' : escape(d.left || 'Leer')}</div><div>Rechte Hand: ${d.right == null ? '–' : escape(d.right || 'Leer')}</div>` +

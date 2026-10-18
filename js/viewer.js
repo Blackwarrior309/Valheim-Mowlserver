@@ -164,7 +164,7 @@
     (opts.actions || []).forEach((a) => { const b = document.createElement('button'); b.textContent = a.label; if (a.primary) b.className = 'pri'; if (a.title) b.title = a.title; b.onclick = a.onClick; act.appendChild(b); });
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
-    let S = snap, tab = 'map', LIVE = null;
+    let S = snap, tab = 'map', LIVE = null, CREA = []; // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
     const SEEDW = { seed: '', meta: null, data: null, reg: null, regS: null };
     function seedRegion() {
@@ -225,7 +225,7 @@
       ['giant', '#9aa3ad', 'Riesenreste'], ['tissue', '#e07aa0', 'Weichgewebe'], ['blackcore', '#5a3b8a', 'Schwarzer Kern'], ['surtling', '#ffb23d', 'Surtlingkern'], ['chitin', '#7fc7b8', 'Chitin'], ['flametal', '#ff6a2a', 'Flammenmetall']];
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
-      ['deaths', '✝', '#ff6b5a', 'Tode'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
+      ['deaths', '✝', '#ff6b5a', 'Tode'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
       ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
       ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager'], ['_h', '', '', 'Rohstoffe']].concat(RES_K.map(([k, c, de]) => ['R_' + k, '◆', c, de]));
     const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
@@ -234,6 +234,7 @@
     const PIN_IC = { 0: '🔥', 1: '🏠', 2: '🔨', 3: '●', 4: '✦', 9: '☠' };
     const PIN_N = { '$enemy_eikthyr': 'Eikthyr', '$enemy_gdking': 'Der Älteste', '$enemy_bonemass': 'Knochenmasse', '$enemy_dragon': 'Moder', '$enemy_goblinking': 'Yagluth', '$enemy_seekerqueen': 'Die Königin', '$enemy_fader': 'Fader' };
     const pinName = (p) => { const n = p.n || ''; if (PIN_N[n]) return T(PIN_N[n]); if (/^\$hud_pin_hildir/.test(n)) return 'Hildir'; return n.replace(/^\$\w+_/, ''); };
+    const crCol = (c) => c.tame ? '#4cc36b' : c.boss ? '#ff2fd0' : (c.f === 'AnimalsVeg' || c.f === 'PlayerSpawned') ? '#ffd84a' : '#ff5a4a'; // gezähmt grün, Boss pink, harmlos gelb, feindlich rot
     const FOG = 110; // Abdunklung unerkundeter Gebiete auf der fertigen Weltkarte (0–255)
     const BIO_COL = [null, [111, 154, 69], [92, 86, 52], [196, 202, 208], [52, 86, 50], [190, 172, 88], [92, 52, 42], [226, 236, 244], null, [84, 82, 104]];
     let BIOU = null, BIOS = null;
@@ -373,6 +374,8 @@
           if (st[1] === 'tri') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.closePath(); } else if (st[1] === 'dot') ctx.arc(x, y, 3.5, 0, Math.PI * 2); else if (st[1] === 'dia') { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); } else ctx.rect(x - 3.5, y - 3.5, 7, 7);
           ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
           if ((st[2] && view.s > 0.12) || l.k === 'StartTemple' || view.s > 0.35) { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
+        if (ML.creatures && CREA.length) { ctx.textAlign = 'center'; CREA.forEach((c) => { const [x, y] = toS(c.x, c.z); const col = crCol(c); ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, c.boss ? 7 : 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            if (view.s > 0.8 || c.boss || c.tame) { const t = c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + (c.y > 3000 ? ' ⤓' : ''); ctx.font = '11px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t, x, y - 8); ctx.fillStyle = '#fff'; ctx.fillText(t, x, y - 8); } }); ctx.font = '12px system-ui,sans-serif'; }
         if (ML.pins) { ctx.textBaseline = 'middle'; (S.pins || []).forEach((p) => { const [x, y] = toS(p.x, p.z); const ic = PIN_IC[p.t] || '•'; ctx.globalAlpha = p.c ? 0.5 : 1; ctx.font = (p.t === 9 ? 'bold 15px' : '13px') + ' system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = p.t === 9 ? '#ffb4a8' : '#ffe08a'; ctx.strokeText(ic, x, y); ctx.fillText(ic, x, y);
             if (view.s > 0.25) { const nm = pinName(p); const t = (nm ? nm + ' · ' : '') + (p.by || ''); if (t) { ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y + 13); ctx.fillStyle = '#fff3c9'; ctx.fillText(t, x, y + 13); } } ctx.globalAlpha = 1; }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
         if (ML.portals) S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
@@ -393,7 +396,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, pins: true, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, pins: true, creatures: false, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -434,7 +437,7 @@
         cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; Object.entries(S.resources || {}).forEach(([k, a]) => (cnt['R_' + k] = a.length / 3)); const SRc = ML.seed ? seedRes() : null; if (SRc) Object.entries(SRc).forEach(([k, a]) => { let n = 0; for (let i = 2; i < a.length; i += 3) n += a[i]; cnt['R_' + k] = (cnt['R_' + k] || 0) + n; }); cnt.pins = (S.pins || []).length;
         $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_') || k.startsWith('R_')) lb.hidden = !cnt[k]; }); const fh = $('.vw-filter .fh'); if (fh) fh.hidden = !Object.keys(S.resources || {}).length && !SRc;
         $('[data-fk="seed"]').hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
-        $('[data-fk="heat"]').hidden = !EX.days.length; $('[data-fk="pins"]').hidden = !(S.pins || []).length;
+        $('[data-fk="heat"]').hidden = !EX.days.length; $('[data-fk="pins"]').hidden = !(S.pins || []).length; $('[data-fk="creatures"]').hidden = !CREA.length && !ML.creatures; cnt.creatures = CREA.length; { const lb = $('[data-fk="creatures"] .n'); if (lb) lb.textContent = CREA.length ? fmt(CREA.length) : ''; }
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
         if (EX.days.length && !$('.hPl').options.length) {
           const names = new Set(); Promise.resolve(heatDays(7)).then((ds) => { ds.forEach((d) => Object.keys(d.players || {}).forEach((n) => names.add(n))); $('.hPl').innerHTML = '<option value="">Alle Spieler</option>' + [...names].sort().map((n) => `<option>${esc(n)}</option>`).join(''); });
@@ -1267,6 +1270,17 @@
         if (!RT3) return; const p0 = RT3.pts[0]; const A = areas(); let i = A.findIndex((r) => r.id !== 'world' && r.id !== 'seed' && p0.x >= r.bounds[0] && p0.x <= r.bounds[1] && p0.z >= r.bounds[2] && p0.z <= r.bounds[3]); if (i < 0) i = A.findIndex((r) => r.id === 'world'); if (i < 0) i = 0;
         if (!reg || reg !== A[i]) selectRegion(i); else drawRoute3(); tgt.copy(W(p0.x, p0.y, p0.z)); dist = 90; pit = 0.75; invalidate();
       }
+      // Gegner und Tiere vom eigenen Mod: kleine Kugeln (Farbe wie auf der Karte), Name bei Bossen, Gezähmten und Sternen
+      let crG = null, crLab = [];
+      const crGeo = new THREE.SphereGeometry(0.6, 10, 8);
+      function setCreatures(list) {
+        if (crG) { scene.remove(crG); crG.children.forEach((m) => m.material && m.material.dispose()); crG = null; } crLab.forEach((l) => l.d.remove()); crLab = [];
+        let on = true; try { on = JSON.parse(localStorage.getItem('vw-maplayers') || '{}').creatures === true; } catch (e) { }
+        if (!on || !reg || !list || !list.length) { invalidate(); return; } crG = new THREE.Group(); scene.add(crG);
+        list.forEach((c) => { if (c.y > 3000) return; const m = new THREE.Mesh(crGeo, new THREE.MeshBasicMaterial({ color: crCol(c), depthTest: false, transparent: true, opacity: 0.9 })); m.renderOrder = 11; m.position.copy(W(c.x, c.y + 1.2, c.z)); if (c.boss) m.scale.setScalar(2.5); crG.add(m);
+          if (c.boss || c.tame || c.lv > 1) { const d = document.createElement('div'); d.className = 'vw-lbl'; d.textContent = c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + ' ❤' + Math.round(c.hp); LB.appendChild(d); crLab.push({ d, v: W(c.x, c.y + 3, c.z) }); } });
+        invalidate();
+      }
       const OP = new Map(); // Online-Spieler-Figuren
       function opTick(dt) {
         if (!OP.size) return; let moved = false; const k = dt ? Math.min(1, dt * 4) : 0;
@@ -1541,6 +1555,7 @@
           labels.forEach((l) => { pv2.copy(l.v).project(cam); const d = fly ? l.v.distanceTo(cam.position) : dist; place(l, showLbl && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && d < (l.k === 'bed' || l.k === 'tomb' ? (fly ? 60 : 220) : (fly ? 150 : 380))); });
           roomLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           rtLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
+          crLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && dist < 400); });
           plLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, !l.out && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           chLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && (fly ? l.v.distanceTo(cam.position) < 120 : dist < 260)); });
         }
@@ -1712,7 +1727,7 @@
         running = false; originalRevision++; if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
         const resources = new Set(); scene.traverse((o) => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) { resources.add(m); for (const v of Object.values(m)) if (v && v.isTexture) resources.add(v); } }); resources.forEach((r) => r.dispose()); ren.dispose(); ren.forceContextLoss();
       }
-      return { focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
+      return { focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, setCreatures, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
     })();
 
     $('.w3d').onclick = () => { setTab('3d'); three.selectRegion(0); };
@@ -2015,7 +2030,8 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     let GL = { on: false, timer: 0, fails: 0, url: 'http://localhost:8686' };
     async function gamePoll() {
       try { const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500); const l = await (await fetch(GL.url + '/api/players', { cache: 'no-store', signal: ctl.signal })).json(); clearTimeout(to);
-        GL.fails = 0; updateLive(l); three.pubGame(l); $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
+        GL.fails = 0; updateLive(l); three.pubGame(l);
+        try { const cr = await (await fetch(GL.url + '/api/creatures', { cache: 'no-store' })).json(); CREA = Array.isArray(cr) ? cr.slice(0, 400) : []; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); } } catch (e) { CREA = []; } $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
       } catch (e) { GL.fails++; $('.gameLink').textContent = '🎮 ' + T('Spiel nicht erreichbar – läuft Valheim mit dem Mod?'); if (GL.fails > 3) LIVE = null; }
     }
     function gameLink(on) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+- Players nearby: health, stamina, eitr, equipment with quality, dead / sleeping – the values the game itself sends over the network.
+- New `/api/creatures`: enemies and animals in the loaded area (also inside dungeons) with health, stars, tamed and boss flags.
+
 ## 0.5.0
 - Live player cards in map, 3D and player lists, with follow, go-to and view switching.
 - Local character health, stamina, eitr, equipped items and held items in `/api/players`.
