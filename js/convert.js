@@ -73,7 +73,7 @@
     const L = g.VW_DATA.locations;
     for (let i = 0; i < nl; i++) {
       const h = r.i32(), x = r.f32(), y = r.f32(), z = r.f32(), gen = r.u8();
-      const l = L[h]; if (l) locs.push({ k: l[0], n: l[1], x: Math.round(x), z: Math.round(z), v: gen });
+      const l = L[h]; if (l) locs.push(Object.assign({ k: l[0], n: l[1], x: Math.round(x), z: Math.round(z), v: gen }, l[2] ? { c: l[2] } : {}));
     }
     return { version: ver, keys, locations: locs, netTime };
   }
@@ -130,7 +130,7 @@
     const nk = r.i32(); for (let i = 0; i < nk; i++) meta.keys.push(r.str());
     const np = r.i32(); for (let i = 0; i < np; i++) meta.live.push({ name: r.str(), x: r.f32(), y: r.f32(), z: r.f32() });
     const nl = r.i32(); const L = g.VW_DATA.locations;
-    for (let i = 0; i < nl; i++) { const n = r.str(), x = r.f32(), z = r.f32(), pl = r.u8(); const l = L[stable(n)]; if (l) meta.locations.push({ k: l[0], n: l[1], x: Math.round(x), z: Math.round(z), v: pl }); }
+    for (let i = 0; i < nl; i++) { const n = r.str(), x = r.f32(), z = r.f32(), pl = r.u8(); const l = L[stable(n)]; if (l) meta.locations.push(Object.assign({ k: l[0], n: l[1], x: Math.round(x), z: Math.round(z), v: pl }, l[2] ? { c: l[2] } : {})); }
     const nz = r.i32();
     for (let k = 0; k < nz; k++) {
       const prefab = r.i32(), x = r.f32(), y = r.f32(), z = r.f32(), yaw = r.f32(), scale = r.f32(), m = r.u8();

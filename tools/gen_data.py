@@ -27,7 +27,11 @@ except FileNotFoundError: META={}
 for _k,_m in META.items():
     if _m.get('de'): PN[_k]=_m['de']
 LOC={'StartTemple':'Spawn','Eikthyrnir':'Eikthyr','GDKing':'Der Älteste','Bonemass':'Knochenmasse','Dragonqueen':'Moder','GoblinKing':'Yagluth','Mistlands_DvergrBossEntrance1':'Die Königin','FaderLocation':'Fader','Vendor_BlackForest':'Haldor (Händler)','Hildir_camp':'Hildir','BogWitch_Camp':'Moorhexe'}
-out={'locations':{str(stable(k)):[k,v] for k,v in LOC.items()},'prefabs':{str(stable(n)):n for n in sorted(names)},'pieces':{k:list(v[:5])+([META[k]['yoff']] if k in META and 'yoff' in META[k] else []) for k,v in T.items()},
+# Dungeons und weitere Orte (Kartenebene „Dungeons“); Kategorie 'd'
+DUN={'Crypt2':'Grabkammer','Crypt3':'Grabkammer','Crypt4':'Grabkammer','TrollCave02':'Trollhöhle','SunkenCrypt4':'Versunkene Krypta','MountainCave02':'Frosthöhle',
+     'Mistlands_DvergrTownEntrance1':'Befallene Mine','Mistlands_DvergrTownEntrance2':'Befallene Mine','CharredFortress':'Festung (Aschelande)','MorgenHole1':'Morgen-Höhle','MorgenHole2':'Morgen-Höhle','MorgenHole3':'Morgen-Höhle',
+     'Hildir_crypt':'Hildir: Rauchige Gruft','Hildir_cave':'Hildir: Heulende Höhle','Hildir_plainsfortress':'Hildir: Festung','GoblinCamp2':'Fulingdorf','WoodVillage1':'Draugr-Dorf','WoodVillage2':'Draugr-Dorf'}
+out={'locations':dict([(str(stable(k)),[k,v]) for k,v in LOC.items()]+[(str(stable(k)),[k,v,'d']) for k,v in DUN.items()]),'prefabs':{str(stable(n)):n for n in sorted(names)},'pieces':{k:list(v[:5])+([META[k]['yoff']] if k in META and 'yoff' in META[k] else []) for k,v in T.items()},
  'nature':{str(stable(n)):k for k,v in NAT.items() for n in v.split()},'ground':[stable(n) for n in GROUND],
  'items':{str(stable(k)):v for k,v in NAMES.items()},'containers':{str(stable(k)):v for k,v in CONT.items()},'pieceNames':PN}
 js='/* Generiert von tools/gen_data.py – Namens- und Bauteil-Tabellen (inoffiziell) */\n(function(g){g.VW_DATA='+json.dumps(out,ensure_ascii=False,separators=(',',':'))+';})(typeof self!=="undefined"?self:globalThis);\n'

@@ -95,7 +95,7 @@
 <div class="vw-main">
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
     <div class="vw-side"><button class="vw-mob" data-min>Menü</button><button class="pri w3d" style="width:100%;margin-top:4px">🌍 Ganze Welt in 3D ansehen</button><h2>Basen</h2><div class="vw-maplist"></div>
-      <h2 data-en="Map layers">Karten-Ebenen</h2><div class="row mlay"><button data-ml="portals">⛩ Portal-Netz</button><button data-ml="deaths">✝ Tode</button><button data-ml="heat" hidden>👣 Laufwege</button><button data-ml="seed" title="Unerkundete Gebiete aus dem Seed berechnet (wie der Weltgenerator des Spiels)">🗺 Ganze Welt (Seed)</button></div>
+      <h2 data-en="Map layers">Karten-Ebenen</h2><div class="row mlay"><button data-ml="portals">⛩ Portal-Netz</button><button data-ml="deaths">✝ Tode</button><button data-ml="heat" hidden>👣 Laufwege</button><button data-ml="seed" title="Unerkundete Gebiete aus dem Seed berechnet (wie der Weltgenerator des Spiels)">🗺 Ganze Welt (Seed)</button><button data-ml="dungeons" hidden title="Dungeons und Dörfer aus dem Spielstand">⛏ Dungeons</button></div>
       <div class="heatCtl" hidden><div class="row" style="margin-top:6px"><select class="hPl" style="flex:1;min-width:0"></select><select class="hDays"><option value="0">Alle Tage</option><option value="1">Heute</option><option value="7">7 Tage</option><option value="30">30 Tage</option></select></div></div>
       <div class="sub mlInfo" style="margin-top:6px"></div>
       <h2>Legende</h2><div class="sub">● Basis (anklicken = 3D) · ◆ Portal · ▲ Boss/Ort (grau = noch nicht erkundet)<br>Ziehen = verschieben · Mausrad/Pinch = Zoom</div><div class="sub biolg" style="margin-top:6px"></div></div>
@@ -152,6 +152,7 @@
     const areas = () => (S.world3d ? [S.world3d] : []).concat(S.regions);
     const livePlayers = () => (LIVE || (S.live && S.live.players) || []);
     // Biome → Grundfarbe (ohne Biomdaten: klassisches Grün)
+    const FOG = 110; // Abdunklung unerkundeter Gebiete auf der fertigen Weltkarte (0–255)
     const BIO_COL = [null, [111, 154, 69], [92, 86, 52], [196, 202, 208], [52, 86, 50], [190, 172, 88], [92, 52, 42], [226, 236, 244], null, [84, 82, 104]];
     let BIOU = null, BIOS = null;
     const bioAt = (x, z) => { const B = S.biomes; if (!B) return 0; if (BIOS !== B) { BIOS = B; BIOU = b64u8(B.b); } const i = Math.floor((x - B.x0) / B.res), j = Math.floor((z - B.z0) / B.res); return (i < 0 || j < 0 || i >= B.nx || j >= B.nz) ? 0 : BIOU[j * B.nx + i]; };
@@ -190,16 +191,16 @@
     // ================= Karte (2D) =================
     const map = (function () {
       const cv = $('canvas.map'), ctx = cv.getContext('2d');
-      let img = null, view = { cx: 0, cz: 0, s: 0.1 }, hover = null;
+      let img = null, fog = null, view = { cx: 0, cz: 0, s: 0.1 }, hover = null;
       function build() {
         const o = S.overview; const u = b64u8(o.h); const c = document.createElement('canvas'); c.width = o.nx; c.height = o.nz;
-        const x = c.getContext('2d'), id = x.createImageData(o.nx, o.nz);
+        const x = c.getContext('2d'), id = x.createImageData(o.nx, o.nz), fc = document.createElement('canvas'); fc.width = o.nx; fc.height = o.nz; const fx = fc.getContext('2d'), fd = fx.createImageData(o.nx, o.nz);
         for (let j = 0; j < o.nz; j++) for (let i = 0; i < o.nx; i++) {
           const v = u[j * o.nx + i], k = ((o.nz - 1 - j) * o.nx + i) * 4; let r, gg, b, a = 255;
           if (!v) { a = 0; r = gg = b = 0; } else { const e = v - 100; if (e < 0) { const t = Math.min(1, -e / 25); r = 40 + 30 * (1 - t); gg = 90 + 40 * (1 - t); b = 120 + 30 * (1 - t); } else if (e < 2) { r = 205; gg = 190; b = 140; } else { const bc = BIO_COL[bioAt(o.x0 + (i + 0.5) * o.res, o.z0 + (j + 0.5) * o.res)]; if (bc) { const t = Math.min(1, (e - 2) / 90); r = bc[0] + (235 - bc[0]) * t * 0.35; gg = bc[1] + (240 - bc[1]) * t * 0.35; b = bc[2] + (245 - bc[2]) * t * 0.35; if (e > 75) { const s2 = Math.min(1, (e - 75) / 40); r += (240 - r) * s2; gg += (244 - gg) * s2; b += (248 - b) * s2; } } else { const t = Math.min(1, (e - 2) / 60); r = 110 + 90 * t; gg = 150 + 50 * t; b = 70 + 100 * t; } } }
-          id.data[k] = r; id.data[k + 1] = gg; id.data[k + 2] = b; id.data[k + 3] = a;
+          id.data[k] = r; id.data[k + 1] = gg; id.data[k + 2] = b; id.data[k + 3] = a; fd.data[k] = 14; fd.data[k + 1] = 22; fd.data[k + 2] = 30; fd.data[k + 3] = a ? 0 : FOG;
         }
-        x.putImageData(id, 0, 0); img = c;
+        x.putImageData(id, 0, 0); img = c; fx.putImageData(fd, 0, 0); fog = fc;
         const NAMES = ['', 'Wiesen', 'Sumpf', 'Berge', 'Schwarzwald', 'Ebenen', 'Aschelande', 'Tiefer Norden', '', 'Nebellande'];
         $('.biolg').innerHTML = S.biomes ? 'Biome' + (S.biomes.src === 'Weltgenerator' ? ' (exakt)' : ' (geschätzt)') + ':<br>' + [1, 4, 2, 3, 5, 9, 6, 7].map((k) => `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 3px 0 6px;vertical-align:-1px;background:rgb(${BIO_COL[k].join(',')})"></span>${NAMES[k]}`).join('') : '';
         // passend einpassen
@@ -209,9 +210,20 @@
         $$('.b', ml).forEach((d) => (d.onclick = () => open3d(+d.dataset.i)));
       }
       // ---- Ganze Welt aus dem Seed (js/worldgen.js): wird zeilenweise im Hintergrund berechnet
-      const SEED_RES = 24, SEED_N = Math.ceil(21000 / SEED_RES); let seedImg = null, seedFor = '', seedJob = 0;
+      // Liegt eine fertige Weltkarte (Höhen, Flüsse, Wälder; tools/weltkarte.py) unter weltkarte/<Seed>.json, wird die genommen.
+      const SEED_RES = 24, SEED_N = Math.ceil(21000 / SEED_RES); let seedImg = null, seedFor = '', seedJob = 0, seedBox = [-10500, -10500, 21000], seedSrc = '';
       function buildSeed() {
-        const sd = S.world && S.world.seed; if (!g.VWWorldGen || !sd || seedFor === sd) return; seedFor = sd; clearTimeout(seedJob);
+        const sd = S.world && S.world.seed; if (!sd || seedFor === sd) return; seedFor = sd; clearTimeout(seedJob); seedSrc = '';
+        const calc = () => { if (seedFor === sd && !seedSrc) calcSeed(sd); };
+        if (!/^[\w-]+$/.test(sd) || location.protocol === 'file:') return calc();
+        fetch('weltkarte/' + sd + '.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((m) => {
+          if (!m || m.seed !== sd || seedFor !== sd) return calc();
+          const im = new Image(); im.onload = () => { if (seedFor !== sd) return; clearTimeout(seedJob); seedImg = im; seedBox = [m.x0, m.z0, m.size]; seedSrc = m.source || 'Weltkarte'; layersChanged(); }; im.onerror = calc; im.src = 'weltkarte/' + (m.image || sd + '.webp');
+          calc(); // bis das Bild da ist: Biome berechnen
+        }).catch(calc);
+      }
+      function calcSeed(sd) {
+        if (!g.VWWorldGen) return; seedBox = [-10500, -10500, 21000];
         const W = g.VWWorldGen.create(sd, S.world.worldGen); const c = document.createElement('canvas'); c.width = c.height = SEED_N; const x = c.getContext('2d'); const id = x.createImageData(SEED_N, 1); let row = 0; seedImg = c;
         const step = () => {
           const t0 = performance.now();
@@ -241,13 +253,18 @@
         if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#1d3a4a'; ctx.fillRect(0, 0, r.width, r.height);
         const o = S.overview; const [ax, ay] = toS(o.x0, o.z0 + o.nz * o.res);
-        if (ML.seed && seedImg) { const [sx, sy] = toS(-10500, 10500); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.62; ctx.drawImage(seedImg, sx, sy, 21000 * view.s, 21000 * view.s); ctx.globalAlpha = 1; } // unerkundet: blasser
-        ctx.imageSmoothingEnabled = view.s < 0.5; ctx.drawImage(img, ax, ay, o.nx * o.res * view.s, o.nz * o.res * view.s);
+        if (ML.seed && seedImg) { const [bx, bz, bs] = seedBox, [sx, sy] = toS(bx, bz + bs); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = seedSrc ? 1 : 0.62; ctx.drawImage(seedImg, sx, sy, bs * view.s, bs * view.s); ctx.globalAlpha = 1; } // unerkundet: blasser
+        if (ML.seed && seedImg && seedSrc) { // fertige Weltkarte: überall scharf, Unerkundetes nur abgedunkelt (wie der Nebel im Spiel)
+          const ow = o.nx * o.res * view.s, oh = o.nz * o.res * view.s, [wx, wy] = toS(0, 0);
+          ctx.fillStyle = `rgba(14,22,30,${FOG / 255})`; ctx.beginPath(); ctx.arc(wx, wy, 10500 * view.s, 0, Math.PI * 2); ctx.rect(ax + ow, ay, -ow, oh); ctx.fill('evenodd');
+          ctx.imageSmoothingEnabled = true; ctx.drawImage(fog, ax, ay, ow, oh);
+        } else { ctx.imageSmoothingEnabled = view.s < 0.5; ctx.drawImage(img, ax, ay, o.nx * o.res * view.s, o.nz * o.res * view.s); }
         // Weltrand
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
         drawLayers();
         ctx.font = '12px system-ui,sans-serif'; ctx.textAlign = 'center';
-        S.locations.forEach((l) => { const [x, y] = toS(l.x, l.z); ctx.fillStyle = l.v ? '#e8584a' : 'rgba(200,200,200,.55)'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.fill(); if (view.s > 0.12 || l.k === 'StartTemple') { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
+        if (ML.dungeons) S.locations.forEach((l) => { if (!l.c) return; const [x, y] = toS(l.x, l.z); ctx.fillStyle = l.v ? '#c9935a' : 'rgba(201,147,90,.6)'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.rect(x - 3.5, y - 3.5, 7, 7); ctx.fill(); ctx.stroke(); if (view.s > 0.35) { ctx.fillStyle = '#f1dcc3'; ctx.fillText(T(l.n), x, y - 7); } });
+        S.locations.forEach((l) => { if (l.c) return; const [x, y] = toS(l.x, l.z); ctx.fillStyle = l.v ? '#e8584a' : 'rgba(200,200,200,.55)'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.fill(); if (view.s > 0.12 || l.k === 'StartTemple') { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
         S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
         livePlayers().forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d9ffe3'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(p.name, x, y + 18); ctx.font = '12px system-ui,sans-serif'; });
         S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const rr = Math.max(5, Math.min(14, 3 + Math.sqrt(b.pieces) / 8)); ctx.fillStyle = hover === i ? '#ffd27a' : '#e0a854'; ctx.strokeStyle = '#1b1408'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(T(b.name), x, y - rr - 4); ctx.font = '12px system-ui,sans-serif'; });
@@ -266,7 +283,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { portals: true, deaths: false, heat: false, seed: true }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { portals: true, deaths: false, heat: false, seed: true, dungeons: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -304,6 +321,7 @@
       function layersChanged() {
         $$('[data-ml]').forEach((b) => b.classList.toggle('on', !!ML[b.dataset.ml]));
         const sb = $('[data-ml="seed"]'); sb.hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
+        const nd = (S.locations || []).filter((l) => l.c).length; $('[data-ml="dungeons"]').hidden = !nd;
         const hb = $('[data-ml="heat"]'); hb.hidden = !EX.days.length;
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
         if (EX.days.length && !$('.hPl').options.length) {
@@ -311,6 +329,8 @@
         }
         const info = [];
         if (ML.portals) { const N = portalNet(); info.push(`Portal-Netz: ${fmt(N.pairs.length)} Verbindungen` + (N.single.length ? ` · ohne Partner: ${N.single.map(esc).join(', ')}` : '') + (N.multi.length ? ` · mehr als 2 gleiche Namen: ${N.multi.map(esc).join(', ')}` : '') + (N.untagged ? ` · ${N.untagged} ohne Namen` : '')); }
+        if (ML.seed && seedSrc) info.push(T('Ganze Welt mit Höhen, Flüssen und Wäldern') + ' · ' + T('Quelle') + ': ' + esc(seedSrc));
+        if (ML.dungeons && nd) info.push(T('Dungeons') + ': ' + fmt(nd) + ' · ' + T('hell = schon erkundet'));
         if (ML.deaths) { const D = allDeaths(); info.push(`Tode: ${fmt(D.length)} erfasst` + (D.some((d) => d.open) ? ` · rot = Grabstein liegt noch` : '')); }
         baseInfo = info.join('<br>'); $('.mlInfo').innerHTML = baseInfo;
         if (ML.heat) refreshHeat(); else draw();

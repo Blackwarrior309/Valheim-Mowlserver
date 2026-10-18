@@ -102,6 +102,11 @@
     // Bosse / Orte
     'Der Älteste': 'The Elder', 'Knochenmasse': 'Bonemass', 'Die Königin': 'The Queen', 'Seeschlange': 'Sea Serpent',
     'Moorhexe': 'Bog Witch', 'Haldor (Händler)': 'Haldor (trader)', 'Spawn': 'Spawn',
+    'Grabkammer': 'Burial chamber', 'Trollhöhle': 'Troll cave', 'Versunkene Krypta': 'Sunken crypt', 'Frosthöhle': 'Frost cave', 'Befallene Mine': 'Infested mine',
+    'Festung (Aschelande)': 'Fortress (Ashlands)', 'Morgen-Höhle': 'Morgen hole', 'Hildir: Rauchige Gruft': 'Hildir: Smouldering tomb', 'Hildir: Heulende Höhle': 'Hildir: Howling cavern',
+    'Hildir: Festung': 'Hildir: Sealed tower', 'Fulingdorf': 'Fuling village', 'Draugr-Dorf': 'Draugr village',
+    '⛏ Dungeons': '⛏ Dungeons', 'Dungeons': 'Dungeons', 'Dungeons und Dörfer aus dem Spielstand': 'Dungeons and villages from the save', 'hell = schon erkundet': 'bright = already explored',
+    'Ganze Welt mit Höhen, Flüssen und Wäldern': 'Whole world with heights, rivers and forests', 'Quelle': 'Source', '🗺 Ganze Welt (Seed)': '🗺 Whole world (seed)', 'Unerkundete Gebiete aus dem Seed berechnet (wie der Weltgenerator des Spiels)': 'Unexplored areas computed from the seed (like the game\'s world generator)',
     // Behälter
     'Karren': 'Cart', 'Floß': 'Raft', 'Langschiff': 'Longship', 'Holzkiste': 'Wood chest', 'Private Kiste': 'Personal chest', 'Schublade': 'Drawer',
     'Schwarzmetallkiste': 'Blackmetal chest', 'Verstärkte Kiste': 'Reinforced chest', 'Fass': 'Barrel', 'Karve': 'Karve',
