@@ -95,7 +95,7 @@
 <div class="vw-main">
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
     <div class="vw-side"><button class="vw-mob" data-min>Menü</button><button class="pri w3d" style="width:100%;margin-top:4px">🌍 Ganze Welt in 3D ansehen</button><h2>Basen</h2><div class="vw-maplist"></div>
-      <h2 data-en="Map layers">Karten-Ebenen</h2><div class="row mlay"><button data-ml="portals">⛩ Portal-Netz</button><button data-ml="deaths">✝ Tode</button><button data-ml="heat" hidden>👣 Laufwege</button></div>
+      <h2 data-en="Map layers">Karten-Ebenen</h2><div class="row mlay"><button data-ml="portals">⛩ Portal-Netz</button><button data-ml="deaths">✝ Tode</button><button data-ml="heat" hidden>👣 Laufwege</button><button data-ml="seed" title="Unerkundete Gebiete aus dem Seed berechnet (wie der Weltgenerator des Spiels)">🗺 Ganze Welt (Seed)</button></div>
       <div class="heatCtl" hidden><div class="row" style="margin-top:6px"><select class="hPl" style="flex:1;min-width:0"></select><select class="hDays"><option value="0">Alle Tage</option><option value="1">Heute</option><option value="7">7 Tage</option><option value="30">30 Tage</option></select></div></div>
       <div class="sub mlInfo" style="margin-top:6px"></div>
       <h2>Legende</h2><div class="sub">● Basis (anklicken = 3D) · ◆ Portal · ▲ Boss/Ort (grau = noch nicht erkundet)<br>Ziehen = verschieben · Mausrad/Pinch = Zoom</div><div class="sub biolg" style="margin-top:6px"></div></div>
@@ -208,6 +208,30 @@
         const ml = $('.vw-maplist'); ml.innerHTML = S.bases.map((b, i) => `<div class="b" data-i="${i}"><span>${esc(b.name)}<br><span class="sub">${b.builders.map((x) => esc(x[0].split(' (')[0])).join(', ')}</span></span><span class="sub">${fmt(b.pieces)} Teile<br>${b.chests} Kisten</span></div>`).join('') || '<div class="sub">Keine Basen gefunden.</div>';
         $$('.b', ml).forEach((d) => (d.onclick = () => open3d(+d.dataset.i)));
       }
+      // ---- Ganze Welt aus dem Seed (js/worldgen.js): wird zeilenweise im Hintergrund berechnet
+      const SEED_RES = 24, SEED_N = Math.ceil(21000 / SEED_RES); let seedImg = null, seedFor = '', seedJob = 0;
+      function buildSeed() {
+        const sd = S.world && S.world.seed; if (!g.VWWorldGen || !sd || seedFor === sd) return; seedFor = sd; clearTimeout(seedJob);
+        const W = g.VWWorldGen.create(sd, S.world.worldGen); const c = document.createElement('canvas'); c.width = c.height = SEED_N; const x = c.getContext('2d'); const id = x.createImageData(SEED_N, 1); let row = 0; seedImg = c;
+        const step = () => {
+          const t0 = performance.now();
+          while (row < SEED_N && performance.now() - t0 < 20) {
+            const wz = 10500 - (row + 0.5) * SEED_RES;
+            for (let i = 0; i < SEED_N; i++) {
+              const wx = -10500 + (i + 0.5) * SEED_RES, k = i * 4, d = Math.hypot(wx, wz);
+              if (d > 10500) { id.data[k + 3] = 0; continue; }
+              const b = W.biome(wx, wz), h = W.baseHeight(wx, wz); let r, gg, bb;
+              if (b === 8) { const t = Math.min(1, Math.max(0, (0.02 - h) / 0.35)); r = 40 + 26 * (1 - t); gg = 92 + 40 * (1 - t); bb = 122 + 30 * (1 - t); }
+              else { const bc = BIO_COL[b] || BIO_COL[1], t = Math.min(1, Math.max(0, (h - 0.02) / 0.6)); r = bc[0] + (235 - bc[0]) * t * 0.3; gg = bc[1] + (240 - bc[1]) * t * 0.3; bb = bc[2] + (245 - bc[2]) * t * 0.3; if (h < 0.035) { r = 205; gg = 190; bb = 140; } }
+              id.data[k] = r; id.data[k + 1] = gg; id.data[k + 2] = bb; id.data[k + 3] = 255;
+            }
+            x.putImageData(id, 0, row); row++;
+          }
+          if (row % 60 === 0 || row >= SEED_N) draw();
+          if (row < SEED_N) seedJob = setTimeout(step, 0);
+        };
+        step();
+      }
       function fit(bw, bh) { const r = cv.getBoundingClientRect(); if (!r.width) return; view.s = Math.min(r.width / bw, r.height / bh) * 0.92; }
       const toS = (x, z) => { const r = cv.getBoundingClientRect(); return [r.width / 2 + (x - view.cx) * view.s, r.height / 2 - (z - view.cz) * view.s]; };
       const toW = (sx, sy) => { const r = cv.getBoundingClientRect(); return [view.cx + (sx - r.width / 2) / view.s, view.cz - (sy - r.height / 2) / view.s]; };
@@ -217,6 +241,7 @@
         if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#1d3a4a'; ctx.fillRect(0, 0, r.width, r.height);
         const o = S.overview; const [ax, ay] = toS(o.x0, o.z0 + o.nz * o.res);
+        if (ML.seed && seedImg) { const [sx, sy] = toS(-10500, 10500); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.62; ctx.drawImage(seedImg, sx, sy, 21000 * view.s, 21000 * view.s); ctx.globalAlpha = 1; } // unerkundet: blasser
         ctx.imageSmoothingEnabled = view.s < 0.5; ctx.drawImage(img, ax, ay, o.nx * o.res * view.s, o.nz * o.res * view.s);
         // Weltrand
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
@@ -241,7 +266,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { portals: true, deaths: false, heat: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { portals: true, deaths: false, heat: false, seed: true }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -278,6 +303,7 @@
       }
       function layersChanged() {
         $$('[data-ml]').forEach((b) => b.classList.toggle('on', !!ML[b.dataset.ml]));
+        const sb = $('[data-ml="seed"]'); sb.hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
         const hb = $('[data-ml="heat"]'); hb.hidden = !EX.days.length;
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
         if (EX.days.length && !$('.hPl').options.length) {

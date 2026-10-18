@@ -29,15 +29,15 @@
   const PERM = new Uint8Array(512); for (let i = 0; i < 512; i++) PERM[i] = P[i & 255];
   const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
   const lerp = (t, a, b) => a + t * (b - a);
-  function grad(h, x, y) { h &= 7; const u = h < 4 ? x : y, v = h < 4 ? y : x; return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v); }
+  // Gradient wie in Ken Perlins verbessertem Rauschen (3D, hier mit z = 0)
+  function grad(h, x, y) { h &= 15; const u = h < 8 ? x : y, v = h < 4 ? y : (h === 12 || h === 14 ? x : 0); return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v); }
   function perlin(x, y) {
     x = Math.abs(f(x)); y = Math.abs(f(y));
-    let ix0 = Math.floor(x), iy0 = Math.floor(y); const fx0 = x - ix0, fy0 = y - iy0, fx1 = fx0 - 1, fy1 = fy0 - 1;
-    const ix1 = (ix0 + 1) & 255, iy1 = (iy0 + 1) & 255; ix0 &= 255; iy0 &= 255;
-    const t = fade(fy0), s = fade(fx0);
-    const n0 = lerp(t, grad(PERM[ix0 + PERM[iy0]], fx0, fy0), grad(PERM[ix0 + PERM[iy1]], fx0, fy1));
-    const n1 = lerp(t, grad(PERM[ix1 + PERM[iy0]], fx1, fy0), grad(PERM[ix1 + PERM[iy1]], fx1, fy1));
-    return f((0.507 * lerp(s, n0, n1) + 0.69) / 1.483);
+    const fx = Math.floor(x), fy = Math.floor(y), X = fx & 255, Y = fy & 255; x -= fx; y -= fy;
+    const u = fade(x), v = fade(y);
+    const A = PERM[X] + Y, AA = PERM[A], AB = PERM[A + 1], B = PERM[X + 1] + Y, BA = PERM[B], BB = PERM[B + 1];
+    const n = lerp(v, lerp(u, grad(PERM[AA], x, y), grad(PERM[BA], x - 1, y)), lerp(u, grad(PERM[AB], x, y - 1), grad(PERM[BB], x - 1, y - 1)));
+    return f((n + 0.69) / 1.483);
   }
 
   const clamp01 = (v) => (v > 1 ? 1 : v < 0 ? 0 : v);

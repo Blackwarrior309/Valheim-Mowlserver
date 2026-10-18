@@ -113,7 +113,7 @@
     try {
       viewer && viewer.setStatus('Erzeuge Teilen-Datei …');
       const get = (p) => fetch(p).then((r) => { if (!r.ok) throw new Error(p + ' nicht ladbar'); return r.text(); });
-      const [three, ff, data, view, i18n, rec] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => '')]);
+      const [three, ff, data, view, i18n, rec, wgen] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => ''), get('js/worldgen.js').catch(() => '')]);
       const js = (s) => s.replace(/<\/script/gi, '<\\/script');
       const title = (current.world.name || 'Valheim-Welt') + ' – Valheim-Welt';
       const html = `<!doctype html>
@@ -128,6 +128,7 @@
 <script>${js(ff)}</script>
 <script>${js(data)}</script>
 <script>${js(rec)}</script>
+<script>${js(wgen)}</script>
 <script>${js(view)}</script>
 <script id="vwelt" type="application/octet-stream">${u8ToB64(packCurrent())}</script>
 <script>
