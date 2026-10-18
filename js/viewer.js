@@ -48,6 +48,7 @@
 .vw-ud button{width:62px;height:62px;border-radius:50%;font-size:22px;background:rgba(15,20,24,.55);color:#f1e6cf;border:2px solid rgba(216,162,74,.7);touch-action:none;user-select:none}
 .vw-ud button.on{background:rgba(216,162,74,.85);color:#1a1a1a}
 .vw-hud{position:absolute;left:calc(50% + 160px);top:12px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--acc);border-radius:10px;padding:6px 12px;font-size:12px;text-align:center;max-width:calc(100% - 360px);z-index:5}
+.vw-prompt{position:absolute;left:calc(50% + 160px);top:62%;transform:translateX(-50%);background:rgba(15,20,24,.72);color:#f1e6cf;border:1px solid rgba(216,162,74,.8);border-radius:10px;padding:7px 14px;font-size:14px;pointer-events:none;z-index:5;white-space:nowrap}.vw-prompt .key{display:inline-block;min-width:22px;padding:1px 6px;margin-right:6px;border-radius:5px;background:rgba(216,162,74,.9);color:#1a1a1a;text-align:center}@media (max-width:760px){.vw-prompt{left:50%}}
 .vw-act2{position:absolute;right:24px;bottom:24px;z-index:5}.vw-act2 button{width:66px;height:66px;border-radius:50%;font-size:26px;background:rgba(15,20,24,.55);color:#f1e6cf;border:2px solid rgba(216,162,74,.7)}@media (min-width:761px){.vw-act2{display:none}}
 .vw-cross{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;pointer-events:none;z-index:5}
 .vw-cross:before,.vw-cross:after{content:"";position:absolute;background:rgba(255,255,255,.8)}.vw-cross:before{left:6px;top:0;width:2px;height:14px}.vw-cross:after{top:6px;left:0;height:2px;width:14px}
@@ -133,7 +134,7 @@
     <div class="vw-tip" hidden></div><div class="vw-chest" hidden></div>
     <div class="vw-joy" hidden><div class="k"></div></div>
     <div class="vw-ud" hidden><button data-ud="up" aria-label="Hoch">▲</button><button data-ud="fast" aria-label="Schnell">»</button><button data-ud="dn" aria-label="Runter">▼</button></div>
-    <div class="vw-hud" hidden></div><div class="vw-act2" hidden><button aria-label="Benutzen">✋</button></div><div class="vw-cross" hidden></div>
+    <div class="vw-hud" hidden></div><div class="vw-prompt" hidden></div><div class="vw-act2" hidden><button aria-label="Benutzen">✋</button></div><div class="vw-cross" hidden></div>
   </div>
   <div class="vw-pane" data-p="chests" hidden><div class="vw-scroll"><div class="vw-wrap">
     <div class="vw-bar"><input type="search" class="kq" placeholder="Item suchen, z. B. Eisen, Met, Kernholz …" autocomplete="off"><select class="ka"></select><button class="klab">Nur beschriftete</button><button class="kgame" hidden title="Öffnet die Kisten-Suche im laufenden Spiel und setzt Pins auf der Karte">🎯 Im Spiel suchen</button></div>
@@ -484,6 +485,7 @@
         gable: prism([[-0.5, -0.5], [0.5, -0.5], [0, 0.5]]),
         ridge: (() => { const g = prism([[-0.5, -0.5], [0.5, -0.5], [0, 0.5]]); g.rotateY(Math.PI / 2); return g; })()
       };
+      const YO = (ty) => (/stair|stepladder/i.test(ty[0]) && !/spiral/i.test(ty[0]) ? ty[2] / 2 : 0); // Treppen: Bezugspunkt unten
       function shapeOf(name) {
         if (/pole|stone_pillar_round|groundtorch|walltorch|brazierceiling|spice|mortarandpestle|spinningwheel|treasure_stack|treasure_pile|stone_pile|coal_pile|spiralstair|chest_barrel|piece_pot\d|fire_pit_iron|bonfire|Candle|brazierfloor|xmastree/.test(name)) return 'cyl';
         if (/wood_wall_log_4x0\.5|wood_log_(26|45)|_log$|wood_core_stack/.test(name)) return 'logx';
@@ -535,6 +537,7 @@
         if (LIN) { scene.fog.color.convertSRGBToLinear(); sun.color.convertSRGBToLinear(); if (hemi) { hemi.color.convertSRGBToLinear(); hemi.groundColor.convertSRGBToLinear(); } water.material.color.convertSRGBToLinear(); }
         const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF;
         // Gelände
+        { const SPN = g.VW_DATA && g.VW_DATA.pieces; if (SPN) r.types.forEach((t) => { const sp = SPN[t[0]]; if (sp) { t[1] = sp[1]; t[2] = sp[2]; t[3] = sp[3]; t[4] = sp[4]; } }); } // ältere Snapshots: aktuelle Maße nehmen
         const NX = r.nx, NZ = r.nz, RS = r.res; const hu = b64u8(r.h); const H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2);
         TER = { H, NX, NZ, RS, X0, Z0 };
         const hAt = (i, j) => H[Math.min(NZ - 1, Math.max(0, j)) * NX + Math.min(NX - 1, Math.max(0, i))] / 10;
@@ -578,7 +581,7 @@
             idxs.forEach((o, k) => {
               for (let j = 0; j < 6; j++) sub[k * 6 + j] = arr[o + j];
               const ty = r.types[arr[o + 4]], tilt = (ty[4] || 0) * Math.PI / 180, alongX = ty[1] >= ty[3] * 1.5;
-              pv.set(arr[o] - CX, arr[o + 1] - WL, -(arr[o + 2] - CZ));
+              pv.set(arr[o] - CX, arr[o + 1] - WL, -(arr[o + 2] - CZ)); if (!original) pv.y += YO(ty);
               if (tilt && alongX) eu.set(0, -arr[o + 3] * Math.PI / 180, tilt, 'YXZ'); else eu.set(-tilt, -arr[o + 3] * Math.PI / 180, 0, 'YXZ');
               if (original) { eu.set(0, -arr[o + 3] * Math.PI / 180, 0, 'YXZ'); sv.set(1, 1, 1); }
               else sv.set(ty[1], ty[2], ty[3]);
@@ -817,7 +820,7 @@
       cv.addEventListener('pointerup', pUp); cv.addEventListener('pointercancel', pUp);
       function pan(dx, dy) { const s = dist * 0.0016; const fw = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), rt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)); tgt.addScaledVector(rt, -dx * s).addScaledVector(fw, -dy * s); }
       cv.addEventListener('pointermove', (e) => {
-        const p = ptrs.get(e.pointerId); if (!p) { hover(e); return; }
+        const p = ptrs.get(e.pointerId); if (!p) { if (walk) { TIP.hidden = true; return; } hover(e); return; }
         const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
         if (walk) { lookWalk(dx, dy); return; }
         if (fly) { fyw -= dx * 0.0045; fpt = Math.max(-1.5, Math.min(1.5, fpt - dy * 0.0045)); return; }
@@ -884,7 +887,7 @@
 
       // ---- Laufmodus: Figur in 3rd/1st Person, Kollision mit Bauteilen, Türen und Portale (E)
       let walk = false, wyaw = 0, wpit = 0.25, wdist = 4.5, vy = 0, onGround = false, anim = 0, lockLook = false, wmsg = '', wmsgT = 0;
-      const pos = new THREE.Vector3(), WB = $('.walkBtn'), ACT = $('.vw-act2');
+      const pos = new THREE.Vector3(), WB = $('.walkBtn'), ACT = $('.vw-act2'), PROMPT = $('.vw-prompt');
       let OBB = [], GRID = new Map(), DOORS = [], TER = null;
       const GS = 4, gkey = (x, z) => Math.floor(x / GS) + ',' + Math.floor(z / GS);
       const iq = new THREE.Quaternion(), lv = new THREE.Vector3(), ld = new THREE.Vector3();
@@ -900,13 +903,14 @@
           const a = im.userData.arr; if (!a) return;
           for (let k = 0; k < a.length / 6; k++) {
             const o = k * 6, ty = reg.types[a[o + 4]], nm = ty[0], tilt = (ty[4] || 0) * Math.PI / 180, alongX = ty[1] >= ty[3] * 1.5;
-            const c = new THREE.Vector3(a[o] - CX, a[o + 1] - WL, -(a[o + 2] - CZ));
+            const c = new THREE.Vector3(a[o] - CX, a[o + 1] - WL + YO(ty), -(a[o + 2] - CZ));
             if (tilt && alongX) eu.set(0, -a[o + 3] * Math.PI / 180, tilt, 'YXZ'); else eu.set(-tilt, -a[o + 3] * Math.PI / 180, 0, 'YXZ');
             const qq = new THREE.Quaternion().setFromEuler(eu), h = new THREE.Vector3(ty[1] / 2, ty[2] / 2, ty[3] / 2);
-            const door = /door|gate/i.test(nm) && !/portal|drawbridge/i.test(nm), portal = /^portal/i.test(nm), cloth = /cloth|banner|rug|carpet|torch|Candle|lantern|garland|sapling|mistletoe/i.test(nm);
+            const door = /door|gate/i.test(nm) && !/portal|drawbridge/i.test(nm), portal = /^portal/i.test(nm), chest = im.userData.cat === 'chest', cloth = /cloth|banner|rug|carpet|torch|Candle|lantern|garland|sapling|mistletoe/i.test(nm);
             const r = Math.hypot(h.x, h.y, h.z);
-            const b = { c, q: qq, iq: qq.clone().invert(), h, r, door, portal, open: false, pass: cloth, im, k, ty };
-            OBB.push(b); if (door) DOORS.push(b);
+            const ramp = /stair|ladder/i.test(nm); // Treppen/Leitern: begehbare Rampe statt Klotz
+            const b = { c, q: qq, iq: qq.clone().invert(), h, r, door, portal, chest, ramp, open: false, pass: cloth, im, k, ty };
+            OBB.push(b); if (door || portal || chest) DOORS.push(b);
             const x0 = Math.floor((c.x - r) / GS), x1 = Math.floor((c.x + r) / GS), z0 = Math.floor((c.z - r) / GS), z1 = Math.floor((c.z + r) / GS);
             for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const kk = gx + ',' + gz; let l = GRID.get(kk); if (!l) GRID.set(kk, (l = [])); l.push(b); }
           }
@@ -926,13 +930,24 @@
       const DOWN = new THREE.Vector3(0, -1, 0);
       function groundY(x, z, fromY) { // höchste begehbare Fläche unter fromY
         let g = terrainY(x, z); const o = new THREE.Vector3(x, fromY, z);
-        for (const b of near(x, z)) { if (b.pass || (b.door && b.open)) continue; if (Math.abs(b.c.x - x) > b.r || Math.abs(b.c.z - z) > b.r) continue; const t = rayBox(b, o, DOWN, 40); if (t !== null) g = Math.max(g, fromY - t); }
+        for (const b of near(x, z)) {
+          if (b.pass || (b.door && b.open)) continue; if (Math.abs(b.c.x - x) > b.r || Math.abs(b.c.z - z) > b.r) continue;
+          if (b.ramp) { // Höhe auf der Schräge; Steigrichtung unbekannt → die Richtung nehmen, die unter den Füßen liegt
+            lv.set(x - b.c.x, 0, z - b.c.z).applyQuaternion(b.iq); if (Math.abs(lv.x) > b.h.x + 0.1 || Math.abs(lv.z) > b.h.z + 0.05) continue;
+            const t = Math.max(0, Math.min(1, (lv.z + b.h.z) / (2 * b.h.z))), y0 = b.c.y - b.h.y, H2 = 2 * b.h.y;
+            const feet = fromY - STEP; let best = null; for (const hh of [y0 + t * H2, y0 + (1 - t) * H2]) if (hh <= fromY + 0.01 && (best === null || Math.abs(hh - feet) < Math.abs(best - feet))) best = hh; if (best !== null) g = Math.max(g, best);
+            continue;
+          }
+          let t = rayBox(b, o, DOWN, 40);
+          if (t !== null && t <= 1e-4) { o.y = fromY + 0.45; t = rayBox(b, o, DOWN, 40); o.y = fromY; if (t !== null && t > 1e-4) t -= 0.45; else t = null; } // im Klotz: nur knapp höhere Oberkante zählt, sonst Hindernis
+          if (t !== null) g = Math.max(g, fromY - t);
+        }
         return g;
       }
       const RAD = 0.35, STEP = 0.55, HEIGHT = 1.8;
       function pushOut(p) { // seitliche Kollision: Körper als Säule aus drei Kugeln
         for (let it = 0; it < 2; it++) for (const b of near(p.x, p.z)) {
-          if (b.pass || (b.door && b.open)) continue; if (Math.abs(b.c.x - p.x) > b.r + RAD || Math.abs(b.c.z - p.z) > b.r + RAD) continue;
+          if (b.pass || b.ramp || (b.door && b.open)) continue; if (Math.abs(b.c.x - p.x) > b.r + RAD || Math.abs(b.c.z - p.z) > b.r + RAD) continue;
           for (const hy of [STEP + 0.15, 1.0, 1.6]) {
             lv.set(p.x, p.y + hy, p.z).sub(b.c).applyQuaternion(b.iq);
             const cx = Math.max(-b.h.x, Math.min(b.h.x, lv.x)), cy = Math.max(-b.h.y, Math.min(b.h.y, lv.y)), cz = Math.max(-b.h.z, Math.min(b.h.z, lv.z));
@@ -966,12 +981,12 @@
         for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
         placeAt(tgt.x, tgt.z);
       }
-      if (/[?&]debug/.test(location.search)) g.__walk = { get pos() { return pos; }, get OBB() { return OBB; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
+      if (/[?&]debug/.test(location.search)) g.__walk = { groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
         if (on && !reg) return;
         if (on && fly) toggleFly(false);
-        walk = on; WB.classList.toggle('on', walk); HERO.visible = walk; HUD.hidden = CROSS.hidden = !walk; JOY.hidden = !walk || innerWidth > 760; ACT.hidden = !walk;
+        walk = on; TIP.hidden = true; PROMPT.hidden = true; WB.classList.toggle('on', walk); HERO.visible = walk; HUD.hidden = CROSS.hidden = !walk; JOY.hidden = !walk || innerWidth > 760; ACT.hidden = !walk;
         setShadows(!walk && Q.shadows === '1');
         if (walk) {
           buildColliders(); spawn(); wyaw = yaw + Math.PI; wpit = 0.25; wdist = 4.5;
@@ -986,11 +1001,16 @@
       function lookWalk(dx, dy) { wyaw -= dx * 0.0042; wpit = Math.max(-1.2, Math.min(1.35, wpit + dy * 0.0035)); }
       cv.addEventListener('click', () => { if (walk && innerWidth > 760 && document.pointerLockElement !== cv && cv.requestPointerLock) cv.requestPointerLock(); });
       document.addEventListener('mousemove', (e) => { if (walk && document.pointerLockElement === cv) lookWalk(e.movementX, e.movementY); });
+      function target() { // Tür/Portal/Kiste vor der Figur
+        const f = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw)); let best = null, bd = 2.6;
+        for (const b of DOORS) { const dx = b.c.x - pos.x, dz = b.c.z - pos.z; if (Math.abs(dx) > 4 || Math.abs(dz) > 4) continue; const d = Math.hypot(dx, dz); if (Math.abs(b.c.y - (pos.y + 1)) > 2.6) continue; const sc = Math.max(0, d - Math.max(b.h.x, b.h.z) * 0.6) - 0.6 * (dx * f.x + dz * f.z) / (d || 1); if (sc < bd) { bd = sc; best = b; } }
+        return best;
+      }
+      function portalOf(b) { const wx = b.c.x + CX, wz = CZ - b.c.z; let me = null, md = 6; (S.portals || []).forEach((p) => { const d = Math.hypot(p.x - wx, p.z - wz); if (d < md) { md = d; me = p; } }); return me; }
       function interact() {
-        const f = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw));
-        let best = null, bd = 2.8;
-        for (const b of OBB) { if (!b.door && !b.portal) continue; const dx = b.c.x - pos.x, dz = b.c.z - pos.z, d = Math.hypot(dx, dz); if (d > 4) continue; if (Math.abs(b.c.y - (pos.y + 1)) > 3) continue; const sc = d - 0.8 * (dx * f.x + dz * f.z) / (d || 1); if (sc < bd) { bd = sc; best = b; } }
-        if (!best) { say('Hier ist keine Tür und kein Portal.'); return; }
+        const best = target();
+        if (!best) { say('Hier ist keine Tür, Kiste oder Portal.'); return; }
+        if (best.chest) { const a = best.im.userData.arr, o = best.k * 6, k = chestAt([a[o], a[o + 1], a[o + 2]]); if (k >= 0) { if (document.pointerLockElement === cv) document.exitPointerLock(); openChest(k, false); } else say('Kiste ist leer'); return; }
         if (best.door) {
           best.open = !best.open; const m = new THREE.Matrix4(); best.im.getMatrixAt(best.k, m);
           if (!best.m0) best.m0 = m.clone();
@@ -1002,8 +1022,7 @@
           best.im.instanceMatrix.needsUpdate = true; say(best.open ? 'Tür geöffnet' : 'Tür geschlossen'); invalidate(); return;
         }
         // Portal: Gegenstück mit gleichem Namen suchen
-        const wx = best.c.x + CX, wz = CZ - best.c.z, P = S.portals || [];
-        let me = null, md = 6; P.forEach((p) => { const d = Math.hypot(p.x - wx, p.z - wz); if (d < md) { md = d; me = p; } });
+        const P = S.portals || [], me = portalOf(best);
         if (!me) { say('Portal ohne Namen'); return; }
         const dest = P.find((p) => p !== me && p.tag === me.tag && Math.hypot(p.x - me.x, p.z - me.z) > 6);
         if (!dest) { say('Portal „' + me.tag + '“ hat kein Gegenstück'); return; }
@@ -1029,14 +1048,15 @@
         const mv = fw.clone().multiplyScalar(mz).addScaledVector(rt, mx);
         const prev = pos.clone(); pos.addScaledVector(mv, sp * (l > 0 ? 1 : 0) / (l > 1 ? 1 : 1));
         // Schwerkraft, Stufen, Wasser
-        const g = groundY(pos.x, pos.z, pos.y + STEP), water = -1.3;
-        if (onGround && jump) { vy = 5.2; onGround = false; }
+        let g = groundY(pos.x, pos.z, pos.y + STEP); const water = -1.3;
+        for (const [ox, oz] of [[RAD, 0], [-RAD, 0], [0, RAD], [0, -RAD]]) g = Math.max(g, groundY(pos.x + ox, pos.z + oz, pos.y + STEP)); // Füße als Scheibe: kleine Fugen überbrücken
+        if (onGround && jump) { vy = run ? 9.5 : 5.2; onGround = false; }
         vy -= 18 * dt; pos.y += vy * dt;
         const floor = Math.max(g, water);
         if (pos.y <= floor) { pos.y = floor; vy = 0; onGround = true; } else onGround = pos.y - floor < 0.05;
         pushOut(pos);
         // Kopf stößt an Decke
-        if (vy > 0) { const up = new THREE.Vector3(0, 1, 0), o = new THREE.Vector3(pos.x, pos.y + 1.2, pos.z); for (const b of near(pos.x, pos.z)) { if (b.pass || (b.door && b.open)) continue; const t = rayBox(b, o, up, 0.7); if (t !== null) { vy = 0; break; } } }
+        if (vy > 0) { const up = new THREE.Vector3(0, 1, 0), o = new THREE.Vector3(pos.x, pos.y + 1.2, pos.z); for (const b of near(pos.x, pos.z)) { if (b.pass || b.ramp || (b.door && b.open)) continue; const t = rayBox(b, o, up, 0.7); if (t !== null) { vy = 0; break; } } }
         // Figur
         if (l > 0.05) { const want = Math.atan2(mv.x, mv.z), cur = HERO.rotation.y; let d = want - cur; d = Math.atan2(Math.sin(d), Math.cos(d)); HERO.rotation.y = cur + d * Math.min(1, dt * 12); anim += dt * (run ? 13 : 9) * Math.min(1, l); }
         else anim *= 0.85;
@@ -1053,8 +1073,11 @@
         cam.position.copy(first ? head : cp);
         if (first) cam.lookAt(head.clone().addScaledVector(dir, -1)); else cam.lookAt(head.x, head.y - 0.1, head.z);
         if (pos.distanceTo(prev) > 0 || Math.abs(vy) > 0) invalidate();
+        const tg = target(); let hint = '';
+        if (tg) { if (tg.chest) hint = 'Kiste öffnen'; else if (tg.door) hint = tg.open ? 'Tür schließen' : 'Tür öffnen'; else { const pp = portalOf(tg); hint = pp && pp.tag ? 'Portal „' + pp.tag + '“ benutzen' : 'Portal (ohne Namen)'; } }
+        PROMPT.hidden = !hint; if (hint) PROMPT.innerHTML = `<b class="key">${innerWidth > 760 ? 'E' : '✋'}</b> ${esc(hint)}`;
         const msg = performance.now() - wmsgT < 2500 ? `<br><b style="color:var(--acc)">${esc(wmsg)}</b>` : '';
-        HUD.innerHTML = `<b>Laufen</b> · ${first ? 'Ich-Perspektive' : '3rd Person'}${msg}<br><span class="m sub">Joystick = laufen · ziehen = umsehen · ✋ = Tür/Portal</span><span class="k sub">WASD laufen · Shift rennen · Leertaste springen · E Tür/Portal · Mausrad Abstand · Klick = Maus fangen · G/Esc beenden</span>`;
+        HUD.innerHTML = `<b>Laufen</b> · ${first ? 'Ich-Perspektive' : '3rd Person'}${msg}<br><span class="m sub">Joystick = laufen · ziehen = umsehen · ✋ = Tür/Portal</span><span class="k sub">WASD laufen · Shift rennen · Leertaste springen · Shift+Leertaste hoch springen · E Tür/Kiste/Portal · Mausrad Abstand · Klick = Maus fangen · G/Esc beenden</span>`;
       }
 
       // ---- Schleife

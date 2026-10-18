@@ -20,7 +20,7 @@ t('darkwood_roof_45 darkwood_roof_icorner_45 darkwood_roof_ocorner_45','droof',2
 t('darkwood_roof_top darkwood_roof_top_45','droof',2,.6,1)
 t('wood_wall_roof wood_wall_roof_top wood_wall_roof_upsidedown','wood',2,1,.2)
 t('wood_wall_roof_45 wood_wall_roof_45_upsidedown wood_wall_roof_top_45','wood',2,2,.2)
-t('wood_stair','wood',1.2,2,2,0); t('wood_stepladder','wood',1.2,2,1.6)
+t('wood_stair','wood',1.2,1,2,0); t('wood_stepladder','wood',1.2,2,1.6)
 t('wood_gate','wood',3,2.5,.3); t('wood_door','wood',1.4,2.2,.2); t('darkwood_gate','dark',4,4,.3)
 t('wood_fence','wood',2,1,.1); t('wood_window','wood',1,1,.2); t('wood_dragon1','wood',1,3,.5)
 t('darkwood_beam','dark',2,.3,.3); t('darkwood_beam4x4','dark',4,.4,.4); t('darkwood_pole darkwood_pole4','dark',.3,4,.3)
