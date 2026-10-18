@@ -51,12 +51,12 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#14181b'; ctx.fillRect(0, 0, r.width, r.height);
       if (!D || !D.inside) { ctx.fillStyle = '#9aa'; ctx.font = '15px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText(T('Geh mit deiner Figur in eine Krypta oder Höhle – dann erscheint hier der Grundriss.'), r.width / 2, r.height / 2); return; }
       // Räume (gedrehte Rechtecke), nach Höhe sortiert: tiefere Stockwerke zuerst
-      const rooms = (D.rooms || []).slice().sort((a, b) => a[1] - b[1]);
+      const rooms = (D.rooms || []).slice().sort((a, b) => b[4] * Math.max(1, b[6]) - a[4] * Math.max(1, a[6]) || a[1] - b[1]); // große Räume (z. B. Bossarena) zuerst, kleine darüber
       rooms.forEach((rm) => {
-        const [x, y] = toS(rm[0], rm[2]), a = rm[3] * Math.PI / 180, vis = visited.has(rkey(rm)), here = inside(rm, D.x, D.y, D.z), other = Math.abs(rm[1] - D.y) > 6;
+        const [x, y] = toS(rm[0], rm[2]), a = rm[3] * Math.PI / 180, vis = visited.has(rkey(rm)), here = inside(rm, D.x, D.y, D.z), other = Math.abs(rm[1] - D.y) > Math.max(8, rm[5] / 2 + 2); const dz = Math.max(1, rm[6]);
         ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.globalAlpha = other ? 0.35 : 1;
         ctx.fillStyle = here ? '#5c7a62' : vis ? '#4a5a52' : '#2a3036'; ctx.strokeStyle = here ? '#bfffd0' : vis ? '#8fa' : '#567'; ctx.lineWidth = here ? 2 : 1;
-        ctx.fillRect(-rm[4] / 2 * view.s, -rm[6] / 2 * view.s, rm[4] * view.s, rm[6] * view.s); ctx.strokeRect(-rm[4] / 2 * view.s, -rm[6] / 2 * view.s, rm[4] * view.s, rm[6] * view.s);
+        ctx.fillRect(-rm[4] / 2 * view.s, -dz / 2 * view.s, rm[4] * view.s, dz * view.s); ctx.strokeRect(-rm[4] / 2 * view.s, -dz / 2 * view.s, rm[4] * view.s, dz * view.s);
         ctx.restore();
       });
       ctx.globalAlpha = 1; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -65,9 +65,10 @@
       mark(D.picks, (x, y) => { ctx.fillStyle = '#ffb23d'; ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.fill(); });
       mark(D.chests, (x, y, c) => { ctx.fillStyle = c[4].length ? '#ffd34d' : '#8a7a40'; ctx.strokeStyle = '#2a1d08'; ctx.lineWidth = 1.5; ctx.fillRect(x - 5, y - 4, 10, 8); ctx.strokeRect(x - 5, y - 4, 10, 8); });
       ctx.globalAlpha = 1;
-      (D.creatures || []).forEach((c) => { const [x, y] = toS(c.x, c.z); ctx.globalAlpha = Math.abs(c.y - D.y) > 6 ? 0.4 : 1; ctx.fillStyle = c.tame ? '#4cc36b' : c.boss ? '#ff2fd0' : '#ff5a4a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        if (c.lv > 1) { ctx.fillStyle = '#ffe680'; ctx.font = 'bold 10px system-ui,sans-serif'; ctx.fillText('★'.repeat(c.lv - 1), x, y - 10); }
-        if (c.mhp > 0) { ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - 8, y + 7, 16, 3); ctx.fillStyle = '#e04a3c'; ctx.fillRect(x - 8, y + 7, 16 * Math.max(0, Math.min(1, c.hp / c.mhp)), 3); } });
+      (D.creatures || []).slice().sort((a, b) => (a.boss ? 1 : 0) - (b.boss ? 1 : 0)).forEach((c) => { const [x, y] = toS(c.x, c.z), rr = c.boss ? 11 : 5; ctx.globalAlpha = 1; ctx.fillStyle = c.tame ? '#4cc36b' : c.boss ? '#ff2fd0' : '#ff5a4a'; ctx.strokeStyle = c.boss ? '#fff' : '#000'; ctx.lineWidth = c.boss ? 2.5 : 1.5; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        if (c.lv > 1) { ctx.fillStyle = '#ffe680'; ctx.font = 'bold 10px system-ui,sans-serif'; ctx.fillText('★'.repeat(c.lv - 1), x, y - rr - 5); }
+        const bw = c.boss ? 60 : 16; if (c.mhp > 0) { ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(x - bw / 2, y + rr + 3, bw, c.boss ? 6 : 3); ctx.fillStyle = '#e04a3c'; ctx.fillRect(x - bw / 2, y + rr + 3, bw * Math.max(0, Math.min(1, c.hp / c.mhp)), c.boss ? 6 : 3); }
+        if (c.boss) { ctx.font = 'bold 12px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.8)'; const t = c.n + ' ' + Math.round(c.hp).toLocaleString('de-DE') + ' / ' + Math.round(c.mhp).toLocaleString('de-DE'); ctx.strokeText(t, x, y - rr - 8); ctx.fillStyle = '#ffd6f6'; ctx.fillText(t, x, y - rr - 8); } });
       ctx.globalAlpha = 1;
       (D.players || []).forEach((p) => { if (Math.abs(p.x - D.x) < 0.5 && Math.abs(p.z - D.z) < 0.5) return; const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#7fd0ff'; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = '11px system-ui,sans-serif'; ctx.fillText(p.name, x, y - 11); });
       // eigene Figur als Pfeil in Blickrichtung
