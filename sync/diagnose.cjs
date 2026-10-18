@@ -10,7 +10,7 @@ const D = globalThis.VW_DATA, PREF = D.prefabs, ITEMS = D.items;
 const dir = process.argv[2]; const files = [];
 (function walk(d) { for (const n of fs.readdirSync(d)) { const p = path.join(d, n); if (fs.statSync(p).isDirectory()) walk(p); else files.push(p); } })(dir);
 const chunks = files.filter((f) => f.endsWith('.chunk'));
-const H_TAMED = stable('tamed'), H_CREATOR = stable('creator');
+const H_TAMED = stable('tamed'), H_CREATOR = stable('creator'), H_OWNERNAME = stable('ownerName'), BEDS = new Set(['bed', 'piece_bed02'].map(stable)); const beds = [];
 const FISH = new Set(Array.from({ length: 14 }, (_, i) => stable('Fish' + (i + 1)))); // Fische schwimmen als „Gegenstände“ im Meer – keine liegengelassenen Sachen
 const zone = new Map(), byPrefab = new Map(); let total = 0, built = 0, drops = 0, tamed = 0, interior = 0;
 const dropZ = new Map(), tameZ = new Map(), tameKind = new Map(), fires = new Map(), ships = [], smelt = new Map();
@@ -24,6 +24,7 @@ for (const f of chunks) {
       const name = PREF[prefab] || (ITEMS[prefab] ? 'Item:' + ITEMS[prefab] : '#' + prefab);
       inc(zone, zk(x, z)); inc(byPrefab, name);
       if (L && L[H_CREATOR] !== undefined) built++;
+      if (BEDS.has(prefab)) beds.push([(S && S[H_OWNERNAME]) || '(niemand)', Math.round(x), Math.round(y), Math.round(z)]);
       if (ITEMS[prefab] && !FISH.has(prefab)) { drops++; inc(dropZ, zk(x, z)); }
       if (I && I[H_TAMED]) { tamed++; inc(tameZ, zk(x, z)); inc(tameKind, name); }
       if (FIRE.test(name) && L && L[H_CREATOR] !== undefined) inc(fires, zk(x, z));
@@ -45,6 +46,7 @@ L.push(`Gezähmte Tiere: ${tamed}` + (tamed ? ' – ' + top(tameKind, 6).map(([k
 L.push(`Gebaute Feuer/Lichter: ${[...fires.values()].reduce((a, b) => a + b, 0)} – meiste bei: ` + top(fires, 3).map(([k, n]) => `${n} (${where(k)})`).join(', '));
 L.push(`Schiffe/Karren: ${ships.length}` + (ships.length ? ' – ' + ships.slice(0, 12).map((s) => `${s[0]} (${s[1]}/${s[2]})`).join(', ') : ''));
 L.push(`Werkstationen mit Dauerbetrieb: ` + top(smelt, 10).map(([k, n]) => `${k} ${n}`).join(', '));
+L.push('', 'Betten: ' + beds.map((b) => `${b[0]} (x ${b[1]} / z ${b[3]})`).join(', '));
 L.push('', 'Häufigste Objekte:'); top(byPrefab, 15).forEach(([k, n]) => L.push(`  ${n.toLocaleString('de-DE')}  ${k}`));
 const out = L.join('\n'); console.log(out);
 const esc = (x) => x.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
