@@ -6,7 +6,7 @@
     const models = new Map(), pending = new Map(), textures = new Map();
     const url = (file) => base + 'assets/valheim/' + file;
     async function json(file) {
-      const r = await fetch(url(file));
+      const r = await fetch(url(file), file === 'index.json' ? { cache: 'no-cache' } : undefined);
       if (!r.ok) throw new Error('Grafikdatei nicht verfügbar: ' + r.status);
       return r.json();
     }

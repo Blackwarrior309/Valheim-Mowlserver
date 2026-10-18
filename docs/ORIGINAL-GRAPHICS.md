@@ -21,6 +21,9 @@ python tools/export_graphics.py --game "F:/SteamLibrary/steamapps/common/Valheim
 Der Export liest die Installation, verändert sie aber nicht. `index.json` enthält
 Prefab-Namen und versionierte Modellpfade. Jedes Modell enthält indizierte Geometrie,
 UVs, Normalen und Materialgruppen; Texturen werden gemeinsam als WebP gespeichert.
+Die Root-Position und Root-Rotation des Prefabs werden nicht in die Geometrie
+eingebacken: Diese ersetzt Valheim beim Platzieren durch die Weltposition und
+Objektrotation. Lokale Rotationen der Kindobjekte und die Prefab-Skalierung bleiben erhalten.
 `export-report.json` dokumentiert fehlende Objekte und Exportfehler.
 
 Nach einem Spielupdate das Paket erneut exportieren und `assets/valheim/` zusammen

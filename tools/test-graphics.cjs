@@ -8,6 +8,28 @@ require('../js/data.js');
 require('../js/valheim-assets.js');
 const { convert, stable } = require('../js/convert.js');
 
+function testRotations() {
+  // wood_roof_45 has a 90-degree root yaw in the source prefab. Its authored
+  // slope runs along local Z; the prefab root yaw must not be baked into the mesh.
+  const d = JSON.parse(fs.readFileSync(path.join(root, 'assets/valheim/models/wood_roof_45.json')));
+  const p = d.positions, n = p.length / 3, mean = [0, 0, 0];
+  for (let i = 0; i < p.length; i++) mean[i % 3] += p[i] / n;
+  let yx = 0, yz = 0;
+  for (let i = 0; i < p.length; i += 3) {
+    yx += (p[i + 1] - mean[1]) * (p[i] - mean[0]);
+    yz += (p[i + 1] - mean[1]) * (p[i + 2] - mean[2]);
+  }
+  assert(Math.abs(yz) > 5 * Math.abs(yx), 'Roof slope must follow prefab-local Z, without the root yaw');
+  // Mirroring Unity Z requires negating the instance yaw in Three.js.
+  for (const yaw of [0, 45, 90, 180, 270]) {
+    const angle = yaw * Math.PI / 180, x = 0.3, z = 1;
+    const expected = new THREE.Vector3(Math.cos(angle) * x + Math.sin(angle) * z, 0.2,
+      Math.sin(angle) * x - Math.cos(angle) * z);
+    const actual = new THREE.Vector3(x, 0.2, -z).applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
+    assert(actual.distanceTo(expected) < 1e-9, 'Unity-to-viewer yaw conversion: ' + yaw);
+  }
+}
+
 function testPack() {
   const crypto = require('node:crypto');
   const base = path.join(root, 'assets/valheim');
@@ -79,5 +101,5 @@ function testConversion() {
   assert(region.types.some((t) => t[0] === 'woodwall'));
 }
 
-(async () => { testPack(); await testLoader(); testConversion(); console.log('Graphics loader and world conversion passed.'); })()
+(async () => { testRotations(); testPack(); await testLoader(); testConversion(); console.log('Graphics rotation, loader and world conversion passed.'); })()
   .catch((e) => { console.error(e); process.exitCode = 1; });

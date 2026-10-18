@@ -14,7 +14,7 @@ import UnityPy
 from UnityPy.helpers.MeshHelper import MeshHandler
 
 
-def matrix(t):
+def matrix(t, root=False):
     q = t.m_LocalRotation
     x, y, z, w = q.x, q.y, q.z, q.w
     r = np.array([[1-2*(y*y+z*z), 2*(x*y-z*w), 2*(x*z+y*w)],
@@ -22,8 +22,10 @@ def matrix(t):
                   [2*(x*z-y*w), 2*(y*z+x*w), 1-2*(x*x+y*y)]])
     m = np.eye(4)
     s, p = t.m_LocalScale, t.m_LocalPosition
-    m[:3, :3] = r @ np.diag([s.x, s.y, s.z])
-    m[:3, 3] = [p.x, p.y, p.z]
+    # Instantiate(prefab, position, rotation) replaces root placement. Only children
+    # keep their authored rotations; baking the root rotation would apply it twice.
+    m[:3, :3] = (np.eye(3) if root else r) @ np.diag([s.x, s.y, s.z])
+    m[:3, 3] = [0, 0, 0] if root else [p.x, p.y, p.z]
     return m
 
 
@@ -103,10 +105,7 @@ class Exporter:
             t = c.get('Transform')
             if t is None:
                 return
-            # Preserve authored scale and orientation; world position comes from the snapshot.
-            local = matrix(t)
-            if is_root:
-                local[:3, 3] = 0
+            local = matrix(t, root=is_root)
             world = parent @ local
             lod = c.get('LODGroup')
             if lod:
