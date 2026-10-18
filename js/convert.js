@@ -233,7 +233,9 @@
     const pushG = (x, y, z) => { if (gn * 3 + 3 > gx.length) { const t = new Float32Array(gx.length * 2); t.set(gx); gx = t; } gx[gn * 3] = x; gx[gn * 3 + 1] = y; gx[gn * 3 + 2] = z; gn++; };
     const mapTables = []; const pieces = []; const nature = []; const signs = []; const portals = []; const beds = []; const conts = []; const tombs = []; const loose = [];
     let total = 0;
+    const RESD = D.resources || {}, resv = {};
     const visitor = (prefab, x, y, z, yaw, scale, L, S, B, I) => {
+          const rs = RESD[prefab]; if (rs) { (resv[rs[0]] || (resv[rs[0]] = [])).push(Math.round(x), Math.round(z), y > 2000 ? 2 : rs[1]); } // Rohstoffe (auch in Dungeons, liegen ~5000 m höher)
           if (y > 2000 || Math.abs(x) > 12000 || Math.abs(z) > 12000) return;
           const name = PREF[prefab];
           const cr = L ? L[K.creator] : undefined;
@@ -511,7 +513,7 @@
       players: world.players.map((p) => strip ? { name: p.name } : { name: p.name, platform: p.platform }),
       characters: characters.map((c) => strip ? { name: c.name, account: c.account, pieces: c.pieces } : { name: c.name, account: c.account, steam: c.steam, pieces: c.pieces }),
       bosses: dbi.keys.filter((k) => k.startsWith('defeated_')).map((k) => k.slice(9)),
-      globalKeys: dbi.keys, locations: dbi.locations, pins: tablePins, tableMap,
+      globalKeys: dbi.keys, locations: dbi.locations, pins: tablePins, tableMap, resources: resv, // Rohstoffe: Art → [x, z, f] (f: 1 angebrochen, 2 im Dungeon)
       portals: portals.map((p) => ({ tag: p.tag, x: Math.round(p.x), z: Math.round(p.z) })),
       // Grabsteine: Todeszeit = Spielstand-Zeit minus (Weltzeit jetzt − Weltzeit beim Tod); Weltzeit in .NET-Ticks (100 ns)
       tombs: tombs.map((b) => { const ref = opts.saveTime || Date.now(); const t = b.tod && dbi.netTime ? Math.round(ref - (dbi.netTime - b.tod / 1e7) * 1000) : null; return { n: b.n, x: Math.round(b.x), y: Math.round(b.y), z: Math.round(b.z), t: t && t > 1.5e12 && t <= ref + 6e4 ? t : null, items: b.items }; }),

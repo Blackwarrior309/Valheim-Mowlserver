@@ -202,11 +202,14 @@
     const areas = () => { const sr = seedRegion(); return (S.world3d ? [S.world3d] : []).concat(S.regions, sr ? [sr] : []); };
     const livePlayers = () => { const L = (LIVE || (S.live && S.live.players) || []).slice(); let P = []; try { P = three.peerList().filter((p) => !p.web); } catch (e) { } const have = new Set(L.map((p) => p.name)); P.forEach((p) => { if (!have.has(p.name)) L.push(Object.assign({ peer: true }, p)); }); return L; };
     // Biome → Grundfarbe (ohne Biomdaten: klassisches Grün)
+    // Rohstoff-Vorkommen aus dem Spielstand (nur Unabgebautes): [Art, Farbe, Name]
+    const RES_K = [['copper', '#d9824a', 'Kupfer'], ['tin', '#c9cfd4', 'Zinn'], ['silver', '#eef3ff', 'Silber'], ['obsidian', '#3b2a55', 'Obsidian'], ['tar', '#15110e', 'Teer'], ['scrap', '#8a6a4a', 'Schrott'],
+      ['giant', '#9aa3ad', 'Riesenreste'], ['tissue', '#e07aa0', 'Weichgewebe'], ['blackcore', '#5a3b8a', 'Schwarzer Kern'], ['chitin', '#7fc7b8', 'Chitin'], ['flametal', '#ff6a2a', 'Flammenmetall']];
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
       ['deaths', '✝', '#ff6b5a', 'Tode'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
       ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
-      ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager']];
+      ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager'], ['_h', '', '', 'Rohstoffe']].concat(RES_K.map(([k, c, de]) => ['R_' + k, '◆', c, de]));
     const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
     const LOCK = {}; Object.values((g.VW_DATA && g.VW_DATA.locations) || {}).forEach((l) => { if (l[2]) LOCK[l[0]] = l[2]; });
     const locCat = (l) => LOCK[l.k] || l.c || 'b';
@@ -334,6 +337,8 @@
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
         drawLayers(); drawRoute2d(ctx, toS, view.s);
         ctx.font = '12px system-ui,sans-serif'; ctx.textAlign = 'center';
+        RES_K.forEach(([k, col]) => { const a = S.resources && S.resources[k]; if (!a || !ML['R_' + k]) return; const r = view.s > 0.6 ? 4 : view.s > 0.2 ? 3 : 2; ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1;
+          for (let i = 0; i < a.length; i += 3) { const [x, y] = toS(a[i], a[i + 1]); if (x < -10 || y < -10 || x > 5000 || y > 5000) continue; ctx.beginPath(); ctx.moveTo(x, y - r - 1); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r + 1); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fill(); ctx.stroke(); if (a[i + 2] === 1 && r > 2) { ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.strokeStyle = 'rgba(0,0,0,.7)'; } } });
         S.locations.forEach((l) => { const c = locCat(l); if (!ML['L_' + c]) return; const [x, y] = toS(l.x, l.z); const st = LOCSTY[c] || LOCSTY.d; const a = l.v ? 1 : 0.6;
           ctx.globalAlpha = a; ctx.fillStyle = st[0]; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.lineWidth = 1.5; ctx.beginPath();
           if (st[1] === 'tri') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.closePath(); } else if (st[1] === 'dot') ctx.arc(x, y, 3.5, 0, Math.PI * 2); else if (st[1] === 'dia') { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); } else ctx.rect(x - 3.5, y - 3.5, 7, 7);
@@ -397,8 +402,8 @@
       function layersChanged() {
         $$('[data-ml]').forEach((b) => (b.checked = !!ML[b.dataset.ml]));
         const cnt = {}; (S.locations || []).forEach((l) => { const c = 'L_' + locCat(l); cnt[c] = (cnt[c] || 0) + 1; });
-        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; cnt.pins = (S.pins || []).length;
-        $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_')) lb.hidden = !cnt[k]; });
+        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; Object.entries(S.resources || {}).forEach(([k, a]) => (cnt['R_' + k] = a.length / 3)); cnt.pins = (S.pins || []).length;
+        $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_') || k.startsWith('R_')) lb.hidden = !cnt[k]; }); const fh = $('.vw-filter .fh'); if (fh) fh.hidden = !Object.keys(S.resources || {}).length;
         $('[data-fk="seed"]').hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
         $('[data-fk="heat"]').hidden = !EX.days.length; $('[data-fk="pins"]').hidden = !(S.pins || []).length;
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
@@ -412,7 +417,7 @@
         baseInfo = info.join('<br>'); $('.mlInfo').innerHTML = baseInfo;
         if (ML.heat) refreshHeat(); else draw();
       }
-      $('.vw-filter').innerHTML = FILTERS.map(([k, ic, col, de]) => `<label data-fk="${k}"><input type="checkbox" data-ml="${k}"><span class="ic" style="color:${col}">${ic}</span><span>${de}</span><span class="n"></span></label>`).join('');
+      $('.vw-filter').innerHTML = FILTERS.map(([k, ic, col, de]) => k === '_h' ? `<div class="fh" style="grid-column:1/-1;margin-top:6px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.7">${de}</div>` : `<label data-fk="${k}"><input type="checkbox" data-ml="${k}"><span class="ic" style="color:${col}">${ic}</span><span>${de}</span><span class="n"></span></label>`).join('');
       $$('[data-ml]').forEach((b) => (b.onchange = () => { ML[b.dataset.ml] = b.checked; try { localStorage.setItem('vw-maplayers', JSON.stringify(ML)); } catch (e) { } layersChanged(); }));
       $('.hPl').onchange = refreshHeat; $('.hDays').onchange = refreshHeat;
 
