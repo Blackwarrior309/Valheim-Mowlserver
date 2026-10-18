@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.1
+- New `/api/dungeon`: rooms, chests with contents, pickables and scrap piles of the dungeon you are in – shown in the map's new “Dungeon” tab.
+
 ## 0.6.0
 - Players nearby: health, stamina, eitr, equipment with quality, dead / sleeping – the values the game itself sends over the network.
 - New `/api/creatures`: enemies and animals in the loaded area (also inside dungeons) with health, stars, tamed and boss flags.

@@ -1,6 +1,6 @@
 {
   "name": "ValheimWeltLive",
-  "version_number": "0.6.0",
+  "version_number": "0.6.1",
   "website_url": "https://github.com/Blackwarrior309/Valheim-welt",
   "description": "Live 3D map of your world in the browser plus an in-game chest search (F7): find items in all chests, map pins, recipes with ingredient stock. Unofficial.",
   "dependencies": [

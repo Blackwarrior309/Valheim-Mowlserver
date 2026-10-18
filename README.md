@@ -19,6 +19,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **18.10.2026**
+- Neuer Tab „⤓ Dungeon“ (nur sichtbar mit Mod 0.6.1 auf dem eigenen PC): Grundriss der Krypta/Höhle, in der du gerade bist – besuchte Räume, Gegner mit Sternen und HP, Truhen mit Inhalt, Surtlingkerne, Schrotthaufen, Mitspieler.
 - Mod 0.6.0: Werte von Mitspielern in deiner Nähe (Leben, Ausdauer, Eitr, Ausrüstung mit Stufe, tot/schläft) in der Spielerkarte; neue Kartenebene „Gegner & Tiere (Mod)“ – rot feindlich, gelb harmlos, grün gezähmt, pink Boss, mit Sternen, auch in Dungeons.
 - Mitspieler wieder immer in einem gemeinsamen Raum; benannte Bereiche und Bauprojekte werden automatisch mit allen Besuchern geteilt.
 - Türen öffnen sich im Laufmodus um ihre echten Scharniere (Codex).

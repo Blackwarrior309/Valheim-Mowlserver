@@ -101,7 +101,7 @@
     const R = document.createElement('div'); R.className = 'vw'; root.appendChild(R);
     R.innerHTML = `
 <div class="vw-top"><span class="vw-title"></span>
-  <div class="vw-tabs"><button data-t="map" class="on">Karte</button><button data-t="3d">3D</button><button data-t="chests">Kisten</button><button data-t="info">Welt & Spieler</button></div>
+  <div class="vw-tabs"><button data-t="map" class="on">Karte</button><button data-t="3d">3D</button><button data-t="chests">Kisten</button><button data-t="info">Welt & Spieler</button><button data-t="dungeon" hidden title="Nur mit dem Mod auf diesem PC: Grundriss des Dungeons, in dem du gerade bist">⤓ Dungeon</button></div>
   <div class="vw-act"><span class="vw-status"></span></div></div>
 <div class="vw-main">
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
@@ -157,6 +157,7 @@
     <details class="vw-panel"><summary>Routen-Einstellungen</summary><div class="row"><select class="rtPlayer" aria-label="Routenstart"><option value="view">Aktuelle 3D-Position</option><option value="station">Werkstation</option></select><label><input class="rtBoat" type="checkbox"> Bootswege erlauben</label><label><input class="rtMetal" type="checkbox"> Welt erlaubt Metall durch Portale</label></div><div class="sub">Wege berücksichtigen das verfügbare Höhenraster; unbekannte Gebiete können nicht zuverlässig bewertet werden.</div></details><div class="vw-stats kstats"></div><div class="kcraft"></div><div class="kroute"></div>
     <div class="vw-grid"><div class="vw-panel"><h2 style="margin-top:0">Summe</h2><table class="ktot"></table><div class="sub" style="margin-top:8px">Klick auf ein Item filtert die Kisten. „★2“ = Ausrüstungsstufe.</div></div><div class="klist"></div></div>
   </div></div></div>
+  <div class="vw-pane" data-p="dungeon" hidden></div>
   <div class="vw-pane" data-p="info" hidden><div class="vw-scroll"><div class="vw-wrap info"></div></div></div>
 </div>`;
     const $ = (s, p) => (p || R).querySelector(s), $$ = (s, p) => Array.from((p || R).querySelectorAll(s));
@@ -164,7 +165,7 @@
     (opts.actions || []).forEach((a) => { const b = document.createElement('button'); b.textContent = a.label; if (a.primary) b.className = 'pri'; if (a.title) b.title = a.title; b.onclick = a.onClick; act.appendChild(b); });
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
-    let S = snap, tab = 'map', LIVE = null, CREA = []; // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
+    let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
     const SEEDW = { seed: '', meta: null, data: null, reg: null, regS: null };
     function seedRegion() {
@@ -245,7 +246,7 @@
       tab = t; $$('.vw-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
       $$('.vw-pane').forEach((p) => (p.hidden = p.dataset.p !== t));
       if (t === 'map') map.draw(); if (t === '3d') three.start(); else three.stop();
-      if (t === 'chests') kisten.render(); if (t === 'info') info();
+      if (t === 'chests') kisten.render(); if (t === 'info') info(); if (t === 'dungeon' && DG) setTimeout(() => DG.draw(), 0);
     }
     $$('.vw-tabs button').forEach((b) => (b.onclick = () => setTab(b.dataset.t)));
 
@@ -2031,7 +2032,8 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     async function gamePoll() {
       try { const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500); const l = await (await fetch(GL.url + '/api/players', { cache: 'no-store', signal: ctl.signal })).json(); clearTimeout(to);
         GL.fails = 0; updateLive(l); three.pubGame(l);
-        try { const cr = await (await fetch(GL.url + '/api/creatures', { cache: 'no-store' })).json(); CREA = Array.isArray(cr) ? cr.slice(0, 400) : []; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); } } catch (e) { CREA = []; } $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
+        try { const cr = await (await fetch(GL.url + '/api/creatures', { cache: 'no-store' })).json(); CREA = Array.isArray(cr) ? cr.slice(0, 400) : []; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); } } catch (e) { CREA = []; }
+        try { const dj = await (await fetch(GL.url + '/api/dungeon', { cache: 'no-store' })).json(); if (dj && typeof dj.inside === "boolean" && g.VWDungeon) { const tb = $('.vw-tabs [data-t="dungeon"]'); if (dj.inside || !tb.hidden) { tb.hidden = false; if (!DG && g.VWDungeon) DG = g.VWDungeon.mount($('.vw-pane[data-p="dungeon"]'), { T }); if (DG) DG.update(dj, CREA, l); tb.textContent = dj.inside ? '⤓ Dungeon ●' : '⤓ Dungeon'; } } } catch (e) { } $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
       } catch (e) { GL.fails++; $('.gameLink').textContent = '🎮 ' + T('Spiel nicht erreichbar – läuft Valheim mit dem Mod?'); if (GL.fails > 3) LIVE = null; }
     }
     function gameLink(on) {

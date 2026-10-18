@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.6.0";
+        public const string Version = "0.6.1";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails;
@@ -90,7 +90,7 @@ namespace ValheimWeltLive
             if (statsNetwork != ZNet.instance) { statsSession = null; statsNetwork = ZNet.instance; }
             if (ZNet.instance == null || ZDOMan.instance == null) { statsSession = null; return; }
             float t = Time.realtimeSinceStartup;
-            if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } try { creaturesJson = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); } }
+            if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } try { creaturesJson = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); } if (t >= nextDungeon) { nextDungeon = t + 1.5f; try { dungeonJson = CollectDungeon(); } catch (Exception e) { Logger.LogDebug(e); } } }
             if (!biomeBusy && WorldGenerator.instance != null && ZNet.instance != null && (biomeGrid == null || biomeWorld != ZNet.instance.GetWorldName())) StartCoroutine(BuildBiomes());
             if (t >= nextWorld && !building) { nextWorld = t + Mathf.Max(10, cfgWorldSeconds.Value); StartCoroutine(BuildDump()); }
             if (cfgWriteFile.Value && ZNet.instance.IsServer())
@@ -294,6 +294,50 @@ namespace ValheimWeltLive
             } catch (Exception e) { Logger.LogDebug("Remote details: " + e.Message); }
         }
 
+        // Dungeon-Ansicht: Räume, Truhen, Aufsammelbares und Abbaubares im Dungeon, in dem die eigene Figur gerade ist (liegt ~5000 m über der Welt)
+        volatile string dungeonJson = "{\"inside\":false}"; float nextDungeon;
+        string CollectDungeon()
+        {
+            var me = Player.m_localPlayer; if (me == null || me.transform.position.y < 3000f) return "{\"inside\":false}";
+            Vector3 c = me.transform.position; const float R = 260f;
+            Func<Vector3, bool> near = (v) => v.y > 3000f && Mathf.Abs(v.x - c.x) < R && Mathf.Abs(v.z - c.z) < R;
+            var sb = new StringBuilder("{\"inside\":true,\"x\":").Append(F(c.x)).Append(",\"y\":").Append(F(c.y)).Append(",\"z\":").Append(F(c.z)).Append(",\"r\":").Append(F(me.transform.eulerAngles.y));
+            sb.Append(",\"rooms\":["); bool first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(Room)))
+            {
+                var rm = o as Room; if (rm == null) continue; var t = rm.transform; if (!near(t.position)) continue;
+                string nm = rm.gameObject.name; int k = nm.IndexOf('('); if (k > 0) nm = nm.Substring(0, k).Trim();
+                if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(t.position.x)).Append(',').Append(F(t.position.y)).Append(',').Append(F(t.position.z)).Append(',').Append(F(t.eulerAngles.y)).Append(',')
+                  .Append(rm.m_size.x).Append(',').Append(rm.m_size.y).Append(',').Append(rm.m_size.z).Append(',').Append(Json(nm)).Append(',').Append(rm.m_entrance ? 1 : 0).Append(']');
+            }
+            sb.Append("],\"chests\":["); first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(Container)))
+            {
+                var ct = o as Container; if (ct == null || !near(ct.transform.position)) continue; var inv = ct.GetInventory(); var p = ct.transform.position;
+                if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(p.x)).Append(',').Append(F(p.y)).Append(',').Append(F(p.z)).Append(',').Append(Json(WeltSuche.L(ct.m_name))).Append(",[");
+                bool f2 = true; if (inv != null) foreach (var it in inv.GetAllItems()) { if (!f2) sb.Append(','); f2 = false; sb.Append('[').Append(Json(WeltSuche.L(it.m_shared.m_name))).Append(',').Append(it.m_stack).Append(']'); }
+                sb.Append("]]");
+            }
+            sb.Append("],\"picks\":["); first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(Pickable)))
+            {
+                var pk = o as Pickable; if (pk == null || !near(pk.transform.position)) continue; bool picked = false; try { picked = pk.GetPicked(); } catch { }
+                if (picked) continue; string nm = ""; try { var idp = pk.m_itemPrefab != null ? pk.m_itemPrefab.GetComponent(typeof(ItemDrop)) as ItemDrop : null; nm = idp != null ? WeltSuche.L(idp.m_itemData.m_shared.m_name) : pk.gameObject.name; } catch { }
+                var p = pk.transform.position; if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(p.x)).Append(',').Append(F(p.y)).Append(',').Append(F(p.z)).Append(',').Append(Json(nm)).Append(']');
+            }
+            sb.Append("],\"rocks\":["); first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(MineRock5)))
+            {
+                var mr = o as MineRock5; if (mr == null || !near(mr.transform.position)) continue; var p = mr.transform.position;
+                if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(p.x)).Append(',').Append(F(p.y)).Append(',').Append(F(p.z)).Append(',').Append(Json(WeltSuche.L(mr.m_name))).Append(']');
+            }
+            return sb.Append("]}").ToString();
+        }
+
         // Gegner und Tiere im geladenen Gebiet (auch in Dungeons)
         volatile string creaturesJson = "[]";
         string CollectCreatures()
@@ -483,6 +527,7 @@ namespace ValheimWeltLive
                 if (p == "/api/info") { Send(res, infoJson, "application/json"); return; }
                 if (p == "/api/players") { Send(res, playersJson, "application/json"); return; }
                 if (p == "/api/creatures") { Send(res, creaturesJson, "application/json"); return; }
+                if (p == "/api/dungeon") { Send(res, dungeonJson, "application/json"); return; }
                 if (p == "/api/find") { var q = ctx.Request.QueryString["q"]; if (!string.IsNullOrEmpty(q)) WeltSuche.PendingQuery = q; Send(res, "{\"ok\":true}", "application/json"); return; }
                 if (p == "/api/world.vwdump")
                 {
