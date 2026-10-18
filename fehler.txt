@@ -1,3 +1,0 @@
-2026-10-18T10:36:13.102Z
-10:34:51 Verbinde mit FTP *** …
-10:36:13 FEHLER: FTP „RETR /valheim/savedata/worlds_local/Mowlserver/_main.1876.fwl2“: 550 550 /valheim/savedata/worlds_local/Mowlserver/_main.1876.fwl2: No such file or directory
