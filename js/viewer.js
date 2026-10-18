@@ -1703,9 +1703,14 @@
     let routeTerrain = null;
     function routingTerrain() {
       if (routeTerrain && routeTerrain.snap === S) return routeTerrain;
-      const r = S.world3d, grid = new Map(), floors = new Map(); let heights = null;
-      if (r && r.h) { const u = b64u8(r.h); heights = new Int16Array(u.buffer, u.byteOffset, u.byteLength / 2); }
-      const rawHeight = (x, z) => { if (!r || !heights) return NaN; const i = Math.round((x - r.bounds[0]) / r.res), j = Math.round((z - r.bounds[2]) / r.res); return i < 0 || j < 0 || i >= r.nx || j >= r.nz ? NaN : heights[j * r.nx + i] / 10; };
+      const r = S.world3d, grid = new Map(), floors = new Map();
+      const terrains = (S.regions || []).concat(r ? [r] : []).filter((v) => v.h).sort((a, b) => a.res - b.res).map((region) => { const bytes = b64u8(region.h); return { region, heights: new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2) }; });
+      const rawHeight = (x, z) => {
+        const t = terrains.find(({ region: v }) => x >= v.bounds[0] && x <= v.bounds[1] && z >= v.bounds[2] && z <= v.bounds[3]); if (!t) return NaN;
+        const v = t.region, fx = (x - v.bounds[0]) / v.res, fz = (z - v.bounds[2]) / v.res, i = Math.min(v.nx - 2, Math.floor(fx)), j = Math.min(v.nz - 2, Math.floor(fz));
+        const dx = fx - i, dz = fz - j, h = (xx, zz) => t.heights[zz * v.nx + xx] / 10;
+        return (h(i, j) * (1 - dx) + h(i + 1, j) * dx) * (1 - dz) + (h(i, j + 1) * (1 - dx) + h(i + 1, j + 1) * dx) * dz;
+      };
       if (r) for (const [cat, a] of Object.entries(r.pieces)) for (let i = 0; i < a.length; i += 6) {
         const ty = r.types[a[i + 4]], name = ty[0];
         if (!/wall|fence|stake/.test(name) && cat !== 'floor') continue;
@@ -1766,26 +1771,27 @@
       stepsAt.forEach((list, k) => { if (k === finalKind) return; const sp = nearest(ST[k], anchor); push(sp || anchor, 'station', ST_NAME[k] + (sp ? '' : ' (' + T('nicht gefunden') + ')'), list.map((cr) => fmt(cr.n) + '× ' + itemName(cr.h)).join(', ')); });
       if (finalSt || !pts.length) push(finalSt || anchor, 'station', ST_NAME[finalKind] + (ST[top.st] ? '' : ' (' + T('nicht gefunden') + ')'), (stepsAt.get(finalKind) || []).map((cr) => fmt(cr.n) + '× ' + itemName(cr.h)).join(', '));
       // Resolve every portal hop, then navigate walking/boat legs over the height grid.
-      const path = []; let dist = 0, uncertain = 0; const terrain = routingTerrain();
+      const path = []; let dist = 0, uncertain = 0, straight = 0; const terrain = routingTerrain();
       for (let i = 0; i < pts.length; i++) {
         if (i === 0) { path.push({ ...pts[0] }); continue; }
         const leg = estimate(pts[i - 1], pts[i]); if (!Number.isFinite(leg.d)) return { err: 'Keine Verbindung zwischen den Wegpunkten.' };
         for (let j = 1; j < leg.path.length; j++) {
           const target = leg.path[j], from = leg.path[j - 1];
           if (target.jump) { path.push(target); continue; }
-          const segment = g.VWTools.terrainRoute(from, target, terrain.height, { boat: $('.rtBoat').checked, blocked: terrain.blocked });
-          if (!Number.isFinite(segment.d)) { uncertain++; path.push({ ...target, uncertain: true }); dist += Math.hypot(target.x - from.x, target.z - from.z); continue; }
-          for (let k = 1; k < segment.path.length; k++) { dist += Math.hypot(segment.path[k].x - segment.path[k - 1].x, segment.path[k].z - segment.path[k - 1].z); path.push(segment.path[k]); }
+          let segment = g.VWTools.terrainRoute(from, target, terrain.height, { boat: $('.rtBoat').checked, blocked: terrain.blocked }), weak = false;
+          if (!Number.isFinite(segment.d)) { uncertain++; weak = true; segment = g.VWTools.terrainRoute(from, target, terrain.height, { boat: $('.rtBoat').checked }); }
+          if (!Number.isFinite(segment.d)) { straight++; path.push({ ...target, uncertain: true }); dist += Math.hypot(target.x - from.x, target.z - from.z); continue; }
+          for (let k = 1; k < segment.path.length; k++) { dist += Math.hypot(segment.path[k].x - segment.path[k - 1].x, segment.path[k].z - segment.path[k - 1].z); path.push({ ...segment.path[k], ...(weak ? { uncertain: true } : {}) }); }
         }
         pts[i].via = leg.via;
       }
-      return { h, qty, pts, path, uncertain, dist: Math.round(dist), missing: [...missing].map(([ih, n]) => [itemName(ih), n]), crafts, guess: crafts.some((c) => !c.sure) };
+      return { h, qty, pts, path, uncertain, straight, dist: Math.round(dist), missing: [...missing].map(([ih, n]) => [itemName(ih), n]), crafts, guess: crafts.some((c) => !c.sure) };
     }
     function routeHtml(R) {
       if (R.err) return `<div class="sub">${esc(R.err)}</div>`;
       const ic = { start: '🧍', chest: '📦', station: '🔨' };
       return `<h3 style="margin:14px 0 6px">🧭 ${T('Route')}: ${fmt(R.qty)}× ${esc(itemName(R.h))} <span class="sub">· ${T('ca.')} ${fmt(R.dist)} m ${$('.rtBoat').checked ? 'zu Fuß / Boot' : T('zu Fuß')}</span></h3>` +
-        (R.uncertain ? `<p role="status" style="color:#c47a20">${R.uncertain} Wegabschnitte konnten nicht als begehbar bestätigt werden (orange gestrichelt). Dort ist die Verbindung nur Luftlinie; Wasser, Stockwerke oder fehlendes Gelände prüfen.</p>` : '') +
+        (R.uncertain ? `<p role="status" style="color:#c47a20">${R.uncertain} Wegabschnitte konnten nicht als begehbar bestätigt werden (orange gestrichelt). ${R.straight || 0} davon sind reine Luftlinie. Bei den übrigen sind Gebäudehindernisse/Stockwerke ungeprüft; Geländedaten und Bootsmodus werden berücksichtigt.</p>` : '') +
         (R.missing.length ? `<div class="vw-card" style="border-color:#c0574a"><b>${T('Fehlt in allen Kisten')}:</b> ${R.missing.map(([n, k]) => fmt(k) + '× ' + esc(n)).join(', ')}</div>` : '') +
         `<ol class="rtList" style="margin:8px 0 6px 18px;padding:0">${R.pts.map((p, i) => `<li style="margin:4px 0">${p.via ? `<span class="sub">⛩ ${T('Portal')} „${esc(p.via)}“ →</span><br>` : ''}${ic[p.kind] || '•'} <b>${esc(p.label)}</b>${p.info ? '<br><span class="sub">' + (p.kind === 'chest' ? T('mitnehmen') + ': ' : T('herstellen') + ': ') + esc(p.info) + '</span>' : ''}</li>`).join('')}</ol>` +
         `<div class="row" style="gap:6px"><button class="rt3d">🌍 ${T('In 3D zeigen')}</button><button class="rtMap">🗺 ${T('Auf der Karte')}</button><button class="rtClr">✕ ${T('Route löschen')}</button></div>` +

@@ -74,7 +74,7 @@
     pop() { const out = this.a[0], v = this.a.pop(); if (this.a.length) { let i = 0; while (i * 2 + 1 < this.a.length) { let c = i * 2 + 1; if (c + 1 < this.a.length && this.a[c + 1].f < this.a[c].f) c++; if (this.a[c].f >= v.f) break; this.a[i] = this.a[c]; i = c; } this.a[i] = v; } return out; }
   }
   function terrainRoute(a, b, height, opts = {}) {
-    const distance = Math.hypot(b.x - a.x, b.z - a.z), step = Math.max(2, distance / 90), margin = Math.max(24, Math.min(500, distance * 0.4));
+    const distance = Math.hypot(b.x - a.x, b.z - a.z), step = Math.max(1, distance / 120), margin = Math.max(24, Math.min(500, distance * 0.4));
     const x0 = Math.min(a.x, b.x) - margin, z0 = Math.min(a.z, b.z) - margin;
     const nx = Math.ceil((Math.abs(a.x - b.x) + 2 * margin) / step) + 1, nz = Math.ceil((Math.abs(a.z - b.z) + 2 * margin) / step) + 1;
     const at = (p) => Math.round((p.z - z0) / step) * nx + Math.round((p.x - x0) / step);

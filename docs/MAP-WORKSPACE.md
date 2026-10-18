@@ -11,9 +11,11 @@ gesperrt, solange „Welt erlaubt Metall durch Portale“ nicht aktiviert ist.
 Die Wegsuche nutzt das verfügbare Höhenraster, vorhandene Bodenflächen und grobe
 Wandhindernisse. Bootswege sind optional; Steigungen und Wasser beeinflussen den
 Weg. Portalwahl und Kistenreihenfolge sind Heuristiken, keine Garantie für die
-weltweit kürzeste Route. Wenn die Raster-Suche einen Abschnitt nicht bestätigen
-kann, bleibt er als **orange gestrichelte Luftlinie** sichtbar und die Oberfläche
-meldet die Anzahl ungeprüfter Abschnitte. Gebäudeinnenräume, Stockwerke und
+weltweit kürzeste Route. Wenn die Raster-Suche einen Abschnitt mit Gebäudehindernissen nicht bestätigen
+kann, versucht sie zunächst einen Geländeweg ohne diese Hindernisse. Er erscheint
+**orange gestrichelt** als nicht vollständig geprüft. Ist auch kein Geländeweg
+auffindbar, bleibt eine ausdrücklich gezählte Luftlinie. Die Oberfläche nennt
+die Anzahl ungeprüfter und reiner Luftlinienabschnitte. Gebäudeinnenräume, Stockwerke und
 unbekannte Gebiete brauchen weiterhin eine Prüfung im Spiel.
 
 ## Änderungsansicht
