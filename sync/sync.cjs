@@ -443,7 +443,8 @@ function envConfig() {
   };
 }
 
-(async () => {
+module.exports = { FTP };
+if (!process.env.VS_SCAN_ONLY) (async () => {
   console.log('Valheim-Sync (inoffiziell) – FTP → .vwelt → GitHub\n');
   if (CI) {
     fs.mkdirSync(DATA, { recursive: true });
