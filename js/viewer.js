@@ -397,7 +397,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, pins: true, creatures: false, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -1276,7 +1276,7 @@
       const crGeo = new THREE.SphereGeometry(0.6, 10, 8);
       function setCreatures(list) {
         if (crG) { scene.remove(crG); crG.children.forEach((m) => m.material && m.material.dispose()); crG = null; } crLab.forEach((l) => l.d.remove()); crLab = [];
-        let on = true; try { on = JSON.parse(localStorage.getItem('vw-maplayers') || '{}').creatures === true; } catch (e) { }
+        let on = true; try { on = JSON.parse(localStorage.getItem('vw-maplayers') || '{}').creatures !== false; } catch (e) { }
         if (!on || !reg || !list || !list.length) { invalidate(); return; } crG = new THREE.Group(); scene.add(crG);
         list.forEach((c) => { if (c.y > 3000) return; const m = new THREE.Mesh(crGeo, new THREE.MeshBasicMaterial({ color: crCol(c), depthTest: false, transparent: true, opacity: 0.9 })); m.renderOrder = 11; m.position.copy(W(c.x, c.y + 1.2, c.z)); if (c.boss) m.scale.setScalar(2.5); crG.add(m);
           if (c.boss || c.tame || c.lv > 1) { const d = document.createElement('div'); d.className = 'vw-lbl'; d.textContent = c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + ' ❤' + Math.round(c.hp); LB.appendChild(d); crLab.push({ d, v: W(c.x, c.y + 3, c.z) }); } });
