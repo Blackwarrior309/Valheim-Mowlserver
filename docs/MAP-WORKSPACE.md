@@ -112,3 +112,14 @@ python -m unittest discover -s tools -p test_graphics_export.py
 ```
 
 Der Workflow `Viewer checks` führt diese Prüfungen bei Pushes und Pull Requests aus.
+
+
+## Browser-Mitspieler: Verbindung und Lebensdauer
+
+Unter dem Spielernamen zeigt die Karte den MQTT-Verbindungsstatus. Bei Unterbrechungen verbindet sich der Client automatisch erneut; „Erneut verbinden“ startet zusätzlich einen frischen Versuch. Nach erfolgreichem Abonnement wird die eigene Position sofort erneut gesendet.
+
+Im sichtbaren Tab sendet eine laufende Browserfigur spätestens alle drei Sekunden ein Lebenszeichen. Ein Hintergrundtab meldet seine Browserfigur ab und meldet sie bei der Rückkehr wieder an. Ohne Lebenszeichen verschwinden entfernte Figuren nach ungefähr 20–23 Sekunden, auch in der Kartenansicht. Browser können Hintergrundtimer verzögern. Von der lokalen Spielverbindung gemeldete Figuren laufen nach sechs Sekunden ohne neue Daten aus; ihre Kennungen enthalten die Browsersitzung, damit mehrere Besucher sich nicht gegenseitig abmelden.
+
+Nur leere MQTT-Nachrichten melden Figuren ab. Ungültiges JSON, falsche Topics, zu große Nachrichten und ungültige Koordinaten werden ignoriert. Es werden höchstens 64 entfernte Figuren gehalten; Positionsupdates derselben Figur werden auf höchstens eines pro 60 ms begrenzt. Beim Entfernen werden ihre Grafikressourcen freigegeben. Der öffentliche Broker bleibt ein unverbindlicher Präsenzdienst ohne Identitätsprüfung; seine Verfügbarkeit hängt vom Betreiber ab.
+
+Prüfung: `node --test tools/test-multiplayer.cjs` simuliert Wiederverbinden, Tabwechsel, erneuten Verbindungsversuch, ungültige Nachrichten und Aufräumen ohne 3D-Animationsschleife.

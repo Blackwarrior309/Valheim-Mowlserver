@@ -1266,36 +1266,50 @@
       const H0 = makeHero(0x6d4a2b), HERO = H0.g, legL = H0.legL, legR = H0.legR, armL = H0.armL, armR = H0.armR; HERO.visible = false; scene.add(HERO);
 
       // ---- Mitspieler im Browser: Position und Name laufen über einen öffentlichen MQTT-Broker (kein Server nötig, nichts am Spielserver)
-      const MP = { cli: null, loading: false, me: Math.random().toString(36).slice(2, 10), peers: new Map(), lastPub: 0, lastMsg: '', mine: new Map() };
+      const MP = { cli: null, loading: false, me: Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join(''), peers: new Map(), lastPub: 0, lastMsg: '', mine: new Map() };
       const inviteRoom = new URLSearchParams(location.search).get('room');
       const mpRoom = () => 'vwelt/' + (inviteRoom && /^[a-zA-Z0-9_-]{16,80}$/.test(inviteRoom) ? 'invite/' + inviteRoom + '/' : '') + (location.host + location.pathname).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 60) + '/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
       const NAME_IN = $('.walkName');
-      let myName = ''; try { myName = localStorage.getItem('vw-walk-name') || ''; } catch (e) { }
+      let myName = ''; try { myName = (localStorage.getItem('vw-walk-name') || '').trim().slice(0, 24); } catch (e) { }
       if (!myName) myName = 'Wikinger ' + MP.me.slice(0, 3).toUpperCase();
       NAME_IN.value = myName; NAME_IN.onchange = () => { myName = (NAME_IN.value || '').trim().slice(0, 24) || myName; NAME_IN.value = myName; try { localStorage.setItem('vw-walk-name', myName); } catch (e) { } MP.lastPub = 0; };
+      const MP_STATUS = document.createElement('span'); MP_STATUS.setAttribute('role', 'status'); MP_STATUS.style.fontSize = '12px';
+      const MP_RETRY = document.createElement('button'); MP_RETRY.textContent = 'Erneut verbinden'; MP_RETRY.hidden = true;
+      NAME_IN.parentElement.after(MP_STATUS, MP_RETRY);
+      function mpStatus(text, retry) { if (destroyed) return; MP_STATUS.textContent = 'Mitspieler: ' + text; MP_RETRY.hidden = !retry; }
+      MP_RETRY.onclick = () => { if (MP.cli) { MP.cli.removeAllListeners(); MP.cli.end(true); MP.cli = null; } MP.loading = false; mpStart(); };
+      mpStatus('noch nicht verbunden', false);
       function mpStart() {
-        if (MP.cli || MP.loading || !texBase || location.protocol === 'file:') return; MP.loading = true;
+        if (MP.cli || MP.loading || !texBase || location.protocol === 'file:') return; MP.loading = true; mpStatus('verbinde …', false);
         const url = new URLSearchParams(location.search).get('mqtt') || 'wss://broker.emqx.io:8084/mqtt';
         const go = () => { if (destroyed) { MP.loading = false; return; } try {
           const c = g.mqtt.connect(url, { clientId: 'vw_' + MP.me, clean: true, connectTimeout: 15000, reconnectPeriod: 4000, keepalive: 30, will: { topic: mpRoom() + '/p/' + MP.me, payload: '', qos: 0, retain: false } });
-          MP.cli = c; c.on('connect', () => { c.subscribe(mpRoom() + '/p/+'); MP.lastPub = 0; }); c.on('message', onPeer); c.on('error', (e) => console.warn('Mitspieler:', e && e.message));
-        } catch (e) { console.warn('Mitspieler nicht verfügbar:', e && e.message); } };
-        if (g.mqtt) go(); else { const sc = document.createElement('script'); sc.src = texBase + 'lib/mqtt.min.js'; sc.onload = go; sc.onerror = () => { MP.loading = false; }; document.head.appendChild(sc); }
+          MP.cli = c; MP.loading = false;
+          c.on('connect', () => { c.subscribe(mpRoom() + '/p/+', (err) => { if (err) { mpStatus('Abonnement fehlgeschlagen', true); return; } mpStatus('verbunden', false); MP.lastPub = -Infinity; MP.lastMsg = ''; if (walk && !document.hidden) mpPublish(performance.now(), false); }); });
+          c.on('reconnect', () => mpStatus('verbinde erneut …', true));
+          c.on('offline', () => mpStatus('Verbindung unterbrochen', true));
+          c.on('close', () => mpStatus('Verbindung unterbrochen', true));
+          c.on('message', onPeer); c.on('error', () => mpStatus('Verbindung fehlgeschlagen', true));
+        } catch (e) { MP.loading = false; mpStatus('nicht verfügbar', true); } };
+        if (g.mqtt) go(); else { const sc = document.createElement('script'); sc.src = texBase + 'lib/mqtt.min.js'; sc.onload = go; sc.onerror = () => { MP.loading = false; mpStatus('Bibliothek nicht geladen', true); sc.remove(); }; document.head.appendChild(sc); }
       }
       const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
       function onPeer(topic, msg) {
-        if (destroyed || !topic.startsWith(mpRoom() + '/p/') || msg.length > 2048) return;
-        const id = topic.split('/').pop(); if (id === MP.me || MP.mine.has(id)) return;
-        let d = null; try { d = msg && msg.length ? JSON.parse(new TextDecoder().decode(msg)) : null; } catch (e) { }
+        if (destroyed) return;
+        const packet = g.VWPeerProtocol.decode(mpRoom(), topic, msg); if (!packet) return;
+        const { id, data: d } = packet; if (id === MP.me || MP.mine.has(id)) return;
         let P = MP.peers.get(id);
-        if (d && (!g.VWTools.point(d) || !Number.isFinite(d.y) || !Number.isFinite(d.r) || !P && MP.peers.size >= 64)) return;
-        if (!d) { if (P) { scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id); invalidate(); } return; }
+        if (packet.leave) { removePeer(id); return; }
+        if (!P && MP.peers.size >= g.VWPeerProtocol.limit) return;
+        const now = performance.now(); if (P && now - P.seen < 60) return;
         if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
+        if (Math.hypot(d.x - P.x, d.y - P.y, d.z - P.z) > 50) { P.x = d.x; P.y = d.y; P.z = d.z; }
         Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, g: !!d.g, seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n; invalidate();
       }
       function mpPublish(now, moving) {
-        if (!MP.cli || !MP.cli.connected) return;
+        if (!MP.cli || !MP.cli.connected || document.hidden) return;
         const d = { n: myName, x: +(pos.x + CX).toFixed(2), y: +(pos.y + WL).toFixed(2), z: +(CZ - pos.z).toFixed(2), r: +HERO.rotation.y.toFixed(2), m: moving ? 1 : 0 };
+        if (!g.VWPeerProtocol.decode(mpRoom(), mpRoom() + '/p/' + MP.me, new TextEncoder().encode(JSON.stringify(d)))) return;
         const j = JSON.stringify(d); if (j === MP.lastMsg && now - MP.lastPub < 3000) return; if (now - MP.lastPub < 120) return;
         MP.cli.publish(mpRoom() + '/p/' + MP.me, j, { qos: 0 }); MP.lastMsg = j; MP.lastPub = now;
       }
@@ -1303,19 +1317,32 @@
       function pubGame(list) {
         mpStart(); if (!MP.cli || !MP.cli.connected) return; const now = performance.now();
         (list || []).forEach((p) => {
-          if (!p || !p.name) return; const id = 'g' + [...p.name].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) | 0, 7).toString(36).replace('-', 'm');
+          if (!p || typeof p.name !== 'string' || !g.VWTools.point(p) || !Number.isFinite(p.y)) return; const id = 'g' + MP.me + '_' + [...p.name].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) | 0, 7).toString(36).replace('-', 'm');
           const o = MP.mine.get(id), r = o ? Math.atan2(p.x - o.x, p.z - o.z) : 0, mv = o ? Math.hypot(p.x - o.x, p.z - o.z) > 0.3 : false;
-          const d = { n: p.name, x: +(+p.x).toFixed(2), y: +(+p.y).toFixed(2), z: +(+p.z).toFixed(2), r: mv ? +(-r + Math.PI).toFixed(2) : (o ? o.r : 0), m: mv ? 1 : 0, g: 1 };
+          const d = { n: p.name.slice(0, 24), x: +(+p.x).toFixed(2), y: +(+p.y).toFixed(2), z: +(+p.z).toFixed(2), r: mv ? +(-r + Math.PI).toFixed(2) : (o ? o.r : 0), m: mv ? 1 : 0, g: 1 };
           MP.mine.set(id, Object.assign({}, d, { t: now })); MP.cli.publish(mpRoom() + '/p/' + id, JSON.stringify(d), { qos: 0 });
         });
       }
       const peerList = () => [...MP.peers.values()].map((P) => ({ name: P.n, x: P.tx, y: P.ty, z: P.tz, web: !P.g }));
-      function mpLeave() { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + MP.me, '', { qos: 0 }); MP.lastMsg = ''; }
+      function removePeer(id) {
+        const P = MP.peers.get(id); if (!P) return;
+        scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id);
+        const resources = new Set(); P.h.g.traverse(o => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) resources.add(m); });
+        resources.forEach(r => { const i = HERO_MATS.indexOf(r); if (i >= 0) HERO_MATS.splice(i, 1); r.dispose(); }); invalidate();
+      }
+      function mpLeave() { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + MP.me, '', { qos: 0 }); MP.lastMsg = ''; MP.lastPub = -Infinity; }
+      setInterval(() => {
+        const now = performance.now();
+        for (const [id, P] of MP.peers) if (now - P.seen > g.VWPeerProtocol.ttl) removePeer(id);
+        for (const [id, p] of MP.mine) if (now - p.t > 6000) { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.mine.delete(id); }
+        if (walk && !document.hidden) mpPublish(now, false);
+      }, 3000);
+      listen(document, 'visibilitychange', () => { if (document.hidden) mpLeave(); else { MP.lastPub = -Infinity; if (walk) mpPublish(performance.now(), false); } });
       function mpTick(dt) {
         if (!MP.peers.size) return; const now = performance.now(); let moved = false; const pr = pane.getBoundingClientRect();
         for (const [id, P] of MP.peers) {
-          if (now - P.seen > 12000) { scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id); moved = true; continue; }
-          const k = Math.min(1, dt * 8); P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; P.z += (P.tz - P.z) * k;
+          if (now - P.seen > g.VWPeerProtocol.ttl) { removePeer(id); moved = true; continue; }
+          const k = 1 - Math.exp(-Math.min(dt, 1) * 8); P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; P.z += (P.tz - P.z) * k;
           let dr = P.tr - P.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); P.h.g.rotation.y += dr * k;
           const inside = reg && P.x >= reg.bounds[0] - 50 && P.x <= reg.bounds[1] + 50 && P.z >= reg.bounds[2] - 50 && P.z <= reg.bounds[3] + 50;
           P.h.g.visible = !!inside; P.h.g.position.set(P.x - CX, P.y - WL, CZ - P.z);
@@ -1631,7 +1658,7 @@
       }
       function capture() { if (!reg) return null; return { region: reg.id, camera: { x: tgt.x + CX, y: tgt.y + WL, z: CZ - tgt.z, dist, yaw, pit } }; }
       function dispose() {
-        running = false; originalRevision++; if (MP.cli) { mpLeave(); MP.cli.end(true); } if (originals) originals.dispose();
+        running = false; originalRevision++; if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
         const resources = new Set(); scene.traverse((o) => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) { resources.add(m); for (const v of Object.values(m)) if (v && v.isTexture) resources.add(v); } }); resources.forEach((r) => r.dispose()); ren.dispose(); ren.forceContextLoss();
       }
       return { drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
