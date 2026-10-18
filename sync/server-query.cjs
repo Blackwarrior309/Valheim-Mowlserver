@@ -31,7 +31,7 @@ function cstr(b, o) { const e = b.indexOf(0, o); return [b.toString('utf8', o, e
     let port = +E.VS_GAME_PORT || 0;
     if (!port) {
       const ftp = new FTP({ host: E.VS_FTP_HOST, port: +E.VS_FTP_PORT || 21, user: E.VS_FTP_USER, password: E.VS_FTP_PASSWORD || '', secure: /^(1|true|ja|yes)$/i.test(E.VS_FTP_SECURE || '') });
-      await ftp.connect(); try { const t = (await ftp.get('/valheim/docker_start_server.sh')).toString('utf8'); const m = t.match(/-port[\s=]+"?(\d{2,5})/); if (m) port = +m[1]; } finally { ftp.close(); }
+      await ftp.connect(); try { const t = (await ftp.get('/valheim/docker_start_server.sh')).toString('utf8'); const m = t.match(/-port[\s=]+"?(\d{2,5})/); if (m) port = +m[1]; else out.startScript = [...new Set(t.match(/(^|\s)-[a-zA-Z]+|\$\{?[A-Z_]+\}?/g) || [])].map((x) => x.trim()).join(' '); } finally { ftp.close(); }
     }
     if (!port) throw new Error('Spielport nicht gefunden');
     const ip = (await dns.lookup(E.VS_GAME_HOST || E.VS_FTP_HOST)).address;
@@ -48,5 +48,5 @@ function cstr(b, o) { const e = b.indexOf(0, o); return [b.toString('utf8', o, e
   const j = JSON.stringify(out);
   if (process.argv[2]) fs.writeFileSync(process.argv[2], j); console.log(j);
   const esc = (x) => x.replace(/%/g, '%25').replace(/\n/g, '%0A');
-  console.log('::notice title=Steam-Abfrage::' + esc(out.ok ? `${out.name}: ${out.players}/${out.maxPlayers} online` + (out.list ? '\nListe: ' + (out.list.map((x) => (x.n || '(ohne Name)') + ' ' + Math.round(x.s / 60) + ' min').join(', ') || 'leer') : '\n' + (out.listError || '')) : 'Fehler: ' + out.error));
+  console.log('::notice title=Steam-Abfrage::' + esc(out.ok ? `${out.name}: ${out.players}/${out.maxPlayers} online` + (out.list ? '\nListe: ' + (out.list.map((x) => (x.n || '(ohne Name)') + ' ' + Math.round(x.s / 60) + ' min').join(', ') || 'leer') : '\n' + (out.listError || '')) : 'Fehler: ' + out.error + (out.startScript ? '\nStartskript-Schalter: ' + out.startScript : '')));
 })();
