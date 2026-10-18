@@ -48,6 +48,7 @@
 .vw-ud button{width:62px;height:62px;border-radius:50%;font-size:22px;background:rgba(15,20,24,.55);color:#f1e6cf;border:2px solid rgba(216,162,74,.7);touch-action:none;user-select:none}
 .vw-ud button.on{background:rgba(216,162,74,.85);color:#1a1a1a}
 .vw-hud{position:absolute;left:calc(50% + 160px);top:12px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--acc);border-radius:10px;padding:6px 12px;font-size:12px;text-align:center;max-width:calc(100% - 360px);z-index:5}
+.vw-act2{position:absolute;right:24px;bottom:24px;z-index:5}.vw-act2 button{width:66px;height:66px;border-radius:50%;font-size:26px;background:rgba(15,20,24,.55);color:#f1e6cf;border:2px solid rgba(216,162,74,.7)}@media (min-width:761px){.vw-act2{display:none}}
 .vw-cross{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;pointer-events:none;z-index:5}
 .vw-cross:before,.vw-cross:after{content:"";position:absolute;background:rgba(255,255,255,.8)}.vw-cross:before{left:6px;top:0;width:2px;height:14px}.vw-cross:after{top:6px;left:0;height:2px;width:14px}
 .vw-scroll{position:absolute;inset:0;overflow:auto;padding:18px 16px 60px}
@@ -101,7 +102,7 @@
   <div class="vw-pane" data-p="3d" hidden><canvas class="gl"></canvas><div class="vw-labels"></div>
     <div class="vw-side s3"><button class="vw-mob" data-min>Menü</button>
       <h2>Gebiet</h2><select class="reg" style="width:100%"></select>
-      <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button></div>
+      <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button><button class="walkBtn">🚶 Laufen (G)</button></div>
       <div class="tl" hidden><h2>Zeitraffer</h2><div class="row" style="flex-wrap:nowrap;align-items:center"><button class="tlPlay" aria-label="Abspielen">▶</button><input type="range" class="tlR" min="0" max="0" value="0" style="flex:1;min-width:0"></div><div class="sub tlInfo" style="margin-top:4px"></div><div class="tlList" style="max-height:170px;overflow:auto;margin-top:6px"></div></div>
       <h2>Gebäude exportieren</h2>
       <div class="row"><button class="selMode">☝ Auswählen</button><select class="selHow" style="flex:1"><option value="0">Zusammenhängendes Gebäude</option><option value="6">Umkreis 6 m</option><option value="12">Umkreis 12 m</option><option value="25">Umkreis 25 m</option><option value="1">Einzelnes Teil</option></select></div>
@@ -132,7 +133,7 @@
     <div class="vw-tip" hidden></div><div class="vw-chest" hidden></div>
     <div class="vw-joy" hidden><div class="k"></div></div>
     <div class="vw-ud" hidden><button data-ud="up" aria-label="Hoch">▲</button><button data-ud="fast" aria-label="Schnell">»</button><button data-ud="dn" aria-label="Runter">▼</button></div>
-    <div class="vw-hud" hidden></div><div class="vw-cross" hidden></div>
+    <div class="vw-hud" hidden></div><div class="vw-act2" hidden><button aria-label="Benutzen">✋</button></div><div class="vw-cross" hidden></div>
   </div>
   <div class="vw-pane" data-p="chests" hidden><div class="vw-scroll"><div class="vw-wrap">
     <div class="vw-bar"><input type="search" class="kq" placeholder="Item suchen, z. B. Eisen, Met, Kernholz …" autocomplete="off"><select class="ka"></select><button class="klab">Nur beschriftete</button><button class="kgame" hidden title="Öffnet die Kisten-Suche im laufenden Spiel und setzt Pins auf der Karte">🎯 Im Spiel suchen</button></div>
@@ -501,6 +502,7 @@
       let tgt = new THREE.Vector3(), dist = 400, yaw = -0.6, pit = 0.9;
       function views(v) {
         if (fly) toggleFly(false);
+        if (walk) toggleWalk(false);
         let c = reg ? W(reg.center[0], 34, reg.center[1]) : new THREE.Vector3();
         if (reg && reg.id === 'world' && S.bases[0] && v !== 'top') c = W(S.bases[0].center[0], 34, S.bases[0].center[1]);
         if (v === 'top') { tgt.copy(c); dist = Math.max(reg.bounds[1] - reg.bounds[0], reg.bounds[3] - reg.bounds[2]) * 1.15; pit = 1.52; yaw = 0; }
@@ -534,6 +536,7 @@
         const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF;
         // Gelände
         const NX = r.nx, NZ = r.nz, RS = r.res; const hu = b64u8(r.h); const H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2);
+        TER = { H, NX, NZ, RS, X0, Z0 };
         const hAt = (i, j) => H[Math.min(NZ - 1, Math.max(0, j)) * NX + Math.min(NX - 1, Math.max(0, i))] / 10;
         const tg = new THREE.BufferGeometry(), pos = new Float32Array(NX * NZ * 3), col = new Float32Array(NX * NZ * 3);
         const cSand = new THREE.Color(0xb9a273), cG = new THREE.Color(0x5f8a3a), cG2 = new THREE.Color(0x45692c), cRock = new THREE.Color(0x77736a), cSea = new THREE.Color(0x5e5c4a), cDirt = new THREE.Color(0x6b5a3c);
@@ -816,15 +819,16 @@
       cv.addEventListener('pointermove', (e) => {
         const p = ptrs.get(e.pointerId); if (!p) { hover(e); return; }
         const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+        if (walk) { lookWalk(dx, dy); return; }
         if (fly) { fyw -= dx * 0.0045; fpt = Math.max(-1.5, Math.min(1.5, fpt - dy * 0.0045)); return; }
         if (ptrs.size === 2) { const a = [...ptrs.values()]; const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); if (pd) dist *= pd / d; pd = d; pan(dx / 2, dy / 2); }
         else if (drag && (drag.b === 2 || drag.shift)) pan(dx, dy); else { yaw -= dx * 0.006; pit += dy * 0.005; }
       });
-      cv.addEventListener('wheel', (e) => { e.preventDefault(); if (fly) { fspd = Math.max(2, Math.min(200, fspd * Math.exp(-e.deltaY * 0.0015))); return; } dist *= Math.exp(e.deltaY * 0.0012); }, { passive: false });
+      cv.addEventListener('wheel', (e) => { e.preventDefault(); if (walk) { wdist = Math.max(0, Math.min(14, (wdist < 0.6 && e.deltaY > 0 ? 1.2 : wdist * Math.exp(e.deltaY * 0.0016)))); if (wdist < 0.6) wdist = 0; invalidate(); return; } if (fly) { fspd = Math.max(2, Math.min(200, fspd * Math.exp(-e.deltaY * 0.0015))); return; } dist *= Math.exp(e.deltaY * 0.0012); }, { passive: false });
       const ray = new THREE.Raycaster(), mv = new THREE.Vector2();
       function rayHit(e, withTerrain) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const objs = pickList.filter((m) => m.visible); if (withTerrain) objs.push(terrain); return ray.intersectObjects(objs)[0]; }
       const arrAt = (h) => { const a = h.object.userData.arr, o = h.instanceId * 6; return [a[o], a[o + 1], a[o + 2], a[o + 3], a[o + 4], a[o + 5]]; };
-      cv.addEventListener('dblclick', (e) => { if (fly) return; const h = rayHit(e, true); if (h) { tgt.copy(h.point); dist = Math.max(30, dist * 0.45); } });
+      cv.addEventListener('dblclick', (e) => { if (fly || walk) return; const h = rayHit(e, true); if (h) { tgt.copy(h.point); dist = Math.max(30, dist * 0.45); } });
       const TIP = $('.vw-tip'); let lastHover = 0;
       function hover(e) {
         const now = performance.now(); if (now - lastHover < 60) return; lastHover = now;
@@ -848,7 +852,7 @@
         else { const f = fdir(); tgt.copy(fp).addScaledVector(f, 40); dist = 40; yaw = Math.atan2(-f.x, -f.z); pit = Math.max(0.08, Math.asin(-f.y)); }
       }
       FB.onclick = () => toggleFly();
-      const kd = (e) => { if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.code === 'KeyF') { toggleFly(); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if (fly && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
+      const kd = (e) => { if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.code === 'KeyF' && !walk) { toggleFly(); return; } if (e.code === 'KeyG') { toggleWalk(); return; } if (walk && e.code === 'KeyE') { interact(); return; } if (e.code === 'Escape' && walk && document.pointerLockElement !== cv) { toggleWalk(false); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if ((fly || walk) && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
       const ku = (e) => { keys[e.code] = false; };
       addEventListener('keydown', kd); addEventListener('keyup', ku); addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
       let jid = null;
@@ -878,6 +882,181 @@
         HUD.innerHTML = `<b>Flugmodus</b> · ${Math.round(fspd * (boost ? 4 : 1))} m/s · Höhe ${fp.y.toFixed(0)} m<br><span class="m sub">Joystick = fliegen · ziehen = umsehen · ▲▼ Höhe · » schnell</span><span class="k sub">WASD/Pfeile · Maus ziehen = umsehen · Leertaste/E hoch · C/Q runter · Shift schnell · Mausrad Tempo · Gamepad · F/Esc beenden</span>`;
       }
 
+      // ---- Laufmodus: Figur in 3rd/1st Person, Kollision mit Bauteilen, Türen und Portale (E)
+      let walk = false, wyaw = 0, wpit = 0.25, wdist = 4.5, vy = 0, onGround = false, anim = 0, lockLook = false, wmsg = '', wmsgT = 0;
+      const pos = new THREE.Vector3(), WB = $('.walkBtn'), ACT = $('.vw-act2');
+      let OBB = [], GRID = new Map(), DOORS = [], TER = null;
+      const GS = 4, gkey = (x, z) => Math.floor(x / GS) + ',' + Math.floor(z / GS);
+      const iq = new THREE.Quaternion(), lv = new THREE.Vector3(), ld = new THREE.Vector3();
+      function terrainY(x, z) { // Szenen-Koordinaten → Geländehöhe (bilinear)
+        if (!TER) return -1e9; const wx = x + CX, wz = CZ - z, fi = (wx - TER.X0) / TER.RS, fj = (wz - TER.Z0) / TER.RS;
+        const i = Math.max(0, Math.min(TER.NX - 2, Math.floor(fi))), j = Math.max(0, Math.min(TER.NZ - 2, Math.floor(fj))), u = Math.min(1, Math.max(0, fi - i)), v = Math.min(1, Math.max(0, fj - j));
+        const h = (a, b) => TER.H[b * TER.NX + a] / 10;
+        return (h(i, j) * (1 - u) + h(i + 1, j) * u) * (1 - v) + (h(i, j + 1) * (1 - u) + h(i + 1, j + 1) * u) * v - WL;
+      }
+      function buildColliders() { // aus den gezeichneten Bauteilen: orientierte Boxen in einem 4-m-Raster
+        OBB = []; GRID = new Map(); DOORS = [];
+        pickList.forEach((im) => {
+          const a = im.userData.arr; if (!a) return;
+          for (let k = 0; k < a.length / 6; k++) {
+            const o = k * 6, ty = reg.types[a[o + 4]], nm = ty[0], tilt = (ty[4] || 0) * Math.PI / 180, alongX = ty[1] >= ty[3] * 1.5;
+            const c = new THREE.Vector3(a[o] - CX, a[o + 1] - WL, -(a[o + 2] - CZ));
+            if (tilt && alongX) eu.set(0, -a[o + 3] * Math.PI / 180, tilt, 'YXZ'); else eu.set(-tilt, -a[o + 3] * Math.PI / 180, 0, 'YXZ');
+            const qq = new THREE.Quaternion().setFromEuler(eu), h = new THREE.Vector3(ty[1] / 2, ty[2] / 2, ty[3] / 2);
+            const door = /door|gate/i.test(nm) && !/portal|drawbridge/i.test(nm), portal = /^portal/i.test(nm), cloth = /cloth|banner|rug|carpet|torch|Candle|lantern|garland|sapling|mistletoe/i.test(nm);
+            const r = Math.hypot(h.x, h.y, h.z);
+            const b = { c, q: qq, iq: qq.clone().invert(), h, r, door, portal, open: false, pass: cloth, im, k, ty };
+            OBB.push(b); if (door) DOORS.push(b);
+            const x0 = Math.floor((c.x - r) / GS), x1 = Math.floor((c.x + r) / GS), z0 = Math.floor((c.z - r) / GS), z1 = Math.floor((c.z + r) / GS);
+            for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const kk = gx + ',' + gz; let l = GRID.get(kk); if (!l) GRID.set(kk, (l = [])); l.push(b); }
+          }
+        });
+      }
+      const near = (x, z) => GRID.get(gkey(x, z)) || [];
+      function rayBox(b, o, d, tmax) { // Strahl gegen orientierte Box → Abstand oder null
+        lv.copy(o).sub(b.c).applyQuaternion(b.iq); ld.copy(d).applyQuaternion(b.iq);
+        let t0 = 0, t1 = tmax;
+        for (const ax of ['x', 'y', 'z']) {
+          if (Math.abs(ld[ax]) < 1e-9) { if (Math.abs(lv[ax]) > b.h[ax]) return null; continue; }
+          let a1 = (-b.h[ax] - lv[ax]) / ld[ax], a2 = (b.h[ax] - lv[ax]) / ld[ax]; if (a1 > a2) [a1, a2] = [a2, a1];
+          t0 = Math.max(t0, a1); t1 = Math.min(t1, a2); if (t0 > t1) return null;
+        }
+        return t0;
+      }
+      const DOWN = new THREE.Vector3(0, -1, 0);
+      function groundY(x, z, fromY) { // höchste begehbare Fläche unter fromY
+        let g = terrainY(x, z); const o = new THREE.Vector3(x, fromY, z);
+        for (const b of near(x, z)) { if (b.pass || (b.door && b.open)) continue; if (Math.abs(b.c.x - x) > b.r || Math.abs(b.c.z - z) > b.r) continue; const t = rayBox(b, o, DOWN, 40); if (t !== null) g = Math.max(g, fromY - t); }
+        return g;
+      }
+      const RAD = 0.35, STEP = 0.55, HEIGHT = 1.8;
+      function pushOut(p) { // seitliche Kollision: Körper als Säule aus drei Kugeln
+        for (let it = 0; it < 2; it++) for (const b of near(p.x, p.z)) {
+          if (b.pass || (b.door && b.open)) continue; if (Math.abs(b.c.x - p.x) > b.r + RAD || Math.abs(b.c.z - p.z) > b.r + RAD) continue;
+          for (const hy of [STEP + 0.15, 1.0, 1.6]) {
+            lv.set(p.x, p.y + hy, p.z).sub(b.c).applyQuaternion(b.iq);
+            const cx = Math.max(-b.h.x, Math.min(b.h.x, lv.x)), cy = Math.max(-b.h.y, Math.min(b.h.y, lv.y)), cz = Math.max(-b.h.z, Math.min(b.h.z, lv.z));
+            ld.set(lv.x - cx, lv.y - cy, lv.z - cz); const d = ld.length(); if (d >= RAD) continue;
+            if (d < 1e-6) { ld.set(lv.x / (b.h.x || 1), 0, lv.z / (b.h.z || 1)); if (Math.abs(ld.x) > Math.abs(ld.z)) ld.set(Math.sign(lv.x) || 1, 0, 0); else ld.set(0, 0, Math.sign(lv.z) || 1); ld.multiplyScalar(RAD); }
+            else ld.multiplyScalar((RAD - d) / d);
+            ld.applyQuaternion(b.q); ld.y = 0; p.add(ld);
+          }
+        }
+      }
+      // Figur aus einfachen Formen (eigenes Modell, kein Spiel-Asset)
+      const HERO = new THREE.Group(); HERO.visible = false; scene.add(HERO);
+      const hm = (c) => new THREE.MeshLambertMaterial({ color: c });
+      const part = (geo, mat, x, y, z, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; (parent || HERO).add(m); return m; };
+      const skin = hm(0xe0b090), tunic = hm(0x6d4a2b), pants = hm(0x4a4038), iron = hm(0x8a8f95), beard = hm(0xb0602a), boots = hm(0x2e2620);
+      const legL = new THREE.Group(), legR = new THREE.Group(), armL = new THREE.Group(), armR = new THREE.Group();
+      [[legL, -0.13], [legR, 0.13]].forEach(([g, x]) => { g.position.set(x, 0.85, 0); HERO.add(g); part(new THREE.BoxGeometry(0.2, 0.75, 0.22), pants, 0, -0.4, 0, g); part(new THREE.BoxGeometry(0.22, 0.14, 0.32), boots, 0, -0.78, 0.04, g); });
+      part(new THREE.BoxGeometry(0.5, 0.62, 0.3), tunic, 0, 1.15, 0); part(new THREE.BoxGeometry(0.54, 0.08, 0.33), boots, 0, 0.9, 0);
+      [[armL, -0.33], [armR, 0.33]].forEach(([g, x]) => { g.position.set(x, 1.42, 0); HERO.add(g); part(new THREE.BoxGeometry(0.15, 0.6, 0.17), tunic, 0, -0.27, 0, g); part(new THREE.BoxGeometry(0.13, 0.12, 0.14), skin, 0, -0.62, 0, g); });
+      part(new THREE.SphereGeometry(0.17, 12, 10), skin, 0, 1.62, 0);
+      const beardM = part(new THREE.ConeGeometry(0.15, 0.32, 8), beard, 0, 1.45, 0.08); beardM.rotation.x = Math.PI;
+      part(new THREE.SphereGeometry(0.185, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), iron, 0, 1.66, 0);
+      [-1, 1].forEach((s) => { const h = part(new THREE.ConeGeometry(0.045, 0.25, 6), hm(0xe8e0c8), s * 0.2, 1.8, 0); h.rotation.z = -s * 0.9; });
+
+      function say(t) { wmsg = t; wmsgT = performance.now(); }
+      function placeAt(x, z, y) { pos.set(x, y !== undefined ? y : groundY(x, z, 500) , z); vy = 0; }
+      function spawn() { // auf den nächsten Boden eines Gebäudes stellen, sonst aufs nächste Land
+        let best = null, bd = 1e9;
+        OBB.forEach((b) => { if (!/floor|stair/i.test(b.ty[0]) || b.ty[4] || b.c.y < -0.8) return; const d = Math.hypot(b.c.x - tgt.x, b.c.z - tgt.z); if (d < bd) { bd = d; best = b; } });
+        if (best && bd < 120) { pos.set(best.c.x, groundY(best.c.x, best.c.z, best.c.y + 1.2), best.c.z); vy = 0; return; }
+        for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
+        placeAt(tgt.x, tgt.z);
+      }
+      if (/[?&]debug/.test(location.search)) g.__walk = { get pos() { return pos; }, get OBB() { return OBB; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
+      function toggleWalk(on) {
+        if (on === undefined) on = !walk; if (on === walk) return;
+        if (on && !reg) return;
+        if (on && fly) toggleFly(false);
+        walk = on; WB.classList.toggle('on', walk); HERO.visible = walk; HUD.hidden = CROSS.hidden = !walk; JOY.hidden = !walk || innerWidth > 760; ACT.hidden = !walk;
+        setShadows(!walk && Q.shadows === '1');
+        if (walk) {
+          buildColliders(); spawn(); wyaw = yaw + Math.PI; wpit = 0.25; wdist = 4.5;
+          cam.near = 0.08; cam.updateProjectionMatrix(); if (innerWidth <= 760) $('.s3').classList.add('min');
+        } else {
+          if (document.pointerLockElement === cv) document.exitPointerLock();
+          tgt.copy(pos); tgt.y += 1; dist = 30; yaw = wyaw - Math.PI; pit = 0.5; cam.near = 0.5; cam.updateProjectionMatrix();
+        }
+        invalidate();
+      }
+      WB.onclick = () => toggleWalk();
+      function lookWalk(dx, dy) { wyaw -= dx * 0.0042; wpit = Math.max(-1.2, Math.min(1.35, wpit + dy * 0.0035)); }
+      cv.addEventListener('click', () => { if (walk && innerWidth > 760 && document.pointerLockElement !== cv && cv.requestPointerLock) cv.requestPointerLock(); });
+      document.addEventListener('mousemove', (e) => { if (walk && document.pointerLockElement === cv) lookWalk(e.movementX, e.movementY); });
+      function interact() {
+        const f = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw));
+        let best = null, bd = 2.8;
+        for (const b of OBB) { if (!b.door && !b.portal) continue; const dx = b.c.x - pos.x, dz = b.c.z - pos.z, d = Math.hypot(dx, dz); if (d > 4) continue; if (Math.abs(b.c.y - (pos.y + 1)) > 3) continue; const sc = d - 0.8 * (dx * f.x + dz * f.z) / (d || 1); if (sc < bd) { bd = sc; best = b; } }
+        if (!best) { say('Hier ist keine Tür und kein Portal.'); return; }
+        if (best.door) {
+          best.open = !best.open; const m = new THREE.Matrix4(); best.im.getMatrixAt(best.k, m);
+          if (!best.m0) best.m0 = m.clone();
+          if (best.open) { // um die Kante (Scharnier) aufschwingen
+            const hinge = new THREE.Vector3(-best.h.x, 0, 0).applyQuaternion(best.q).add(best.c), side = lv.copy(pos).sub(best.c).applyQuaternion(best.iq).z > 0 ? -1 : 1, rot = new THREE.Matrix4().makeRotationY(Math.PI / 2 * side);
+            const t = new THREE.Matrix4().makeTranslation(hinge.x, hinge.y, hinge.z).multiply(rot).multiply(new THREE.Matrix4().makeTranslation(-hinge.x, -hinge.y, -hinge.z));
+            best.im.setMatrixAt(best.k, t.multiply(best.m0));
+          } else best.im.setMatrixAt(best.k, best.m0);
+          best.im.instanceMatrix.needsUpdate = true; say(best.open ? 'Tür geöffnet' : 'Tür geschlossen'); invalidate(); return;
+        }
+        // Portal: Gegenstück mit gleichem Namen suchen
+        const wx = best.c.x + CX, wz = CZ - best.c.z, P = S.portals || [];
+        let me = null, md = 6; P.forEach((p) => { const d = Math.hypot(p.x - wx, p.z - wz); if (d < md) { md = d; me = p; } });
+        if (!me) { say('Portal ohne Namen'); return; }
+        const dest = P.find((p) => p !== me && p.tag === me.tag && Math.hypot(p.x - me.x, p.z - me.z) > 6);
+        if (!dest) { say('Portal „' + me.tag + '“ hat kein Gegenstück'); return; }
+        const inside = (r) => dest.x >= r.bounds[0] && dest.x <= r.bounds[1] && dest.z >= r.bounds[2] && dest.z <= r.bounds[3];
+        if (!inside(reg)) { const A = areas(); let i = A.findIndex((r) => r.id !== 'world' && inside(r)); if (i < 0) i = A.findIndex((r) => inside(r)); if (i < 0) { say('Ziel liegt außerhalb der geladenen Karte'); return; } const keepWalk = walk; walk = false; selectRegion(i); walk = keepWalk; buildColliders(); }
+        const dx = dest.x - CX, dz = -(dest.z - CZ); const back = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw));
+        // Höhe: Fuß des Ziel-Portals (Portale im Snapshot haben nur x/z), sonst Gelände
+        let pb = null, pd2 = 8; OBB.forEach((b) => { if (!b.portal) return; const d = Math.hypot(b.c.x - dx, b.c.z - dz); if (d < pd2) { pd2 = d; pb = b; } });
+        const baseY = pb ? pb.c.y - pb.h.y : terrainY(dx, dz);
+        const ox = dx - back.x * 2.2, oz = dz - back.z * 2.2; placeAt(ox, oz, 0); pos.y = groundY(ox, oz, baseY + 1.5);
+        say('Portal „' + me.tag + '“ → angekommen'); invalidate();
+      }
+      $('.vw-act2 button').onclick = () => interact();
+      function walkStep(dt) {
+        let mx = 0, mz = 0, run = keys.ShiftLeft || keys.ShiftRight, lx = 0, ly = 0, jump = keys.Space;
+        if (keys.KeyW || keys.ArrowUp) mz += 1; if (keys.KeyS || keys.ArrowDown) mz -= 1; if (keys.KeyD || keys.ArrowRight) mx += 1; if (keys.KeyA || keys.ArrowLeft) mx -= 1;
+        mx += jx; mz -= jy;
+        const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (const gp of gps) { if (!gp) continue; mx += dz(gp.axes[0] || 0); mz -= dz(gp.axes[1] || 0); lx += dz(gp.axes[2] || 0); ly += dz(gp.axes[3] || 0); if (gp.buttons[0] && gp.buttons[0].pressed) jump = true; if (gp.buttons[10] && gp.buttons[10].pressed) run = true; }
+        wyaw -= lx * 2.4 * dt; wpit = Math.max(-1.2, Math.min(1.35, wpit + ly * 1.8 * dt));
+        const l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; }
+        const sp = (run ? 7 : 4) * dt, fw = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw)), rt = new THREE.Vector3(-Math.cos(wyaw), 0, Math.sin(wyaw));
+        const mv = fw.clone().multiplyScalar(mz).addScaledVector(rt, mx);
+        const prev = pos.clone(); pos.addScaledVector(mv, sp * (l > 0 ? 1 : 0) / (l > 1 ? 1 : 1));
+        // Schwerkraft, Stufen, Wasser
+        const g = groundY(pos.x, pos.z, pos.y + STEP), water = -1.3;
+        if (onGround && jump) { vy = 5.2; onGround = false; }
+        vy -= 18 * dt; pos.y += vy * dt;
+        const floor = Math.max(g, water);
+        if (pos.y <= floor) { pos.y = floor; vy = 0; onGround = true; } else onGround = pos.y - floor < 0.05;
+        pushOut(pos);
+        // Kopf stößt an Decke
+        if (vy > 0) { const up = new THREE.Vector3(0, 1, 0), o = new THREE.Vector3(pos.x, pos.y + 1.2, pos.z); for (const b of near(pos.x, pos.z)) { if (b.pass || (b.door && b.open)) continue; const t = rayBox(b, o, up, 0.7); if (t !== null) { vy = 0; break; } } }
+        // Figur
+        if (l > 0.05) { const want = Math.atan2(mv.x, mv.z), cur = HERO.rotation.y; let d = want - cur; d = Math.atan2(Math.sin(d), Math.cos(d)); HERO.rotation.y = cur + d * Math.min(1, dt * 12); anim += dt * (run ? 13 : 9) * Math.min(1, l); }
+        else anim *= 0.85;
+        const sw = Math.sin(anim) * (l > 0.05 ? 0.7 : 0) * (onGround ? 1 : 0.3);
+        legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw * 0.8; armR.rotation.x = sw * 0.8;
+        HERO.position.copy(pos);
+        // Kamera: hinter dem Kopf, Mausrad = Abstand bis in die Ich-Perspektive; nicht durch Wände
+        const head = pos.clone(); head.y += 1.62;
+        const dir = new THREE.Vector3(-Math.sin(wyaw) * Math.cos(wpit), Math.sin(wpit), -Math.cos(wyaw) * Math.cos(wpit));
+        let cd = wdist;
+        if (cd > 0.3) { for (const kx of [-1, 0, 1]) for (const kz of [-1, 0, 1]) for (const b of near(head.x + kx * GS, head.z + kz * GS)) { if (b.pass || (b.door && b.open)) continue; const t = rayBox(b, head, dir, cd); if (t !== null && t > 0.05) cd = Math.max(0.3, t - 0.2); } }
+        const cp = head.clone().addScaledVector(dir, cd); cp.y = Math.max(cp.y, terrainY(cp.x, cp.z) + 0.25);
+        const first = cd < 0.6; HERO.visible = !first; CROSS.hidden = !first;
+        cam.position.copy(first ? head : cp);
+        if (first) cam.lookAt(head.clone().addScaledVector(dir, -1)); else cam.lookAt(head.x, head.y - 0.1, head.z);
+        if (pos.distanceTo(prev) > 0 || Math.abs(vy) > 0) invalidate();
+        const msg = performance.now() - wmsgT < 2500 ? `<br><b style="color:var(--acc)">${esc(wmsg)}</b>` : '';
+        HUD.innerHTML = `<b>Laufen</b> · ${first ? 'Ich-Perspektive' : '3rd Person'}${msg}<br><span class="m sub">Joystick = laufen · ziehen = umsehen · ✋ = Tür/Portal</span><span class="k sub">WASD laufen · Shift rennen · Leertaste springen · E Tür/Portal · Mausrad Abstand · Klick = Maus fangen · G/Esc beenden</span>`;
+      }
+
       // ---- Schleife
       let running = false, last = performance.now(), lastKey = '';
       const pv2 = new THREE.Vector3();
@@ -886,7 +1065,7 @@
       function frame() {
         if (!running) return;
         const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
-        if (fly) flyStep(dt); else orbit();
+        if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit();
         if (bigArea) { scene.fog.far = Math.max(14000 * ({ near: 0.5, mid: 1, far: 2 }[Q.range] || 1), (fly ? 0 : dist) * 2.2); scene.fog.near = scene.fog.far * 0.2; }
         cam.updateMatrixWorld();
         const key = cam.matrixWorld.elements.map((v) => v.toFixed(3)).join(',');
