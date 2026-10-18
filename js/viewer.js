@@ -1063,11 +1063,15 @@
       function chestAt(p) { let best = -1, bd = 1.2; reg.chests.forEach((c, i) => { const d = Math.hypot(c.x - p[0], c.y - p[1], c.z - p[2]); if (d < bd) { bd = d; best = i; } }); return best; }
 
       // ---- Eingabe (Orbit)
-      const ptrs = new Map(); let drag = null, pd = 0, downAt = null;
+      const ptrs = new Map(); let drag = null, pd = 0, downAt = null, grab = null;
+      /* Online-Wikinger mit der Maus packen: nur hier im Viewer, im Spiel bewegt sich nichts */
+      function opAt(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const L = [...OP.values()].filter((O) => O.h.g.visible); const hits = ray.intersectObjects(L.map((O) => O.h.g), true); if (!hits.length) return null; let o = hits[0].object; while (o && !L.some((O) => O.h.g === o)) o = o.parent; return L.find((O) => O.h.g === o) || null; }
+      function grabMove(e) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const h = ray.intersectObject(terrain)[0]; if (!h) return; const O = grab.O; O.held = true; O.fall = null; O.wait = 0; O.ret = false; O.gy = h.point.y + WL; O.x = h.point.x + CX; O.z = CZ - h.point.z; O.y = O.gy + 2.2; cv.style.cursor = 'grabbing'; invalidate(); }
       cv.addEventListener('contextmenu', (e) => e.preventDefault());
-      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
+      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!walk && !fly && !areaPick && !SEL.active && e.button === 0 && ptrs.size === 1) { const O = opAt(e); if (O) grab = { O, x0: e.clientX, y0: e.clientY, moved: false }; } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
       const pUp = (e) => {
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
+        if (grab) { const G = grab; grab = null; cv.style.cursor = 'grab'; if (G.moved) { G.O.held = false; G.O.fall = { vy: 0 }; invalidate(); return; } }
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
           if (areaPick) { const hit = rayHit(e, true); if (hit) { const p = { x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }; if (!areaFirst) { areaFirst = p; areaPick(p, null); } else { const fn = areaPick, first = areaFirst; areaPick = null; areaFirst = null; cv.style.cursor = ''; fn(first, p); } } return; }
           const rect = cv.getBoundingClientRect(); mv.set((e.clientX-rect.left)/rect.width*2-1, -(e.clientY-rect.top)/rect.height*2+1); ray.setFromCamera(mv,cam);
@@ -1081,7 +1085,8 @@
       cv.addEventListener('pointerup', pUp); cv.addEventListener('pointercancel', pUp);
       function pan(dx, dy) { const s = dist * 0.0016; const fw = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), rt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)); tgt.addScaledVector(rt, -dx * s).addScaledVector(fw, -dy * s); }
       cv.addEventListener('pointermove', (e) => {
-        const p = ptrs.get(e.pointerId); if (!p) { if (walk) { TIP.hidden = true; return; } hover(e); return; }
+        const p = ptrs.get(e.pointerId); if (!p) { if (walk) { TIP.hidden = true; return; } if (!areaPick) cv.style.cursor = opAt(e) ? 'grab' : ''; hover(e); return; }
+        if (grab) { if (!grab.moved && Math.hypot(e.clientX - grab.x0, e.clientY - grab.y0) < 5) return; grab.moved = true; grabMove(e); TIP.hidden = true; return; }
         const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
         if (walk) { lookWalk(dx, dy); return; }
         if (fly) { fyw -= dx * 0.0045; fpt = Math.max(-1.5, Math.min(1.5, fpt - dy * 0.0045)); return; }
@@ -1288,17 +1293,32 @@
       function opTick(dt) {
         if (!OP.size) return; let moved = false; const k = dt ? Math.min(1, dt * 4) : 0;
         for (const O of OP.values()) {
+          if (O.held || O.fall || O.wait > 0 || O.ret) { opGrabbed(O, dt); moved = true; }
+          else {
           if (k) { O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (O.tz - O.z) * k; }
           let dr = O.r - O.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); O.h.g.rotation.y += dr * (dt ? Math.min(1, dt * 8) : 1);
           const going = Math.abs(O.tx - O.x) + Math.abs(O.tz - O.z) > 0.05;
           if (going) { O.anim += dt * (O.run > 1.2 ? 13 : 9); moved = true; } else O.anim *= 0.85;
-          const sw = Math.sin(O.anim) * (going ? 0.7 : 0); O.h.legL.rotation.x = sw; O.h.legR.rotation.x = -sw; O.h.armL.rotation.x = -sw * 0.8; O.h.armR.rotation.x = sw * 0.8;
+          const sw = Math.sin(O.anim) * (going ? 0.7 : 0); O.h.legL.rotation.x = sw; O.h.legR.rotation.x = -sw; O.h.armL.rotation.x = -sw * 0.8; O.h.armR.rotation.x = sw * 0.8; O.h.armL.rotation.z = O.h.armR.rotation.z = 0; O.h.g.rotation.z = 0;
+          }
           const inside = reg && O.x >= reg.bounds[0] - 50 && O.x <= reg.bounds[1] + 50 && O.z >= reg.bounds[2] - 50 && O.z <= reg.bounds[3] + 50;
           O.h.g.visible = !!inside; O.h.g.position.set(O.x - CX, O.y - WL, CZ - O.z);
           if (O.ring) { O.ring.visible = !!inside; O.ring.position.set(O.x - CX, O.y - WL + 0.1, CZ - O.z); }
           if (O.lab) { O.lab.v.set(O.x - CX, O.y - WL + 2.6, CZ - O.z); O.lab.out = !inside; }
         }
         if (moved) invalidate();
+      }
+      function opGrabbed(O, dt) {
+        const H = O.h;
+        if (O.held) { O.anim += dt * 7; const w = Math.sin(O.anim); H.legL.rotation.x = w * 0.5; H.legR.rotation.x = -w * 0.5; H.armL.rotation.x = H.armR.rotation.x = -2.7 + w * 0.25; H.armL.rotation.z = -0.3; H.armR.rotation.z = 0.3; H.g.rotation.z = w * 0.12; return; }
+        H.g.rotation.z = 0; H.armL.rotation.z = H.armR.rotation.z = 0;
+        if (O.fall) { O.fall.vy -= 25 * dt; O.y += O.fall.vy * dt; H.armL.rotation.x = H.armR.rotation.x = -2.4; if (O.y <= O.gy) { O.y = O.gy; O.fall = null; O.wait = 1.2; } return; }
+        if (O.wait > 0) { O.wait -= dt; const t = Math.max(0, O.wait); H.armL.rotation.x = H.armR.rotation.x = -t; H.legL.rotation.x = H.legR.rotation.x = 0; if (O.wait <= 0) { O.ret = true; O.d0 = Math.max(0.1, Math.hypot(O.tx - O.x, O.tz - O.z)); O.y0 = O.y; } return; }
+        const dx = O.tx - O.x, dz = O.tz - O.z, d = Math.hypot(dx, dz);
+        if (d < 0.3 || d > 400) { O.ret = false; return; }
+        const st = Math.min(d, 6 * dt); O.x += dx / d * st; O.z += dz / d * st; const f = 1 - Math.max(0, d - st) / O.d0; O.y = O.y0 + (O.ty - O.y0) * f;
+        O.r = Math.atan2(dx, -dz); let dr = O.r - H.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); H.g.rotation.y += dr * Math.min(1, dt * 8);
+        O.anim += dt * 11; const sw = Math.sin(O.anim) * 0.7; H.legL.rotation.x = sw; H.legR.rotation.x = -sw; H.armL.rotation.x = -sw * 0.8; H.armR.rotation.x = sw * 0.8;
       }
       function makeHero(tunicCol) {
         const G = new THREE.Group();

@@ -24,6 +24,11 @@ jobs:
           VS_STRIP_IDS: 'true'
           VS_DATA: ${{ runner.temp }}/diag
           VS_OUT: ${{ runner.temp }}/diag/welt.vwelt
-        run: node sync/sync.cjs --force > /dev/null || true
+        run: node sync/sync.cjs --force > "$RUNNER_TEMP/sync.log" 2>&1 || true
       - name: Auswerten
-        run: node sync/diagnose.cjs "$RUNNER_TEMP/diag/welt-cache"
+        run: |
+          if ! node sync/diagnose.cjs "$RUNNER_TEMP/diag/welt-cache" 2> "$RUNNER_TEMP/err.txt"; then
+            # Fehler sichtbar machen (lange Zahlen wie Steam-IDs geschwärzt)
+            { tail -n 15 "$RUNNER_TEMP/sync.log"; tail -n 5 "$RUNNER_TEMP/err.txt"; find "$RUNNER_TEMP/diag" -maxdepth 3 | head -20; } | sed -E 's/[0-9]{15,20}/***/g' | while IFS= read -r l; do echo "::warning title=Diagnose-Fehler::$l"; done
+            exit 1
+          fi
