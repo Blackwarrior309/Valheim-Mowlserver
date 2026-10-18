@@ -1,0 +1,1818 @@
+{
+  "version": 1,
+  "source": "Valheim local installation",
+  "models": {
+    "rock2_mountain": {
+      "file": "models/rock2_mountain.json",
+      "version": "28293ddab296"
+    },
+    "BatteringRam": {
+      "file": "models/BatteringRam.json",
+      "version": "90e5dad50a1c"
+    },
+    "Cart": {
+      "file": "models/Cart.json",
+      "version": "79d0381868e7"
+    },
+    "Catapult": {
+      "file": "models/Catapult.json",
+      "version": "81e74323e70e"
+    },
+    "ArmorStand": {
+      "file": "models/ArmorStand.json",
+      "version": "c906161dc94c"
+    },
+    "FeastBlackforest": {
+      "file": "models/FeastBlackforest.json",
+      "version": "0eab32082086"
+    },
+    "FeastDeepNorth": {
+      "file": "models/FeastDeepNorth.json",
+      "version": "bc1e4e651039"
+    },
+    "FeastMeadows": {
+      "file": "models/FeastMeadows.json",
+      "version": "aeae66a0a258"
+    },
+    "FeastMistlands": {
+      "file": "models/FeastMistlands.json",
+      "version": "cd44f195c174"
+    },
+    "FeastMountains": {
+      "file": "models/FeastMountains.json",
+      "version": "07506f76a54b"
+    },
+    "FeastOceans": {
+      "file": "models/FeastOceans.json",
+      "version": "1144b26d76d2"
+    },
+    "FeastPlains": {
+      "file": "models/FeastPlains.json",
+      "version": "d7aa0d8fc07b"
+    },
+    "FeastSwamps": {
+      "file": "models/FeastSwamps.json",
+      "version": "b26021f46a3f"
+    },
+    "Piece_flametal_beam": {
+      "file": "models/Piece_flametal_beam.json",
+      "version": "ad75826cd5c5"
+    },
+    "Piece_flametal_pillar": {
+      "file": "models/Piece_flametal_pillar.json",
+      "version": "a74ba0296251"
+    },
+    "Piece_grausten_floor_1x1": {
+      "file": "models/Piece_grausten_floor_1x1.json",
+      "version": "186eda575b0d"
+    },
+    "Piece_grausten_floor_2x2": {
+      "file": "models/Piece_grausten_floor_2x2.json",
+      "version": "402022eb19a3"
+    },
+    "Piece_grausten_floor_4x4": {
+      "file": "models/Piece_grausten_floor_4x4.json",
+      "version": "cced2cad2e57"
+    },
+    "Piece_grausten_pillar_arch": {
+      "file": "models/Piece_grausten_pillar_arch.json",
+      "version": "5b5b215fef76"
+    },
+    "Piece_grausten_pillar_arch_small": {
+      "file": "models/Piece_grausten_pillar_arch_small.json",
+      "version": "ac06c801b57c"
+    },
+    "Piece_grausten_pillarbase_medium": {
+      "file": "models/Piece_grausten_pillarbase_medium.json",
+      "version": "2d54863b3710"
+    },
+    "Piece_grausten_pillarbase_small": {
+      "file": "models/Piece_grausten_pillarbase_small.json",
+      "version": "f0fe1095a5f9"
+    },
+    "Piece_grausten_pillarbase_tapered": {
+      "file": "models/Piece_grausten_pillarbase_tapered.json",
+      "version": "53a7dbfef03b"
+    },
+    "Piece_grausten_pillarbase_tapered_inverted": {
+      "file": "models/Piece_grausten_pillarbase_tapered_inverted.json",
+      "version": "73bb21ef5eb6"
+    },
+    "Piece_grausten_pillarbeam_medium": {
+      "file": "models/Piece_grausten_pillarbeam_medium.json",
+      "version": "4d1259bdaba6"
+    },
+    "Piece_grausten_pillarbeam_small": {
+      "file": "models/Piece_grausten_pillarbeam_small.json",
+      "version": "172c50b8840d"
+    },
+    "Piece_grausten_stone_ladder": {
+      "file": "models/Piece_grausten_stone_ladder.json",
+      "version": "33c30d94720d"
+    },
+    "Piece_grausten_wall_1x2": {
+      "file": "models/Piece_grausten_wall_1x2.json",
+      "version": "6a30121607c6"
+    },
+    "Piece_grausten_wall_2x2": {
+      "file": "models/Piece_grausten_wall_2x2.json",
+      "version": "f8a931193afa"
+    },
+    "Piece_grausten_wall_4x2": {
+      "file": "models/Piece_grausten_wall_4x2.json",
+      "version": "3cfcbab75d09"
+    },
+    "Piece_grausten_wall_arch": {
+      "file": "models/Piece_grausten_wall_arch.json",
+      "version": "20f39d175880"
+    },
+    "Piece_grausten_wall_arch_inverted": {
+      "file": "models/Piece_grausten_wall_arch_inverted.json",
+      "version": "63eb0fbfcdcf"
+    },
+    "Piece_grausten_window_2x2": {
+      "file": "models/Piece_grausten_window_2x2.json",
+      "version": "9693d81a70e2"
+    },
+    "Piece_grausten_window_4x2": {
+      "file": "models/Piece_grausten_window_4x2.json",
+      "version": "b8cb7c2a4212"
+    },
+    "ashwood_arch_big": {
+      "file": "models/ashwood_arch_big.json",
+      "version": "239b3297ee1c"
+    },
+    "ashwood_beam_1m": {
+      "file": "models/ashwood_beam_1m.json",
+      "version": "b3b04cf21e89"
+    },
+    "ashwood_beam_2m": {
+      "file": "models/ashwood_beam_2m.json",
+      "version": "2afdfbba685b"
+    },
+    "ashwood_bed": {
+      "file": "models/ashwood_bed.json",
+      "version": "b3dce31d2034"
+    },
+    "ashwood_deco_floor": {
+      "file": "models/ashwood_deco_floor.json",
+      "version": "c900e9b15a22"
+    },
+    "ashwood_decowall_2x2": {
+      "file": "models/ashwood_decowall_2x2.json",
+      "version": "88fd55f74cf4"
+    },
+    "ashwood_decowall_divider": {
+      "file": "models/ashwood_decowall_divider.json",
+      "version": "43c2b6415a3d"
+    },
+    "ashwood_decowall_tree": {
+      "file": "models/ashwood_decowall_tree.json",
+      "version": "073e25fefb0b"
+    },
+    "ashwood_door": {
+      "file": "models/ashwood_door.json",
+      "version": "51cca6129445"
+    },
+    "ashwood_floor_1x1": {
+      "file": "models/ashwood_floor_1x1.json",
+      "version": "b81bbee3cb96"
+    },
+    "ashwood_floor_2x2": {
+      "file": "models/ashwood_floor_2x2.json",
+      "version": "f17f48c280df"
+    },
+    "ashwood_halfwall_1x2": {
+      "file": "models/ashwood_halfwall_1x2.json",
+      "version": "9cee3b44e7f1"
+    },
+    "ashwood_pole_1m": {
+      "file": "models/ashwood_pole_1m.json",
+      "version": "f9a1f9e2827c"
+    },
+    "ashwood_pole_2m": {
+      "file": "models/ashwood_pole_2m.json",
+      "version": "2a217eeeea4c"
+    },
+    "ashwood_quarterwall_1x1": {
+      "file": "models/ashwood_quarterwall_1x1.json",
+      "version": "96bdfee754cc"
+    },
+    "ashwood_stair": {
+      "file": "models/ashwood_stair.json",
+      "version": "3fffe6190479"
+    },
+    "ashwood_wall_2x2": {
+      "file": "models/ashwood_wall_2x2.json",
+      "version": "1747197cc19d"
+    },
+    "ashwood_wall_arch": {
+      "file": "models/ashwood_wall_arch.json",
+      "version": "26859005f2b9"
+    },
+    "ashwood_wall_beam_26": {
+      "file": "models/ashwood_wall_beam_26.json",
+      "version": "c76aa124b16e"
+    },
+    "ashwood_wall_beam_45": {
+      "file": "models/ashwood_wall_beam_45.json",
+      "version": "5e99fd891b76"
+    },
+    "ashwood_wall_beam_67": {
+      "file": "models/ashwood_wall_beam_67.json",
+      "version": "515a04eeab0b"
+    },
+    "ashwood_wall_cross_26": {
+      "file": "models/ashwood_wall_cross_26.json",
+      "version": "7c0899486a57"
+    },
+    "ashwood_wall_cross_45": {
+      "file": "models/ashwood_wall_cross_45.json",
+      "version": "2464844acbcd"
+    },
+    "ashwood_wall_cross_67": {
+      "file": "models/ashwood_wall_cross_67.json",
+      "version": "9b61f86f4e24"
+    },
+    "ashwood_wall_roof_26": {
+      "file": "models/ashwood_wall_roof_26.json",
+      "version": "1ec0ddabebdd"
+    },
+    "ashwood_wall_roof_26_upsidedown": {
+      "file": "models/ashwood_wall_roof_26_upsidedown.json",
+      "version": "21e412c67bdf"
+    },
+    "ashwood_wall_roof_45": {
+      "file": "models/ashwood_wall_roof_45.json",
+      "version": "dc1c6bca06ab"
+    },
+    "ashwood_wall_roof_45_upsidedown": {
+      "file": "models/ashwood_wall_roof_45_upsidedown.json",
+      "version": "d2c20d96b35c"
+    },
+    "ashwood_wall_roof_67_a": {
+      "file": "models/ashwood_wall_roof_67_a.json",
+      "version": "216394463786"
+    },
+    "ashwood_wall_roof_67_upsidedown": {
+      "file": "models/ashwood_wall_roof_67_upsidedown.json",
+      "version": "876934dfd09f"
+    },
+    "bar_flametal_stack": {
+      "file": "models/bar_flametal_stack.json",
+      "version": "1f056a58f6c6"
+    },
+    "bar_gold_stack": {
+      "file": "models/bar_gold_stack.json",
+      "version": "9fa1cfc144a6"
+    },
+    "bed": {
+      "file": "models/bed.json",
+      "version": "8f1dacb93459"
+    },
+    "blackforge_ext2_vise": {
+      "file": "models/blackforge_ext2_vise.json",
+      "version": "077d64c0bfb4"
+    },
+    "blackforge_ext3_metalcutter": {
+      "file": "models/blackforge_ext3_metalcutter.json",
+      "version": "d430bc567ceb"
+    },
+    "blackforge_ext4_gemcutter": {
+      "file": "models/blackforge_ext4_gemcutter.json",
+      "version": "186051eb5217"
+    },
+    "blackforge_ext5_apron": {
+      "file": "models/blackforge_ext5_apron.json",
+      "version": "1faecca44de7"
+    },
+    "blackmarble_1x1": {
+      "file": "models/blackmarble_1x1.json",
+      "version": "8c42ed96be77"
+    },
+    "blackmarble_2x1x1": {
+      "file": "models/blackmarble_2x1x1.json",
+      "version": "8176c56afaff"
+    },
+    "blackmarble_2x2x1": {
+      "file": "models/blackmarble_2x2x1.json",
+      "version": "b7d94bd390a7"
+    },
+    "blackmarble_2x2x2": {
+      "file": "models/blackmarble_2x2x2.json",
+      "version": "03415c5c3477"
+    },
+    "blackmarble_arch": {
+      "file": "models/blackmarble_arch.json",
+      "version": "947be23c7345"
+    },
+    "blackmarble_base_1": {
+      "file": "models/blackmarble_base_1.json",
+      "version": "ebc1ede44d28"
+    },
+    "blackmarble_base_2": {
+      "file": "models/blackmarble_base_2.json",
+      "version": "ff9294c8cfa9"
+    },
+    "blackmarble_basecorner": {
+      "file": "models/blackmarble_basecorner.json",
+      "version": "ebc17c028533"
+    },
+    "blackmarble_column_1": {
+      "file": "models/blackmarble_column_1.json",
+      "version": "da216379e799"
+    },
+    "blackmarble_column_2": {
+      "file": "models/blackmarble_column_2.json",
+      "version": "07f816df774e"
+    },
+    "blackmarble_floor": {
+      "file": "models/blackmarble_floor.json",
+      "version": "d88b1f8c67d2"
+    },
+    "blackmarble_out_1": {
+      "file": "models/blackmarble_out_1.json",
+      "version": "950fb4effe49"
+    },
+    "blackmarble_outcorner": {
+      "file": "models/blackmarble_outcorner.json",
+      "version": "a23d6cbe77fa"
+    },
+    "blackmarble_pile": {
+      "file": "models/blackmarble_pile.json",
+      "version": "9c96a417f25e"
+    },
+    "blackmarble_stair": {
+      "file": "models/blackmarble_stair.json",
+      "version": "2042dae023e1"
+    },
+    "blackwood_stack": {
+      "file": "models/blackwood_stack.json",
+      "version": "82b7bd474b22"
+    },
+    "blastfurnace": {
+      "file": "models/blastfurnace.json",
+      "version": "86a700179e95"
+    },
+    "bonfire": {
+      "file": "models/bonfire.json",
+      "version": "b61627cc88d7"
+    },
+    "cauldron_ext1_spice": {
+      "file": "models/cauldron_ext1_spice.json",
+      "version": "57a68018fa59"
+    },
+    "cauldron_ext3_butchertable": {
+      "file": "models/cauldron_ext3_butchertable.json",
+      "version": "5fe1fcf576ae"
+    },
+    "cauldron_ext4_pots": {
+      "file": "models/cauldron_ext4_pots.json",
+      "version": "15526a30c01f"
+    },
+    "cauldron_ext5_mortarandpestle": {
+      "file": "models/cauldron_ext5_mortarandpestle.json",
+      "version": "e3a72611f013"
+    },
+    "cauldron_ext6_rollingpins": {
+      "file": "models/cauldron_ext6_rollingpins.json",
+      "version": "e373d46c2a5c"
+    },
+    "cauldron_ext7_smoker": {
+      "file": "models/cauldron_ext7_smoker.json",
+      "version": "5156ef1c1efd"
+    },
+    "charcoal_kiln": {
+      "file": "models/charcoal_kiln.json",
+      "version": "0a9259ff996a"
+    },
+    "coal_pile": {
+      "file": "models/coal_pile.json",
+      "version": "6b4f9449c549"
+    },
+    "darkwood_arch": {
+      "file": "models/darkwood_arch.json",
+      "version": "6d7b2b90f864"
+    },
+    "darkwood_beam": {
+      "file": "models/darkwood_beam.json",
+      "version": "14c03a902f45"
+    },
+    "darkwood_beam4x4": {
+      "file": "models/darkwood_beam4x4.json",
+      "version": "8b2b023e77ce"
+    },
+    "darkwood_beam_26": {
+      "file": "models/darkwood_beam_26.json",
+      "version": "8b063d5be55c"
+    },
+    "darkwood_beam_45": {
+      "file": "models/darkwood_beam_45.json",
+      "version": "69954c01d459"
+    },
+    "darkwood_beam_67": {
+      "file": "models/darkwood_beam_67.json",
+      "version": "251e11e5acbc"
+    },
+    "darkwood_decowall": {
+      "file": "models/darkwood_decowall.json",
+      "version": "4039ed362191"
+    },
+    "darkwood_gate": {
+      "file": "models/darkwood_gate.json",
+      "version": "1d82713ea68d"
+    },
+    "darkwood_pole": {
+      "file": "models/darkwood_pole.json",
+      "version": "9f9938e46fea"
+    },
+    "darkwood_pole4": {
+      "file": "models/darkwood_pole4.json",
+      "version": "373a1bcc57d4"
+    },
+    "darkwood_raven": {
+      "file": "models/darkwood_raven.json",
+      "version": "b8e32a0c5452"
+    },
+    "darkwood_roof": {
+      "file": "models/darkwood_roof.json",
+      "version": "033cc679f32f"
+    },
+    "darkwood_roof_45": {
+      "file": "models/darkwood_roof_45.json",
+      "version": "dda2895bd164"
+    },
+    "darkwood_roof_67": {
+      "file": "models/darkwood_roof_67.json",
+      "version": "3e997e222739"
+    },
+    "darkwood_roof_icorner": {
+      "file": "models/darkwood_roof_icorner.json",
+      "version": "0b306c1fdb17"
+    },
+    "darkwood_roof_icorner_45": {
+      "file": "models/darkwood_roof_icorner_45.json",
+      "version": "e0f836cb6335"
+    },
+    "darkwood_roof_icorner_67": {
+      "file": "models/darkwood_roof_icorner_67.json",
+      "version": "8ffb4e812811"
+    },
+    "darkwood_roof_ocorner": {
+      "file": "models/darkwood_roof_ocorner.json",
+      "version": "dd7efda02fdb"
+    },
+    "darkwood_roof_ocorner_45": {
+      "file": "models/darkwood_roof_ocorner_45.json",
+      "version": "974cdeb7b10e"
+    },
+    "darkwood_roof_ocorner_67": {
+      "file": "models/darkwood_roof_ocorner_67.json",
+      "version": "554823c4a6ff"
+    },
+    "darkwood_roof_top": {
+      "file": "models/darkwood_roof_top.json",
+      "version": "55c3da0ac365"
+    },
+    "darkwood_roof_top_45": {
+      "file": "models/darkwood_roof_top_45.json",
+      "version": "2a897c7bc712"
+    },
+    "darkwood_roof_top_67": {
+      "file": "models/darkwood_roof_top_67.json",
+      "version": "4277e878f989"
+    },
+    "darkwood_wolf": {
+      "file": "models/darkwood_wolf.json",
+      "version": "28a4cc48c5b9"
+    },
+    "eitrrefinery": {
+      "file": "models/eitrrefinery.json",
+      "version": "66bf2231deb3"
+    },
+    "fermenter": {
+      "file": "models/fermenter.json",
+      "version": "8702b4b7de24"
+    },
+    "flametal_gate": {
+      "file": "models/flametal_gate.json",
+      "version": "999a8502408d"
+    },
+    "forge_ext1": {
+      "file": "models/forge_ext1.json",
+      "version": "a1da8ade2428"
+    },
+    "forge_ext2": {
+      "file": "models/forge_ext2.json",
+      "version": "685213426044"
+    },
+    "forge_ext3": {
+      "file": "models/forge_ext3.json",
+      "version": "de0dd012fc80"
+    },
+    "forge_ext5": {
+      "file": "models/forge_ext5.json",
+      "version": "b19ecb05040e"
+    },
+    "forge_ext6": {
+      "file": "models/forge_ext6.json",
+      "version": "a2fa7c7f13ff"
+    },
+    "grausten_pile": {
+      "file": "models/grausten_pile.json",
+      "version": "c0ec207901cf"
+    },
+    "incinerator": {
+      "file": "models/incinerator.json",
+      "version": "6cd42808ab9e"
+    },
+    "iron_floor_1x1_v2": {
+      "file": "models/iron_floor_1x1_v2.json",
+      "version": "a386f5751a80"
+    },
+    "iron_floor_2x2": {
+      "file": "models/iron_floor_2x2.json",
+      "version": "1550d6503e1e"
+    },
+    "iron_grate": {
+      "file": "models/iron_grate.json",
+      "version": "48fdf7f4a7a2"
+    },
+    "iron_wall_1x1": {
+      "file": "models/iron_wall_1x1.json",
+      "version": "e4c4e1663cfc"
+    },
+    "iron_wall_2x2": {
+      "file": "models/iron_wall_2x2.json",
+      "version": "52f6ba3d2b9b"
+    },
+    "itemstand": {
+      "file": "models/itemstand.json",
+      "version": "82c8c056861f"
+    },
+    "itemstandh": {
+      "file": "models/itemstandh.json",
+      "version": "50c591098451"
+    },
+    "jute_carpet": {
+      "file": "models/jute_carpet.json",
+      "version": "926dedbbcb36"
+    },
+    "jute_carpet_blue": {
+      "file": "models/jute_carpet_blue.json",
+      "version": "990fd03720b6"
+    },
+    "piece_ArcheryTarget": {
+      "file": "models/piece_ArcheryTarget.json",
+      "version": "7955784caf7f"
+    },
+    "piece_CelebrationGarland": {
+      "file": "models/piece_CelebrationGarland.json",
+      "version": "21e156a5f959"
+    },
+    "piece_FairylightGarland": {
+      "file": "models/piece_FairylightGarland.json",
+      "version": "42ebce2778a1"
+    },
+    "piece_FrostFoundry": {
+      "file": "models/piece_FrostFoundry.json",
+      "version": "4c15f7b8da85"
+    },
+    "piece_FrostKiln": {
+      "file": "models/piece_FrostKiln.json",
+      "version": "b08b8d268012"
+    },
+    "piece_TrainingDummy": {
+      "file": "models/piece_TrainingDummy.json",
+      "version": "0533d3117931"
+    },
+    "piece_artisanstation": {
+      "file": "models/piece_artisanstation.json",
+      "version": "47934fac003c"
+    },
+    "piece_banner01": {
+      "file": "models/piece_banner01.json",
+      "version": "ff112e5d4fa9"
+    },
+    "piece_banner02": {
+      "file": "models/piece_banner02.json",
+      "version": "2579a3e6479e"
+    },
+    "piece_banner03": {
+      "file": "models/piece_banner03.json",
+      "version": "388d2ad6d8ae"
+    },
+    "piece_banner04": {
+      "file": "models/piece_banner04.json",
+      "version": "9aaf36411721"
+    },
+    "piece_banner05": {
+      "file": "models/piece_banner05.json",
+      "version": "29dd278b0712"
+    },
+    "piece_banner06": {
+      "file": "models/piece_banner06.json",
+      "version": "f44d1116cc8f"
+    },
+    "piece_banner07": {
+      "file": "models/piece_banner07.json",
+      "version": "18c1e6c15978"
+    },
+    "piece_banner08": {
+      "file": "models/piece_banner08.json",
+      "version": "f5b3bcc39814"
+    },
+    "piece_banner09": {
+      "file": "models/piece_banner09.json",
+      "version": "b5b30b748ffb"
+    },
+    "piece_banner10": {
+      "file": "models/piece_banner10.json",
+      "version": "2f40779891c5"
+    },
+    "piece_banner11": {
+      "file": "models/piece_banner11.json",
+      "version": "f029fade776b"
+    },
+    "piece_bed02": {
+      "file": "models/piece_bed02.json",
+      "version": "196dfab72726"
+    },
+    "piece_beehive": {
+      "file": "models/piece_beehive.json",
+      "version": "2707cfe43f9b"
+    },
+    "piece_bench01": {
+      "file": "models/piece_bench01.json",
+      "version": "0f416cd1bfdb"
+    },
+    "piece_bench_runed": {
+      "file": "models/piece_bench_runed.json",
+      "version": "a780210e749d"
+    },
+    "piece_birdnest": {
+      "file": "models/piece_birdnest.json",
+      "version": "36becabd5e74"
+    },
+    "piece_blackmarble_bench": {
+      "file": "models/piece_blackmarble_bench.json",
+      "version": "1f9e2505fd9f"
+    },
+    "piece_blackmarble_table": {
+      "file": "models/piece_blackmarble_table.json",
+      "version": "44259ff408f3"
+    },
+    "piece_blackmarble_throne": {
+      "file": "models/piece_blackmarble_throne.json",
+      "version": "cf14507361fc"
+    },
+    "piece_blackwood_bench01": {
+      "file": "models/piece_blackwood_bench01.json",
+      "version": "cb41ecd7281e"
+    },
+    "piece_bone_throne": {
+      "file": "models/piece_bone_throne.json",
+      "version": "bf3b94e48f0c"
+    },
+    "piece_brazierceiling01": {
+      "file": "models/piece_brazierceiling01.json",
+      "version": "b2b98c772676"
+    },
+    "piece_cartographytable": {
+      "file": "models/piece_cartographytable.json",
+      "version": "7ae4e5a8e0c7"
+    },
+    "piece_cauldron": {
+      "file": "models/piece_cauldron.json",
+      "version": "a2ed99fae455"
+    },
+    "piece_chair": {
+      "file": "models/piece_chair.json",
+      "version": "565834667eb4"
+    },
+    "piece_chair02": {
+      "file": "models/piece_chair02.json",
+      "version": "b1c027b70341"
+    },
+    "piece_chair03": {
+      "file": "models/piece_chair03.json",
+      "version": "dc26440fe15a"
+    },
+    "piece_chair_runed": {
+      "file": "models/piece_chair_runed.json",
+      "version": "3516687a4858"
+    },
+    "piece_chest": {
+      "file": "models/piece_chest.json",
+      "version": "65aa464e63d0"
+    },
+    "piece_chest_barrel": {
+      "file": "models/piece_chest_barrel.json",
+      "version": "df58c0eede6d"
+    },
+    "piece_chest_blackmetal": {
+      "file": "models/piece_chest_blackmetal.json",
+      "version": "f734d622d315"
+    },
+    "piece_chest_grausten": {
+      "file": "models/piece_chest_grausten.json",
+      "version": "ef1b94ca2ec6"
+    },
+    "piece_chest_private": {
+      "file": "models/piece_chest_private.json",
+      "version": "790e3f7e7cda"
+    },
+    "piece_chest_warderobe": {
+      "file": "models/piece_chest_warderobe.json",
+      "version": "33618860581f"
+    },
+    "piece_chest_wood": {
+      "file": "models/piece_chest_wood.json",
+      "version": "041a090bbefa"
+    },
+    "piece_cloth_hanging_door": {
+      "file": "models/piece_cloth_hanging_door.json",
+      "version": "160135e4bb4f"
+    },
+    "piece_cloth_hanging_door_blue": {
+      "file": "models/piece_cloth_hanging_door_blue.json",
+      "version": "dbe9006280f9"
+    },
+    "piece_cloth_hanging_door_blue2": {
+      "file": "models/piece_cloth_hanging_door_blue2.json",
+      "version": "8a71b68778cb"
+    },
+    "piece_cookingstation": {
+      "file": "models/piece_cookingstation.json",
+      "version": "6127c32441fe"
+    },
+    "piece_cookingstation_iron": {
+      "file": "models/piece_cookingstation_iron.json",
+      "version": "cabef1434ff0"
+    },
+    "piece_drawbridge": {
+      "file": "models/piece_drawbridge.json",
+      "version": "7d8c9127b9de"
+    },
+    "piece_drawbridge_log": {
+      "file": "models/piece_drawbridge_log.json",
+      "version": "dd981d16e2fd"
+    },
+    "piece_dvergr_metal_wall_2x2": {
+      "file": "models/piece_dvergr_metal_wall_2x2.json",
+      "version": "55452d6beb58"
+    },
+    "piece_dvergr_sharpstakes": {
+      "file": "models/piece_dvergr_sharpstakes.json",
+      "version": "659976e54cfa"
+    },
+    "piece_dvergr_spiralstair": {
+      "file": "models/piece_dvergr_spiralstair.json",
+      "version": "429dfcdcd46d"
+    },
+    "piece_dvergr_spiralstair_right": {
+      "file": "models/piece_dvergr_spiralstair_right.json",
+      "version": "6f2c544beec1"
+    },
+    "piece_dvergr_stake_wall": {
+      "file": "models/piece_dvergr_stake_wall.json",
+      "version": "93e5b1222a99"
+    },
+    "piece_gift1": {
+      "file": "models/piece_gift1.json",
+      "version": "cf825b1c6c9c"
+    },
+    "piece_gift2": {
+      "file": "models/piece_gift2.json",
+      "version": "2e504d6974f2"
+    },
+    "piece_gift3": {
+      "file": "models/piece_gift3.json",
+      "version": "b5caf3364dad"
+    },
+    "piece_grausten_roof_45": {
+      "file": "models/piece_grausten_roof_45.json",
+      "version": "bd9192963fff"
+    },
+    "piece_grausten_roof_45_arch": {
+      "file": "models/piece_grausten_roof_45_arch.json",
+      "version": "dbcf69502da4"
+    },
+    "piece_grausten_roof_45_arch_corner": {
+      "file": "models/piece_grausten_roof_45_arch_corner.json",
+      "version": "8fc732fcfcb6"
+    },
+    "piece_grausten_roof_45_arch_corner2": {
+      "file": "models/piece_grausten_roof_45_arch_corner2.json",
+      "version": "abdd0ec6496c"
+    },
+    "piece_grausten_roof_45_corner": {
+      "file": "models/piece_grausten_roof_45_corner.json",
+      "version": "0303226aedf2"
+    },
+    "piece_grausten_roof_45_corner2": {
+      "file": "models/piece_grausten_roof_45_corner2.json",
+      "version": "3fe0a28b320b"
+    },
+    "piece_grausten_stonestair": {
+      "file": "models/piece_grausten_stonestair.json",
+      "version": "365770adb620"
+    },
+    "piece_groundtorch": {
+      "file": "models/piece_groundtorch.json",
+      "version": "96b7865b6c0a"
+    },
+    "piece_groundtorch_blue": {
+      "file": "models/piece_groundtorch_blue.json",
+      "version": "96b7865b6c0a"
+    },
+    "piece_groundtorch_green": {
+      "file": "models/piece_groundtorch_green.json",
+      "version": "96b7865b6c0a"
+    },
+    "piece_groundtorch_wood": {
+      "file": "models/piece_groundtorch_wood.json",
+      "version": "102a4242e829"
+    },
+    "piece_hexagonal_door": {
+      "file": "models/piece_hexagonal_door.json",
+      "version": "7c979ed5f414"
+    },
+    "piece_logbench01": {
+      "file": "models/piece_logbench01.json",
+      "version": "1e6bd4f25594"
+    },
+    "piece_magetable": {
+      "file": "models/piece_magetable.json",
+      "version": "a5f2c4638ae1"
+    },
+    "piece_magetable_ext3": {
+      "file": "models/piece_magetable_ext3.json",
+      "version": "504a371614b2"
+    },
+    "piece_magetable_ext4": {
+      "file": "models/piece_magetable_ext4.json",
+      "version": "f6d63a723475"
+    },
+    "piece_maypole": {
+      "file": "models/piece_maypole.json",
+      "version": "12297861d62c"
+    },
+    "piece_mistletoe": {
+      "file": "models/piece_mistletoe.json",
+      "version": "a60170ddb0ef"
+    },
+    "piece_moose_throne": {
+      "file": "models/piece_moose_throne.json",
+      "version": "20ae3b5f80c5"
+    },
+    "piece_oven": {
+      "file": "models/piece_oven.json",
+      "version": "675ad190bb56"
+    },
+    "piece_pot1": {
+      "file": "models/piece_pot1.json",
+      "version": "f646a184dc98"
+    },
+    "piece_pot2": {
+      "file": "models/piece_pot2.json",
+      "version": "edd7e7f81e2f"
+    },
+    "piece_pot3": {
+      "file": "models/piece_pot3.json",
+      "version": "73b1e24ac5dc"
+    },
+    "piece_preptable": {
+      "file": "models/piece_preptable.json",
+      "version": "85786b737046"
+    },
+    "piece_sapcollector": {
+      "file": "models/piece_sapcollector.json",
+      "version": "a6a81f7547c5"
+    },
+    "piece_sharpstakes": {
+      "file": "models/piece_sharpstakes.json",
+      "version": "98e858e094ae"
+    },
+    "piece_shieldgenerator": {
+      "file": "models/piece_shieldgenerator.json",
+      "version": "9e423dfb62de"
+    },
+    "piece_spinningwheel": {
+      "file": "models/piece_spinningwheel.json",
+      "version": "23d7763e5984"
+    },
+    "piece_stakewall_blackwood": {
+      "file": "models/piece_stakewall_blackwood.json",
+      "version": "4b0729cde6ec"
+    },
+    "piece_stonecutter": {
+      "file": "models/piece_stonecutter.json",
+      "version": "c80627834645"
+    },
+    "piece_table": {
+      "file": "models/piece_table.json",
+      "version": "eabdebad5d6c"
+    },
+    "piece_table_oak": {
+      "file": "models/piece_table_oak.json",
+      "version": "7446e2d933f1"
+    },
+    "piece_table_round": {
+      "file": "models/piece_table_round.json",
+      "version": "dad9331b9a14"
+    },
+    "piece_table_runed": {
+      "file": "models/piece_table_runed.json",
+      "version": "771b26dcf4dc"
+    },
+    "piece_table_runed_small": {
+      "file": "models/piece_table_runed_small.json",
+      "version": "cc62f098bb81"
+    },
+    "piece_throne01": {
+      "file": "models/piece_throne01.json",
+      "version": "5943ed9ba16b"
+    },
+    "piece_throne02": {
+      "file": "models/piece_throne02.json",
+      "version": "68d62058100e"
+    },
+    "piece_trap_troll": {
+      "file": "models/piece_trap_troll.json",
+      "version": "a71d3beec627"
+    },
+    "piece_walltorch": {
+      "file": "models/piece_walltorch.json",
+      "version": "747784004b95"
+    },
+    "piece_workbench": {
+      "file": "models/piece_workbench.json",
+      "version": "1600b8cfb6ed"
+    },
+    "piece_workbench_ext2": {
+      "file": "models/piece_workbench_ext2.json",
+      "version": "b258909fff6d"
+    },
+    "piece_workbench_ext4": {
+      "file": "models/piece_workbench_ext4.json",
+      "version": "de29167a5536"
+    },
+    "piece_xmascrown": {
+      "file": "models/piece_xmascrown.json",
+      "version": "d6cfc156c07a"
+    },
+    "piece_xmasgarland": {
+      "file": "models/piece_xmasgarland.json",
+      "version": "8988cd340abb"
+    },
+    "placeable_bigrock_01": {
+      "file": "models/placeable_bigrock_01.json",
+      "version": "9418a4b78fda"
+    },
+    "placeable_bigrock_02": {
+      "file": "models/placeable_bigrock_02.json",
+      "version": "6af1749b8666"
+    },
+    "portal_stone": {
+      "file": "models/portal_stone.json",
+      "version": "d5de236185ef"
+    },
+    "rug_Bjorn": {
+      "file": "models/rug_Bjorn.json",
+      "version": "b9e44188225d"
+    },
+    "rug_asksvin": {
+      "file": "models/rug_asksvin.json",
+      "version": "84714093156d"
+    },
+    "rug_deer": {
+      "file": "models/rug_deer.json",
+      "version": "dca4d60ab0fd"
+    },
+    "rug_fur": {
+      "file": "models/rug_fur.json",
+      "version": "3e90d1c3167a"
+    },
+    "rug_hare": {
+      "file": "models/rug_hare.json",
+      "version": "95798f7f1923"
+    },
+    "rug_moose": {
+      "file": "models/rug_moose.json",
+      "version": "0b83b7c0ca18"
+    },
+    "rug_seal": {
+      "file": "models/rug_seal.json",
+      "version": "eead6312586b"
+    },
+    "rug_straw": {
+      "file": "models/rug_straw.json",
+      "version": "f882728fabb7"
+    },
+    "rug_wolf": {
+      "file": "models/rug_wolf.json",
+      "version": "3928967f8263"
+    },
+    "scale_halfwall_1x2": {
+      "file": "models/scale_halfwall_1x2.json",
+      "version": "098a00594d57"
+    },
+    "scale_quarterwall_1x1": {
+      "file": "models/scale_quarterwall_1x1.json",
+      "version": "711eb3c1a39c"
+    },
+    "scale_wall_2x2": {
+      "file": "models/scale_wall_2x2.json",
+      "version": "32174e3da640"
+    },
+    "scale_wall_roof_26": {
+      "file": "models/scale_wall_roof_26.json",
+      "version": "0b0271087344"
+    },
+    "scale_wall_roof_26_flipped": {
+      "file": "models/scale_wall_roof_26_flipped.json",
+      "version": "a254c993083d"
+    },
+    "scale_wall_roof_26_upsidedown": {
+      "file": "models/scale_wall_roof_26_upsidedown.json",
+      "version": "3f302ea1bd41"
+    },
+    "scale_wall_roof_26_upsidedown_flipped": {
+      "file": "models/scale_wall_roof_26_upsidedown_flipped.json",
+      "version": "87ac29c9a07a"
+    },
+    "scale_wall_roof_45": {
+      "file": "models/scale_wall_roof_45.json",
+      "version": "3e5ca6bbf8b2"
+    },
+    "scale_wall_roof_45_flipped": {
+      "file": "models/scale_wall_roof_45_flipped.json",
+      "version": "2d64fee0d2f1"
+    },
+    "scale_wall_roof_45_upsidedown": {
+      "file": "models/scale_wall_roof_45_upsidedown.json",
+      "version": "ec0d1aeb0be2"
+    },
+    "scale_wall_roof_45_upsidedown_flipped": {
+      "file": "models/scale_wall_roof_45_upsidedown_flipped.json",
+      "version": "0933a5fe9771"
+    },
+    "scale_wall_roof_67": {
+      "file": "models/scale_wall_roof_67.json",
+      "version": "1f35835a43a6"
+    },
+    "scale_wall_roof_67_flipped": {
+      "file": "models/scale_wall_roof_67_flipped.json",
+      "version": "25202878838c"
+    },
+    "scale_wall_roof_67_upsidedown": {
+      "file": "models/scale_wall_roof_67_upsidedown.json",
+      "version": "a16cabe2c40f"
+    },
+    "scale_wall_roof_67_upsidedown_flipped": {
+      "file": "models/scale_wall_roof_67_upsidedown_flipped.json",
+      "version": "95434f55f7df"
+    },
+    "sign": {
+      "file": "models/sign.json",
+      "version": "d1c8a36f2ece"
+    },
+    "skull_pile": {
+      "file": "models/skull_pile.json",
+      "version": "b5a6183ac810"
+    },
+    "smelter": {
+      "file": "models/smelter.json",
+      "version": "c53a13ac2243"
+    },
+    "stake_wall": {
+      "file": "models/stake_wall.json",
+      "version": "0151115d6a26"
+    },
+    "stave_beam_26": {
+      "file": "models/stave_beam_26.json",
+      "version": "cb0c7935b0b0"
+    },
+    "stave_beam_2m": {
+      "file": "models/stave_beam_2m.json",
+      "version": "eeeefd463aa9"
+    },
+    "stave_beam_45": {
+      "file": "models/stave_beam_45.json",
+      "version": "4110b61b500f"
+    },
+    "stave_beam_4m": {
+      "file": "models/stave_beam_4m.json",
+      "version": "78bb01050f2f"
+    },
+    "stave_beam_67": {
+      "file": "models/stave_beam_67.json",
+      "version": "8c7c097892bb"
+    },
+    "stave_deco_beam_26": {
+      "file": "models/stave_deco_beam_26.json",
+      "version": "21a44be260e7"
+    },
+    "stave_deco_beam_2m": {
+      "file": "models/stave_deco_beam_2m.json",
+      "version": "e3029606b559"
+    },
+    "stave_deco_beam_45": {
+      "file": "models/stave_deco_beam_45.json",
+      "version": "96eed12bb294"
+    },
+    "stave_deco_beam_67": {
+      "file": "models/stave_deco_beam_67.json",
+      "version": "00bc2ffee24e"
+    },
+    "stave_deco_pole_2m": {
+      "file": "models/stave_deco_pole_2m.json",
+      "version": "812e0890e49b"
+    },
+    "stave_deco_wall_2x2": {
+      "file": "models/stave_deco_wall_2x2.json",
+      "version": "b8fd6abd8cea"
+    },
+    "stave_gate": {
+      "file": "models/stave_gate.json",
+      "version": "4f29f75cced8"
+    },
+    "stave_pole_2m": {
+      "file": "models/stave_pole_2m.json",
+      "version": "a2b9821bb371"
+    },
+    "stave_pole_4m": {
+      "file": "models/stave_pole_4m.json",
+      "version": "6d5f2350ef4d"
+    },
+    "stave_wall_2x2": {
+      "file": "models/stave_wall_2x2.json",
+      "version": "9c4a3d3095e3"
+    },
+    "stave_wall_cross_26": {
+      "file": "models/stave_wall_cross_26.json",
+      "version": "8d7e442b05e7"
+    },
+    "stave_wall_cross_45": {
+      "file": "models/stave_wall_cross_45.json",
+      "version": "65025b410c7e"
+    },
+    "stave_wall_cross_67": {
+      "file": "models/stave_wall_cross_67.json",
+      "version": "384ce5c1822d"
+    },
+    "stone_arch": {
+      "file": "models/stone_arch.json",
+      "version": "d33d2e85602d"
+    },
+    "stone_fence": {
+      "file": "models/stone_fence.json",
+      "version": "851e62d7ee25"
+    },
+    "stone_floor_2x2": {
+      "file": "models/stone_floor_2x2.json",
+      "version": "0c0545a0aaec"
+    },
+    "stone_pile": {
+      "file": "models/stone_pile.json",
+      "version": "b9ec859353a3"
+    },
+    "stone_pillar": {
+      "file": "models/stone_pillar.json",
+      "version": "ee490816b9cd"
+    },
+    "stone_stair": {
+      "file": "models/stone_stair.json",
+      "version": "f228f4972b4e"
+    },
+    "stone_wall_1x1": {
+      "file": "models/stone_wall_1x1.json",
+      "version": "e4f2dfe90594"
+    },
+    "stone_wall_2x1": {
+      "file": "models/stone_wall_2x1.json",
+      "version": "51c9183be21e"
+    },
+    "stone_wall_4x2": {
+      "file": "models/stone_wall_4x2.json",
+      "version": "2202d0a216c7"
+    },
+    "treasure_pile": {
+      "file": "models/treasure_pile.json",
+      "version": "5b30e9e39c2c"
+    },
+    "windmill": {
+      "file": "models/windmill.json",
+      "version": "f12d4f7b2daa"
+    },
+    "wood_beam": {
+      "file": "models/wood_beam.json",
+      "version": "3cd191c26087"
+    },
+    "wood_beam_1": {
+      "file": "models/wood_beam_1.json",
+      "version": "5accf7a8e2a2"
+    },
+    "wood_beam_26": {
+      "file": "models/wood_beam_26.json",
+      "version": "fe63914c08c6"
+    },
+    "wood_beam_45": {
+      "file": "models/wood_beam_45.json",
+      "version": "42bb734d8170"
+    },
+    "wood_beam_67": {
+      "file": "models/wood_beam_67.json",
+      "version": "8151c25d3940"
+    },
+    "wood_core_stack": {
+      "file": "models/wood_core_stack.json",
+      "version": "83ccda736da6"
+    },
+    "wood_door": {
+      "file": "models/wood_door.json",
+      "version": "b3d11676fdfe"
+    },
+    "wood_dragon1": {
+      "file": "models/wood_dragon1.json",
+      "version": "64621b62d893"
+    },
+    "wood_fence": {
+      "file": "models/wood_fence.json",
+      "version": "f65eaf79dd6b"
+    },
+    "wood_fence_gate": {
+      "file": "models/wood_fence_gate.json",
+      "version": "76d0aedb43b4"
+    },
+    "wood_fine_stack": {
+      "file": "models/wood_fine_stack.json",
+      "version": "f6692cdc7786"
+    },
+    "wood_floor": {
+      "file": "models/wood_floor.json",
+      "version": "c9c041a11164"
+    },
+    "wood_floor_1x1": {
+      "file": "models/wood_floor_1x1.json",
+      "version": "a9d6b5d76378"
+    },
+    "wood_frost_stack": {
+      "file": "models/wood_frost_stack.json",
+      "version": "08277feeedb9"
+    },
+    "wood_gate": {
+      "file": "models/wood_gate.json",
+      "version": "c3b4e688f0da"
+    },
+    "wood_log_26": {
+      "file": "models/wood_log_26.json",
+      "version": "01f06829dd59"
+    },
+    "wood_log_45": {
+      "file": "models/wood_log_45.json",
+      "version": "ba34c37b081b"
+    },
+    "wood_log_67": {
+      "file": "models/wood_log_67.json",
+      "version": "b63fddd6e8a3"
+    },
+    "wood_pole": {
+      "file": "models/wood_pole.json",
+      "version": "c4d113cdea00"
+    },
+    "wood_pole2": {
+      "file": "models/wood_pole2.json",
+      "version": "c84dc728cce0"
+    },
+    "wood_pole_log": {
+      "file": "models/wood_pole_log.json",
+      "version": "ba0e7d04791c"
+    },
+    "wood_pole_log_4": {
+      "file": "models/wood_pole_log_4.json",
+      "version": "b3bb3cc81be6"
+    },
+    "wood_roof": {
+      "file": "models/wood_roof.json",
+      "version": "0d81c058b5d7"
+    },
+    "wood_roof_45": {
+      "file": "models/wood_roof_45.json",
+      "version": "fc258d59711a"
+    },
+    "wood_roof_67": {
+      "file": "models/wood_roof_67.json",
+      "version": "1ab45ba57e01"
+    },
+    "wood_roof_icorner": {
+      "file": "models/wood_roof_icorner.json",
+      "version": "84f20fff0023"
+    },
+    "wood_roof_icorner_45": {
+      "file": "models/wood_roof_icorner_45.json",
+      "version": "ce172fd2287d"
+    },
+    "wood_roof_icorner_67": {
+      "file": "models/wood_roof_icorner_67.json",
+      "version": "734d2562c4f2"
+    },
+    "wood_roof_ocorner": {
+      "file": "models/wood_roof_ocorner.json",
+      "version": "9b730c8096f8"
+    },
+    "wood_roof_ocorner_45": {
+      "file": "models/wood_roof_ocorner_45.json",
+      "version": "4535b5c04818"
+    },
+    "wood_roof_ocorner_67": {
+      "file": "models/wood_roof_ocorner_67.json",
+      "version": "65e159b4de67"
+    },
+    "wood_roof_top": {
+      "file": "models/wood_roof_top.json",
+      "version": "51759bfcd1c0"
+    },
+    "wood_roof_top_45": {
+      "file": "models/wood_roof_top_45.json",
+      "version": "5e962a495367"
+    },
+    "wood_roof_top_67": {
+      "file": "models/wood_roof_top_67.json",
+      "version": "00aef54309c9"
+    },
+    "wood_stack": {
+      "file": "models/wood_stack.json",
+      "version": "dcdfa172ffef"
+    },
+    "wood_stair": {
+      "file": "models/wood_stair.json",
+      "version": "d90f5f854d65"
+    },
+    "wood_stepladder": {
+      "file": "models/wood_stepladder.json",
+      "version": "78f0f3a4b524"
+    },
+    "wood_wall_half": {
+      "file": "models/wood_wall_half.json",
+      "version": "e6f22e5f6aa5"
+    },
+    "wood_wall_log": {
+      "file": "models/wood_wall_log.json",
+      "version": "7cb1aa7f6d81"
+    },
+    "wood_wall_log_4x0.5": {
+      "file": "models/wood_wall_log_4x0_5.json",
+      "version": "59b8c7b8148e"
+    },
+    "wood_wall_quarter": {
+      "file": "models/wood_wall_quarter.json",
+      "version": "3c4408f196d5"
+    },
+    "wood_wall_roof": {
+      "file": "models/wood_wall_roof.json",
+      "version": "fdedb395a5cf"
+    },
+    "wood_wall_roof_45": {
+      "file": "models/wood_wall_roof_45.json",
+      "version": "51d14aed7794"
+    },
+    "wood_wall_roof_45_upsidedown": {
+      "file": "models/wood_wall_roof_45_upsidedown.json",
+      "version": "da9727e6ec18"
+    },
+    "wood_wall_roof_67_a": {
+      "file": "models/wood_wall_roof_67_a.json",
+      "version": "cc4ba023a033"
+    },
+    "wood_wall_roof_67_upsidedown": {
+      "file": "models/wood_wall_roof_67_upsidedown.json",
+      "version": "72c503eb6963"
+    },
+    "wood_wall_roof_a": {
+      "file": "models/wood_wall_roof_a.json",
+      "version": "fdedb395a5cf"
+    },
+    "wood_wall_roof_top": {
+      "file": "models/wood_wall_roof_top.json",
+      "version": "0d57a21836e0"
+    },
+    "wood_wall_roof_top_45": {
+      "file": "models/wood_wall_roof_top_45.json",
+      "version": "b663c87ce37c"
+    },
+    "wood_wall_roof_top_67": {
+      "file": "models/wood_wall_roof_top_67.json",
+      "version": "dcdf99ac2955"
+    },
+    "wood_wall_roof_upsidedown": {
+      "file": "models/wood_wall_roof_upsidedown.json",
+      "version": "df54bc73202d"
+    },
+    "wood_window": {
+      "file": "models/wood_window.json",
+      "version": "1654c7af6741"
+    },
+    "wood_yggdrasil_stack": {
+      "file": "models/wood_yggdrasil_stack.json",
+      "version": "b29845af7f5f"
+    },
+    "woodiron_beam": {
+      "file": "models/woodiron_beam.json",
+      "version": "5da4c39cefbf"
+    },
+    "woodiron_beam_26": {
+      "file": "models/woodiron_beam_26.json",
+      "version": "f766e93a7721"
+    },
+    "woodiron_beam_45": {
+      "file": "models/woodiron_beam_45.json",
+      "version": "45991d60430e"
+    },
+    "woodiron_beam_67": {
+      "file": "models/woodiron_beam_67.json",
+      "version": "2d4365d71585"
+    },
+    "woodiron_pole": {
+      "file": "models/woodiron_pole.json",
+      "version": "eadbcc581f9b"
+    },
+    "woodwall": {
+      "file": "models/woodwall.json",
+      "version": "57b5543f5582"
+    },
+    "Raft": {
+      "file": "models/Raft.json",
+      "version": "497af57bbaaa"
+    },
+    "VikingShip_Ashlands": {
+      "file": "models/VikingShip_Ashlands.json",
+      "version": "a3919f3c5b79"
+    },
+    "Beech1": {
+      "file": "models/Beech1.json",
+      "version": "d56fdc223432"
+    },
+    "Beech_small1": {
+      "file": "models/Beech_small1.json",
+      "version": "8c22214d947e"
+    },
+    "Beech_small2": {
+      "file": "models/Beech_small2.json",
+      "version": "638a108c767f"
+    },
+    "Birch1": {
+      "file": "models/Birch1.json",
+      "version": "e1886af115fe"
+    },
+    "Birch1_aut": {
+      "file": "models/Birch1_aut.json",
+      "version": "deb63e296e65"
+    },
+    "Birch2": {
+      "file": "models/Birch2.json",
+      "version": "9f586e4acc08"
+    },
+    "Birch2_aut": {
+      "file": "models/Birch2_aut.json",
+      "version": "dff737716436"
+    },
+    "Bush01": {
+      "file": "models/Bush01.json",
+      "version": "9ae1f29507e9"
+    },
+    "Bush01_heath": {
+      "file": "models/Bush01_heath.json",
+      "version": "216cd9fa9963"
+    },
+    "Bush02_en": {
+      "file": "models/Bush02_en.json",
+      "version": "52ca9a63c31d"
+    },
+    "FirTree": {
+      "file": "models/FirTree.json",
+      "version": "f7af62bef409"
+    },
+    "FirTree_oldLog": {
+      "file": "models/FirTree_oldLog.json",
+      "version": "1726c02e02c4"
+    },
+    "FirTree_small": {
+      "file": "models/FirTree_small.json",
+      "version": "1279b2dcc7a9"
+    },
+    "FirTree_small_dead": {
+      "file": "models/FirTree_small_dead.json",
+      "version": "b636ea21d28f"
+    },
+    "Pinetree_01": {
+      "file": "models/Pinetree_01.json",
+      "version": "708e2ecc655c"
+    },
+    "Rock_3": {
+      "file": "models/Rock_3.json",
+      "version": "9418a4b78fda"
+    },
+    "Rock_4": {
+      "file": "models/Rock_4.json",
+      "version": "5de7b209b464"
+    },
+    "Rock_4_plains": {
+      "file": "models/Rock_4_plains.json",
+      "version": "a4ee2b7ae1f4"
+    },
+    "Rock_7": {
+      "file": "models/Rock_7.json",
+      "version": "aa1a722ef778"
+    },
+    "rock1_mountain": {
+      "file": "models/rock1_mountain.json",
+      "version": "2a253a1f3961"
+    },
+    "rock2_heath": {
+      "file": "models/rock2_heath.json",
+      "version": "4a802032322e"
+    },
+    "rock3_mountain": {
+      "file": "models/rock3_mountain.json",
+      "version": "dbeb79523cf0"
+    },
+    "rock4_coast": {
+      "file": "models/rock4_coast.json",
+      "version": "3f4a9fb76d28"
+    },
+    "rock4_forest": {
+      "file": "models/rock4_forest.json",
+      "version": "30a3b76b2f80"
+    },
+    "rock4_heath": {
+      "file": "models/rock4_heath.json",
+      "version": "99053d86a9ce"
+    },
+    "YggaShoot1": {
+      "file": "models/YggaShoot1.json",
+      "version": "5f5e73426831"
+    },
+    "YggaShoot2": {
+      "file": "models/YggaShoot2.json",
+      "version": "f1e0b2eff0bd"
+    },
+    "YggaShoot3": {
+      "file": "models/YggaShoot3.json",
+      "version": "72193bc28345"
+    },
+    "YggaShoot_small1": {
+      "file": "models/YggaShoot_small1.json",
+      "version": "479e2d2efb21"
+    },
+    "shrub_2": {
+      "file": "models/shrub_2.json",
+      "version": "216bc5efce6d"
+    },
+    "shrub_2_heath": {
+      "file": "models/shrub_2_heath.json",
+      "version": "1873d117b059"
+    },
+    "SwampTree1": {
+      "file": "models/SwampTree1.json",
+      "version": "e7f63f2209cd"
+    },
+    "SwampTree2": {
+      "file": "models/SwampTree2.json",
+      "version": "354b96c1fc9d"
+    },
+    "SwampTree2_log": {
+      "file": "models/SwampTree2_log.json",
+      "version": "0c2f1ca10a20"
+    },
+    "SwampTree1_log": {
+      "file": "models/SwampTree1_log.json",
+      "version": "ffdd5a40189f"
+    },
+    "blackmarble_2x2_enforced": {
+      "file": "models/blackmarble_2x2_enforced.json",
+      "version": "8cc708ed520d"
+    },
+    "blackmarble_column_3": {
+      "file": "models/blackmarble_column_3.json",
+      "version": "d55546c60f88"
+    },
+    "blackmarble_floor_triangle": {
+      "file": "models/blackmarble_floor_triangle.json",
+      "version": "d6f6028c0b8f"
+    },
+    "blackmarble_tip": {
+      "file": "models/blackmarble_tip.json",
+      "version": "dc972b425941"
+    },
+    "Oak1": {
+      "file": "models/Oak1.json",
+      "version": "d3ad4aa6a600"
+    },
+    "Placeable_HardRock": {
+      "file": "models/Placeable_HardRock.json",
+      "version": "55186920d5a0"
+    },
+    "Candle_resin": {
+      "file": "models/Candle_resin.json",
+      "version": "36c5632df581"
+    },
+    "FeastAshlands": {
+      "file": "models/FeastAshlands.json",
+      "version": "c54d9f80917c"
+    },
+    "piece_MeadCauldron": {
+      "file": "models/piece_MeadCauldron.json",
+      "version": "7177b3ca3333"
+    },
+    "artisan_ext1": {
+      "file": "models/artisan_ext1.json",
+      "version": "678b687dffa4"
+    },
+    "bar_blackmetal_stack": {
+      "file": "models/bar_blackmetal_stack.json",
+      "version": "5df8a2a06c9b"
+    },
+    "bar_bronze_stack": {
+      "file": "models/bar_bronze_stack.json",
+      "version": "a85c7fea39cb"
+    },
+    "bar_copper_stack": {
+      "file": "models/bar_copper_stack.json",
+      "version": "58d60d771b59"
+    },
+    "bar_iron_stack": {
+      "file": "models/bar_iron_stack.json",
+      "version": "551f83412647"
+    },
+    "bar_silver_stack": {
+      "file": "models/bar_silver_stack.json",
+      "version": "b2bf9257a03d"
+    },
+    "bar_tin_stack": {
+      "file": "models/bar_tin_stack.json",
+      "version": "df3cdf6b9972"
+    },
+    "blackforge": {
+      "file": "models/blackforge.json",
+      "version": "b44165ceed51"
+    },
+    "blackforge_ext1": {
+      "file": "models/blackforge_ext1.json",
+      "version": "3eee355e0f7e"
+    },
+    "bone_stack": {
+      "file": "models/bone_stack.json",
+      "version": "e5eb7d3f0f66"
+    },
+    "crystal_wall_1x1": {
+      "file": "models/crystal_wall_1x1.json",
+      "version": "ac9d42c3a038"
+    },
+    "fire_pit": {
+      "file": "models/fire_pit.json",
+      "version": "5db76948c680"
+    },
+    "fire_pit_iron": {
+      "file": "models/fire_pit_iron.json",
+      "version": "96454382679d"
+    },
+    "flint_pile": {
+      "file": "models/flint_pile.json",
+      "version": "fc1dc5b8226f"
+    },
+    "forge": {
+      "file": "models/forge.json",
+      "version": "30ac651ff6fc"
+    },
+    "forge_ext4": {
+      "file": "models/forge_ext4.json",
+      "version": "3a6eaa7ea4d9"
+    },
+    "guard_stone": {
+      "file": "models/guard_stone.json",
+      "version": "38a5789a404f"
+    },
+    "hearth": {
+      "file": "models/hearth.json",
+      "version": "3caedc6929ad"
+    },
+    "piece_Lavalantern": {
+      "file": "models/piece_Lavalantern.json",
+      "version": "b421370ace5a"
+    },
+    "piece_asksvinskeleton": {
+      "file": "models/piece_asksvinskeleton.json",
+      "version": "d3ad176d95df"
+    },
+    "piece_barber": {
+      "file": "models/piece_barber.json",
+      "version": "2f8445e23550"
+    },
+    "piece_bathtub": {
+      "file": "models/piece_bathtub.json",
+      "version": "6a01b33961e9"
+    },
+    "piece_brazierfloor01": {
+      "file": "models/piece_brazierfloor01.json",
+      "version": "70f202b0f04c"
+    },
+    "piece_brazierfloor02": {
+      "file": "models/piece_brazierfloor02.json",
+      "version": "70f202b0f04c"
+    },
+    "piece_chest_treasure": {
+      "file": "models/piece_chest_treasure.json",
+      "version": "3c371c92fec6"
+    },
+    "piece_dvergr_lantern": {
+      "file": "models/piece_dvergr_lantern.json",
+      "version": "fcec96f0be36"
+    },
+    "piece_dvergr_lantern_pole": {
+      "file": "models/piece_dvergr_lantern_pole.json",
+      "version": "a5e6da83c8f1"
+    },
+    "piece_groundtorch_mist": {
+      "file": "models/piece_groundtorch_mist.json",
+      "version": "7e11829471c3"
+    },
+    "piece_hoodedlantern": {
+      "file": "models/piece_hoodedlantern.json",
+      "version": "62e72b27d526"
+    },
+    "piece_icecube": {
+      "file": "models/piece_icecube.json",
+      "version": "324bc3f26a99"
+    },
+    "piece_jackoturnip": {
+      "file": "models/piece_jackoturnip.json",
+      "version": "d0483b5b1e4f"
+    },
+    "piece_magetable_ext": {
+      "file": "models/piece_magetable_ext.json",
+      "version": "17afab8d62d3"
+    },
+    "piece_magetable_ext2": {
+      "file": "models/piece_magetable_ext2.json",
+      "version": "05de263ce086"
+    },
+    "piece_snowlantern": {
+      "file": "models/piece_snowlantern.json",
+      "version": "989ffd8e7b12"
+    },
+    "piece_turret": {
+      "file": "models/piece_turret.json",
+      "version": "17e4a8609f71"
+    },
+    "piece_wisplure": {
+      "file": "models/piece_wisplure.json",
+      "version": "9977bf5db8a7"
+    },
+    "piece_workbench_ext1": {
+      "file": "models/piece_workbench_ext1.json",
+      "version": "b540a65346f1"
+    },
+    "piece_workbench_ext3": {
+      "file": "models/piece_workbench_ext3.json",
+      "version": "325a4a8eab95"
+    },
+    "piece_xmastree": {
+      "file": "models/piece_xmastree.json",
+      "version": "1f7f35b551a2"
+    },
+    "portal_wood": {
+      "file": "models/portal_wood.json",
+      "version": "3a9623ec5c68"
+    },
+    "treasure_stack": {
+      "file": "models/treasure_stack.json",
+      "version": "a28a68d4becc"
+    },
+    "Karve": {
+      "file": "models/Karve.json",
+      "version": "be8f575c6a38"
+    },
+    "VikingShip": {
+      "file": "models/VikingShip.json",
+      "version": "aaf738368937"
+    },
+    "BlueberryBush": {
+      "file": "models/BlueberryBush.json",
+      "version": "a42ffcde5f6d"
+    },
+    "RaspberryBush": {
+      "file": "models/RaspberryBush.json",
+      "version": "405fc85d2c3a"
+    },
+    "CloudberryBush": {
+      "file": "models/CloudberryBush.json",
+      "version": "2ec0bb85f050"
+    },
+    "Oak_log": {
+      "file": "models/Oak_log.json",
+      "version": "23724c55420d"
+    }
+  }
+}

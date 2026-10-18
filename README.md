@@ -9,3 +9,6 @@ Erstellt aus dem Template [Valheim Welt-Viewer](https://github.com/Blackwarrior3
 Anleitung und Einstellungen: [docs/LIVE-MAP.md](docs/LIVE-MAP.md). Neue Versionen des Viewers: Dateien aus dem Template übernehmen.
 
 Inoffizielles Fan-Projekt, nicht mit Iron Gate verbunden.
+
+Grafikoption **Valheim Original**: exportierte Spielmodelle und Texturen, bei Bedarf
+im Browser geladen. Export, Abdeckung und Grenzen: [Originalgrafik](docs/ORIGINAL-GRAPHICS.md).

@@ -15,6 +15,8 @@ xcopy /e /i /y ..\css paket\ValheimWeltLive\web\css >nul
 xcopy /e /i /y ..\js paket\ValheimWeltLive\web\js >nul
 xcopy /e /i /y ..\lib paket\ValheimWeltLive\web\lib >nul
 xcopy /e /i /y ..\plans paket\ValheimWeltLive\web\plans >nul
+if exist ..\textures xcopy /e /i /y ..\textures paket\ValheimWeltLive\web\textures >nul
+if exist ..\assets\valheim xcopy /e /i /y ..\assets\valheim paket\ValheimWeltLive\web\assets\valheim >nul
 echo.
 echo Fertig: mod\paket\ValheimWeltLive  →  nach "%VALHEIM%\BepInEx\plugins\" kopieren.
 if /i "%~2"=="install" xcopy /e /i /y paket\ValheimWeltLive "%VALHEIM%\BepInEx\plugins\ValheimWeltLive" >nul && echo Installiert.
