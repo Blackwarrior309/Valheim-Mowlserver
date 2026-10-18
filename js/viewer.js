@@ -143,7 +143,7 @@
   </div>
   <div class="vw-pane" data-p="chests" hidden><div class="vw-scroll"><div class="vw-wrap">
     <div class="vw-bar"><input type="search" class="kq" placeholder="Item suchen, z. B. Eisen, Met, Kernholz …" autocomplete="off"><select class="ka"></select><button class="klab">Nur beschriftete</button><button class="kgame" hidden title="Öffnet die Kisten-Suche im laufenden Spiel und setzt Pins auf der Karte">🎯 Im Spiel suchen</button></div>
-    <div class="vw-stats kstats"></div><div class="kcraft"></div>
+    <div class="vw-stats kstats"></div><div class="kcraft"></div><div class="kroute"></div>
     <div class="vw-grid"><div class="vw-panel"><h2 style="margin-top:0">Summe</h2><table class="ktot"></table><div class="sub" style="margin-top:8px">Klick auf ein Item filtert die Kisten. „★2“ = Ausrüstungsstufe.</div></div><div class="klist"></div></div>
   </div></div></div>
   <div class="vw-pane" data-p="info" hidden><div class="vw-scroll"><div class="vw-wrap info"></div></div></div>
@@ -332,7 +332,7 @@
         } else { ctx.imageSmoothingEnabled = view.s < 0.5; ctx.drawImage(img, ax, ay, o.nx * o.res * view.s, o.nz * o.res * view.s); }
         // Weltrand
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
-        drawLayers();
+        drawLayers(); drawRoute2d(ctx, toS, view.s);
         ctx.font = '12px system-ui,sans-serif'; ctx.textAlign = 'center';
         S.locations.forEach((l) => { const c = locCat(l); if (!ML['L_' + c]) return; const [x, y] = toS(l.x, l.z); const st = LOCSTY[c] || LOCSTY.d; const a = l.v ? 1 : 0.6;
           ctx.globalAlpha = a; ctx.fillStyle = st[0]; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.lineWidth = 1.5; ctx.beginPath();
@@ -418,7 +418,8 @@
 
       function pick(sx, sy) { let best = null, bd = 16; S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = i; } }); return best; }
       addEventListener('resize', draw);
-      return { build, draw, layersChanged };
+      function focus(P) { if (!P || !P.length) return; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; P.forEach((p) => { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }); view.cx = (x0 + x1) / 2; view.cz = (z0 + z1) / 2; const r = cv.getBoundingClientRect(); if (r.width) view.s = Math.max(0.02, Math.min(4, Math.min(r.width / Math.max(80, x1 - x0), r.height / Math.max(80, z1 - z0)) * 0.8)); draw(); }
+      return { build, draw, layersChanged, focus };
     })();
 
     // ================= 3D =================
@@ -800,7 +801,7 @@
         $('.top').innerHTML = r.topTypes.slice(0, 15).map((t) => `<tr><td>${esc(pieceName(t[0]))}</td><td class="n">${fmt(t[1])}</td></tr>`).join('');
         chestSearch(); placePlans(); drawPlayers(); shadowFresh = false; shadowPasses = 2; invalidate();
         if (!keepCam) views('obl');
-        SEL.reset(); TL.onLoad(); prepareOriginals(r);
+        SEL.reset(); TL.onLoad(); prepareOriginals(r); drawRoute3();
       }
       function recolor(mode) {
         colorMode = mode;
@@ -1136,6 +1137,23 @@
       // Figur aus einfachen Formen (eigenes Modell, kein Spiel-Asset)
       const HERO_MATS = []; let heroLin = false;
       function heroColors(lin) { if (lin === heroLin) return; heroLin = lin; HERO_MATS.forEach((m) => { m.color.setHex(m.userData.hex); if (lin) m.color.convertSRGBToLinear(); }); }
+      // ---- Route des Routenplaners in 3D: Linie mit nummerierten Wegpunkten (Portalsprünge gestrichelt)
+      let RT3 = null, rtG = null, rtLab = [];
+      const rtMat = new THREE.LineBasicMaterial({ color: 0xffc83d, depthTest: false, transparent: true, opacity: 0.95 }), rtMatJ = new THREE.LineDashedMaterial({ color: 0xbe96ff, dashSize: 3, gapSize: 3, depthTest: false, transparent: true });
+      function drawRoute3() {
+        if (rtG) { scene.remove(rtG); rtG.traverse((o) => o.geometry && o.geometry.dispose()); rtG = null; } rtLab.forEach((l) => l.d.remove()); rtLab = [];
+        if (!RT3 || !reg) { invalidate(); return; } rtG = new THREE.Group(); rtG.renderOrder = 12; scene.add(rtG);
+        const P = RT3.path; let seg = [];
+        const flush = (mat, pts) => { if (pts.length < 2) return; const g2 = new THREE.BufferGeometry().setFromPoints(pts); const ln = new THREE.Line(g2, mat); ln.renderOrder = 12; if (mat === rtMatJ) ln.computeLineDistances(); rtG.add(ln); };
+        P.forEach((p, i) => { const v = W(p.x, p.y + 1.5, p.z); if (p.jump) { flush(rtMat, seg); flush(rtMatJ, [W(P[i - 1].x, P[i - 1].y + 1.5, P[i - 1].z), v]); seg = [v]; } else seg.push(v); }); flush(rtMat, seg);
+        RT3.pts.forEach((p, i) => { const d = document.createElement('div'); d.className = 'vw-lbl rt'; d.style.background = '#ffc83d'; d.style.color = '#2a1d08'; d.style.fontWeight = '700'; d.textContent = (i + 1) + ' ' + p.label; LB.appendChild(d); rtLab.push({ d, v: W(p.x, p.y + 3, p.z) }); });
+        invalidate();
+      }
+      function setRoute3(R) { RT3 = R; drawRoute3(); }
+      function showRoute3() {
+        if (!RT3) return; const p0 = RT3.pts[0]; const A = areas(); let i = A.findIndex((r) => r.id !== 'world' && r.id !== 'seed' && p0.x >= r.bounds[0] && p0.x <= r.bounds[1] && p0.z >= r.bounds[2] && p0.z <= r.bounds[3]); if (i < 0) i = A.findIndex((r) => r.id === 'world'); if (i < 0) i = 0;
+        if (!reg || reg !== A[i]) selectRegion(i); else drawRoute3(); tgt.copy(W(p0.x, p0.y, p0.z)); dist = 90; pit = 0.75; invalidate();
+      }
       const OP = new Map(); // Online-Spieler-Figuren
       function opTick(dt) {
         if (!OP.size) return; let moved = false; const k = dt ? Math.min(1, dt * 4) : 0;
@@ -1367,6 +1385,7 @@
           const r = pane.getBoundingClientRect();
           const place = (l, vis) => { l.d.style.display = vis ? 'block' : 'none'; if (vis) { l.d.style.left = ((pv2.x + 1) / 2 * r.width) + 'px'; l.d.style.top = ((1 - pv2.y) / 2 * r.height) + 'px'; } };
           labels.forEach((l) => { pv2.copy(l.v).project(cam); const d = fly ? l.v.distanceTo(cam.position) : dist; place(l, showLbl && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && d < (l.k === 'bed' || l.k === 'tomb' ? (fly ? 60 : 220) : (fly ? 150 : 380))); });
+          rtLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           plLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, !l.out && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           chLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && (fly ? l.v.distanceTo(cam.position) < 120 : dist < 260)); });
         }
@@ -1520,7 +1539,7 @@
         if (r.lazy && !r.H16) { const st = $('.vw-status'), prev = st.textContent; st.textContent = T('Lade Gelände der ganzen Welt …'); prepSeed(r).then(() => { st.textContent = prev; if (+sel.value === i) { load(r, keepCam); applyLayers(); } }).catch((e) => { st.textContent = 'Gelände nicht ladbar: ' + e.message; }); return; }
         load(r, keepCam); applyLayers();
       }
-      return { start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
+      return { start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
     })();
 
     $('.w3d').onclick = () => { setTab('3d'); three.selectRegion(0); };
@@ -1549,7 +1568,115 @@
     function craftHtml(r) {
       const st = stock(); let can = Infinity;
       const rows = r[2].map(([h, n]) => { const have = st[h] || 0; can = Math.min(can, Math.floor(have / n)); const sub = have < n && RC.recipes.some((x) => String(x[0]) === String(h)); return `<li class="${have >= n ? 'ok' : 'no'}"><span>${have >= n ? '✔' : '✘'} ${fmt(n)} × <a href="#" class="cr" data-n="${esc(itemName(h))}">${esc(itemName(h))}</a>${sub ? ' <span class="sub">(herstellbar)</span>' : ''}</span><span class="sub">${fmt(have)} da</span></li>`; }).join('');
-      return `<div class="vw-card ${can > 0 ? 'hit' : ''}"><div class="lab">${esc(itemName(r[0]))}${r[1] > 1 ? ' ×' + r[1] : ''}</div><div class="meta">${can > 0 ? 'Herstellbar: ' + fmt(can) + '×' : 'Zutaten fehlen'}</div><ul class="it">${rows}</ul></div>`;
+      return `<div class="vw-card ${can > 0 ? 'hit' : ''}"><div class="lab">${esc(itemName(r[0]))}${r[1] > 1 ? ' ×' + r[1] : ''}</div><div class="meta">${can > 0 ? 'Herstellbar: ' + fmt(can) + '×' : 'Zutaten fehlen'}</div><ul class="it">${rows}</ul><div class="row" style="margin-top:8px;gap:6px"><input class="rtN" data-h="${r[0]}" type="number" min="1" max="999" value="1" style="width:58px;font:inherit;padding:5px 6px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"><button class="rtGo" data-h="${r[0]}" style="flex:1">🧭 Route planen</button></div></div>`;
+    }
+    // ================= Routenplaner: Rezeptbaum auflösen, Zutaten in Kisten finden, kürzesten Weg (mit Portalen) planen =================
+    let ROUTE = null;
+    const ST_NAME = { workbench: 'Werkbank', forge: 'Schmiede', cauldron: 'Kessel', smelter: 'Schmelzofen', blast: 'Hochofen', kiln: 'Meiler', spin: 'Spinnrad', mill: 'Windmühle', refinery: 'Eitr-Raffinerie', galdr: 'Galdrtisch', blackforge: 'Schwarze Schmiede' };
+    const ST_PREFAB = { piece_workbench: 'workbench', forge: 'forge', piece_cauldron: 'cauldron', smelter: 'smelter', blastfurnace: 'blast', charcoal_kiln: 'kiln', piece_spinningwheel: 'spin', windmill: 'mill', eitrrefinery: 'refinery', piece_magetable: 'galdr', blackforge: 'blackforge' };
+    let P2H = null; const ph = (pf) => { if (!P2H) { P2H = {}; Object.entries((RC && RC.items) || {}).forEach(([h, v]) => { if (v[0]) P2H[v[0]] = +h; }); } return P2H[pf]; };
+    function recipeOf(h) {
+      const CONV = [['Copper', 'CopperOre', 'smelter'], ['Tin', 'TinOre', 'smelter'], ['Iron', 'IronScrap', 'smelter'], ['Silver', 'SilverOre', 'smelter'], ['BlackMetal', 'BlackMetalScrap', 'blast'], ['FlametalNew', 'FlametalOreNew', 'blast'], ['Coal', 'Wood', 'kiln'], ['LinenThread', 'Flax', 'spin'], ['BarleyFlour', 'Barley', 'mill']];
+      for (const [o, i, st] of CONV) if (ph(o) === +h && ph(i)) return { out: +h, amt: 1, ing: [[ph(i), 1]], st, sure: true };
+      if (ph('Eitr') === +h && ph('Sap') && ph('Softtissue')) return { out: +h, amt: 1, ing: [[ph('Sap'), 1], [ph('Softtissue'), 1]], st: 'refinery', sure: true };
+      const r = RC && RC.recipes.find((x) => +x[0] === +h); if (!r) return null;
+      const typ = (RC.items[r[0]] || [])[2], ings = r[2].map(([ih]) => (RC.items[ih] || [])[0] || '');
+      let st = 'workbench';
+      if (ings.includes('Eitr')) st = 'galdr'; else if (ings.includes('Carapace') || ings.includes('Mandible')) st = 'blackforge';
+      else if (ings.some((n) => /^(Copper|Tin|Bronze|Iron|Silver|BlackMetal|Flametal|FlametalNew)$/.test(n))) st = 'forge';
+      else if (typ === 'Consumable') st = 'cauldron';
+      return { out: +h, amt: r[1] || 1, ing: r[2].map(([a, b]) => [+a, b]), st, sure: false };
+    }
+    function allChests() {
+      const out = []; const NH = {}; Object.entries(IT()).forEach(([h, n]) => (NH[n] = +h));
+      const add = (c, reg) => { const m = new Map(); c.i.forEach(([n, k, h]) => { const hh = h != null ? +h : NH[n.replace(/ ★\d+$/, '')]; if (hh != null) m.set(hh, (m.get(hh) || 0) + k); }); if (m.size) out.push({ c, reg, m }); };
+      S.regions.forEach((r) => r.chests.forEach((c) => add(c, r.name))); (S.looseChests || []).forEach((c) => add(c, c.g || ''));
+      return out;
+    }
+    function stationsByKind() {
+      const out = {}; const w = S.world3d; if (!w) return out;
+      Object.values(w.pieces || {}).forEach((arr) => { for (let i = 0; i < arr.length; i += 6) { const ty = w.types[arr[i + 4]]; const k = ty && ST_PREFAB[ty[0]]; if (k) (out[k] || (out[k] = [])).push({ x: arr[i], y: arr[i + 1], z: arr[i + 2] }); } });
+      return out;
+    }
+    function portalLinks() {
+      const by = {}; (S.portals || []).forEach((p) => { if (p.tag) (by[p.tag] || (by[p.tag] = [])).push(p); });
+      const w = S.world3d, PY = []; if (w && w.pieces && w.pieces.portal) { const a = w.pieces.portal; for (let i = 0; i < a.length; i += 6) PY.push([a[i], a[i + 1], a[i + 2]]); }
+      const yOf = (p) => { let best = 32, bd = 1e9; PY.forEach(([x, y, z]) => { const d = Math.hypot(x - p.x, z - p.z); if (d < bd) { bd = d; best = y; } }); return best; };
+      const L = []; Object.entries(by).forEach(([t, l]) => { for (let i = 0; i < l.length; i++) for (let j = 0; j < l.length; j++) if (i !== j) L.push({ a: { x: l[i].x, y: yOf(l[i]), z: l[i].z }, b: { x: l[j].x, y: yOf(l[j]), z: l[j].z }, tag: t }); });
+      return L;
+    }
+    const PORTAL_COST = 45; // Ladezeit + Umweg zum Portal: kurze Wege lieber laufen
+    function legOf(a, b, PL) { // kürzester Weg a→b: zu Fuß/Boot oder über ein Portalpaar
+      let best = { d: Math.hypot(a.x - b.x, a.z - b.z), via: null };
+      for (const l of PL) { const d = Math.hypot(a.x - l.a.x, a.z - l.a.z) + PORTAL_COST + Math.hypot(l.b.x - b.x, l.b.z - b.z); if (d < best.d) best = { d, via: l }; }
+      return best;
+    }
+    function planRoute(h, qty) {
+      const CH = allChests(), ST = stationsByKind(), PL = portalLinks();
+      const avail = new Map(); CH.forEach((c) => c.m.forEach((k, ih) => avail.set(ih, (avail.get(ih) || 0) + k)));
+      const takes = new Map(), missing = new Map(), crafts = [];
+      function need(ih, n, depth) {
+        const a = avail.get(ih) || 0, t = Math.min(a, n); if (t > 0) { avail.set(ih, a - t); takes.set(ih, (takes.get(ih) || 0) + t); }
+        const rest = n - t; if (rest <= 0) return;
+        const rc = depth < 7 ? recipeOf(ih) : null; if (!rc) { missing.set(ih, (missing.get(ih) || 0) + rest); return; }
+        craft(rc, Math.ceil(rest / rc.amt), depth);
+      }
+      function craft(rc, batches, depth) { rc.ing.forEach(([ih, k]) => need(ih, k * batches, depth + 1)); crafts.push({ h: rc.out, n: batches * rc.amt, batches, st: rc.st, sure: rc.sure }); }
+      const top = recipeOf(h); if (!top) return { err: 'Kein Rezept bekannt.' };
+      craft(top, Math.ceil(qty / top.amt), 0);
+      // Start: eigene Position (Mod/Laufen), sonst die passende Werkstation
+      let me = null; try { const L = (typeof LIVE !== 'undefined' && LIVE) || []; if (L.length) me = { x: L[0].x, y: L[0].y, z: L[0].z, label: L[0].name }; } catch (e) { }
+      if (!me) { const wp = three.walkPos && three.walkPos(); if (wp) me = Object.assign({ label: T('Du') }, wp); }
+      const anchor0 = me || (CH[0] && { x: CH[0].c.x, z: CH[0].c.z }) || { x: 0, z: 0 };
+      const nearest = (list, p) => { let b = null, bd = 1e18; (list || []).forEach((q) => { const d = legOf(p, q, PL).d; if (d < bd) { bd = d; b = q; } }); return b; };
+      const finalKind = ST[top.st] ? top.st : 'workbench', finalSt = nearest(ST[finalKind], anchor0) || nearest(ST.workbench, anchor0);
+      const anchor = finalSt || anchor0;
+      // Kisten wählen: je Zutat die nächstgelegenen (zur Werkstation) zuerst
+      const pick = new Map();
+      takes.forEach((n, ih) => {
+        const cand = CH.filter((c) => c.m.get(ih)).map((c) => ({ c, d: legOf(c.c, anchor, PL).d })).sort((a, b) => a.d - b.d);
+        let left = n; for (const { c } of cand) { if (left <= 0) break; const t = Math.min(left, c.m.get(ih)); left -= t; const e = pick.get(c) || pick.set(c, []).get(c); e.push([ih, t]); }
+      });
+      // Reihenfolge der Kisten: nächster Nachbar + 2-opt, Ende Richtung Werkstation
+      let order = [...pick.keys()]; const start = me || anchor;
+      const D = (a, b) => legOf(a, b, PL).d;
+      { const rest = order.slice(); order = []; let cur = start; while (rest.length) { let bi = 0, bd = 1e18; rest.forEach((c, i) => { const d = D(cur, c.c); if (d < bd) { bd = d; bi = i; } }); cur = rest[bi].c; order.push(rest.splice(bi, 1)[0]); } }
+      const tour = (o) => { let d = 0, cur = start; o.forEach((c) => { d += D(cur, c.c); cur = c.c; }); return d + D(cur, anchor); };
+      for (let it = 0, imp = true; imp && it < 40; it++) { imp = false; for (let i = 0; i < order.length - 1; i++) for (let j = i + 1; j < order.length; j++) { const o2 = order.slice(0, i).concat(order.slice(i, j + 1).reverse(), order.slice(j + 1)); if (tour(o2) < tour(order) - 0.5) { order = o2; imp = true; } } }
+      // Wegpunkte + Werkstationen in Herstell-Reihenfolge
+      const pts = []; const push = (p, kind, label, info) => pts.push({ x: p.x, y: p.y != null ? p.y : 34, z: p.z, kind, label, info });
+      if (me) push(me, 'start', me.label || T('Start'));
+      order.forEach((c) => push(c.c, 'chest', (c.c.s ? '„' + c.c.s + '“' : c.c.t) + (c.reg ? ' · ' + c.reg : ''), pick.get(c).map(([ih, t]) => fmt(t) + '× ' + itemName(ih)).join(', ')));
+      const stepsAt = new Map(); crafts.forEach((cr) => { const k = ST[cr.st] ? cr.st : 'workbench'; (stepsAt.get(k) || stepsAt.set(k, []).get(k)).push(cr); });
+      stepsAt.forEach((list, k) => { if (k === finalKind) return; const sp = nearest(ST[k], anchor); push(sp || anchor, 'station', ST_NAME[k] + (sp ? '' : ' (' + T('nicht gefunden') + ')'), list.map((cr) => fmt(cr.n) + '× ' + itemName(cr.h)).join(', ')); });
+      if (finalSt || !pts.length) push(finalSt || anchor, 'station', ST_NAME[finalKind] + (ST[top.st] ? '' : ' (' + T('nicht gefunden') + ')'), (stepsAt.get(finalKind) || []).map((cr) => fmt(cr.n) + '× ' + itemName(cr.h)).join(', '));
+      // Wege mit Portalsprüngen auflösen
+      const path = []; let dist = 0;
+      for (let i = 0; i < pts.length; i++) {
+        if (i === 0) { path.push({ x: pts[0].x, y: pts[0].y, z: pts[0].z }); continue; }
+        const l = legOf(pts[i - 1], pts[i], PL); dist += l.via ? l.d - PORTAL_COST : l.d;
+        if (l.via) { path.push({ x: l.via.a.x, y: l.via.a.y, z: l.via.a.z, portal: l.via.tag }); path.push({ x: l.via.b.x, y: l.via.b.y, z: l.via.b.z, jump: true, portal: l.via.tag }); }
+        path.push({ x: pts[i].x, y: pts[i].y, z: pts[i].z });
+        pts[i].via = l.via ? l.via.tag : null;
+      }
+      return { h, qty, pts, path, dist: Math.round(dist), missing: [...missing].map(([ih, n]) => [itemName(ih), n]), crafts, guess: crafts.some((c) => !c.sure) };
+    }
+    function routeHtml(R) {
+      if (R.err) return `<div class="sub">${esc(R.err)}</div>`;
+      const ic = { start: '🧍', chest: '📦', station: '🔨' };
+      return `<h3 style="margin:14px 0 6px">🧭 ${T('Route')}: ${fmt(R.qty)}× ${esc(itemName(R.h))} <span class="sub">· ${T('ca.')} ${fmt(R.dist)} m ${T('zu Fuß')}</span></h3>` +
+        (R.missing.length ? `<div class="vw-card" style="border-color:#c0574a"><b>${T('Fehlt in allen Kisten')}:</b> ${R.missing.map(([n, k]) => fmt(k) + '× ' + esc(n)).join(', ')}</div>` : '') +
+        `<ol class="rtList" style="margin:8px 0 6px 18px;padding:0">${R.pts.map((p, i) => `<li style="margin:4px 0">${p.via ? `<span class="sub">⛩ ${T('Portal')} „${esc(p.via)}“ →</span><br>` : ''}${ic[p.kind] || '•'} <b>${esc(p.label)}</b>${p.info ? '<br><span class="sub">' + (p.kind === 'chest' ? T('mitnehmen') + ': ' : T('herstellen') + ': ') + esc(p.info) + '</span>' : ''}</li>`).join('')}</ol>` +
+        `<div class="row" style="gap:6px"><button class="rt3d">🌍 ${T('In 3D zeigen')}</button><button class="rtMap">🗺 ${T('Auf der Karte')}</button><button class="rtClr">✕ ${T('Route löschen')}</button></div>` +
+        (R.guess ? `<div class="sub" style="margin-top:6px">${T('Werkstationen für Rezepte sind geschätzt (Schmiede für Metall, Kessel für Essen, sonst Werkbank). Wege sind Luftlinie.')}</div>` : `<div class="sub" style="margin-top:6px">${T('Wege sind Luftlinie.')}</div>`);
+    }
+    function setRoute(R) { ROUTE = R && !R.err ? R : null; try { three.setRoute(ROUTE); } catch (e) { } try { map.draw(); } catch (e) { } }
+    function drawRoute2d(ctx, toS, s) {
+      if (!ROUTE) return; const P = ROUTE.path; ctx.save(); ctx.lineWidth = 3;
+      for (let i = 1; i < P.length; i++) { const [x1, y1] = toS(P[i - 1].x, P[i - 1].z), [x2, y2] = toS(P[i].x, P[i].z); ctx.strokeStyle = P[i].jump ? 'rgba(190,150,255,.9)' : 'rgba(255,200,60,.95)'; ctx.setLineDash(P[i].jump ? [3, 6] : [10, 6]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+      ctx.setLineDash([]); ctx.font = 'bold 11px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ROUTE.pts.forEach((p, i) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = p.kind === 'station' ? '#ffb347' : p.kind === 'start' ? '#4cc36b' : '#ffd84a'; ctx.strokeStyle = '#2a1d08'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#2a1d08'; ctx.fillText(String(i + 1), x, y + 0.5); });
+      ctx.textBaseline = 'alphabetic'; ctx.restore();
     }
     function pieceCost(name) { return RC && RC.pieces[name] ? RC.pieces[name][2] : null; }
 
@@ -1573,6 +1700,8 @@
         const R = recipesFor(s);
         $('.kcraft').innerHTML = R.length ? `<h3 style="margin:14px 0 8px">Herstellen${found ? '' : ' – nichts davon in den Kisten'}</h3><div class="vw-cards">${R.map(craftHtml).join('')}</div>` : '';
         $$('.kcraft a.cr').forEach((a) => (a.onclick = (e) => { e.preventDefault(); q.value = a.dataset.n; render(); }));
+        $$('.kcraft .rtGo').forEach((b) => (b.onclick = () => { const n = Math.max(1, +($(`.rtN[data-h="${b.dataset.h}"]`).value) || 1); const Rt = planRoute(+b.dataset.h, n); setRoute(Rt); showRoute(Rt); }));
+        if (ROUTE) showRoute(ROUTE);
         const tot = {}; all.forEach((c) => c.i.forEach((it) => (tot[it[0]] = (tot[it[0]] || 0) + it[1])));
         let tl = Object.entries(tot).sort((x, y) => y[1] - x[1]); if (s) tl = tl.filter((t) => (g.VW_I18N ? g.VW_I18N.names(t[0]) : [t[0]]).some((n) => n.toLowerCase().includes(s)));
         $('.ktot').innerHTML = tl.slice(0, s ? 400 : 60).map((t) => `<tr class="click" data-i="${esc(t[0])}" style="cursor:pointer"><td>${esc(t[0])}</td><td class="n">${fmt(t[1])}</td></tr>`).join('') + (tl.length > 60 && !s ? `<tr><td colspan="2" class="sub">… ${tl.length - 60} weitere – Suche nutzen</td></tr>` : '') || '<tr><td class="sub">Nichts gefunden</td></tr>';
@@ -1585,6 +1714,13 @@
           return `<div class="vw-card${hit ? ' hit' : ''}"><div class="lab${c.s ? '' : ' none'}">${c.s ? esc(c.s) : 'ohne Schild'}</div><div class="meta">${esc(c.t)}${c.o ? ' · ' + esc(c.o) : ''} · x ${Math.round(c.x)} / z ${Math.round(c.z)}</div>` +
             (c.i.length ? `<ul class="it">${it.slice(0, lim).map((i) => `<li class="${match(i) ? 'm' : ''}"><span>${esc(i[0])}</span><span>${fmt(i[1])}</span></li>`).join('')}</ul>${c.i.length > 8 ? `<button class="more" data-k="${k}">${open.has(k) ? 'weniger' : '+ ' + (c.i.length - 8) + ' weitere'}</button>` : ''}` : '<div class="sub">leer</div>') + '</div>';
         }
+      }
+      function showRoute(Rt) {
+        const el = $('.kroute'); el.innerHTML = routeHtml(Rt);
+        const b3 = $('.rt3d', el), bm = $('.rtMap', el), bc = $('.rtClr', el);
+        if (bc) bc.onclick = () => { setRoute(null); el.innerHTML = ''; };
+        if (bm) bm.onclick = () => { setTab('map'); map.focus(Rt.path); };
+        if (b3) b3.onclick = () => { setTab('3d'); three.showRoute(); };
       }
       return { fill, render };
     })();

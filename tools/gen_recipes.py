@@ -72,7 +72,7 @@ for c in rows(os.path.join(D, 'pieces/piece-list.md')):
 names = {}
 for pf, (en, typ) in items.items():
     if typ in ('OneHandedWeapon',) and en.lower().endswith('attack'): continue
-    names[stable(pf)] = [pf, en]
+    names[stable(pf)] = [pf, en, typ]  # typ: Material, Consumable, … (für die Werkstation-Schätzung im Routenplaner)
 for h in set([r[0] for r in recipes] + [x[0] for r in recipes for x in r[2]] + [x[0] for p in pieces.values() for x in p[2]]):
     if h in names: continue
     pf = next((p for p in items if stable(p) == h), None)
