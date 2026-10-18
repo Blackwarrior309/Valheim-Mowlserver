@@ -108,11 +108,11 @@
       <div class="row" style="margin-top:6px"><button class="selAll">Alles im Gebiet</button><button class="selClr">Leeren</button></div>
       <div class="sub selInfo" style="margin-top:4px">Klick = hinzufügen, Shift+Klick = entfernen.</div>
       <div class="selExp" hidden><input class="selName" type="text" placeholder="Name des Bauplans" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"><div class="row" style="margin-top:6px"><button class="pri selBp">⬇ PlanBuild (.blueprint)</button></div><div class="sub selHint" style="margin-top:4px" data-en="For the PlanBuild mod: put the file into <code>BepInEx/config/PlanBuild/blueprints</code>, place it in game with the blueprint rune as a hologram and build it.">Für den Mod PlanBuild: Datei nach <code>BepInEx/config/PlanBuild/blueprints</code> legen, im Spiel mit der Bauplan-Rune als Hologramm platzieren und nachbauen.</div></div>
-      <h2>Grafik</h2><div class="row gstyle"><button data-gs="valheim">Valheim Original</button><button data-gs="real" title="Gemalte Texturen (textures/*.jpg)">Realistisch</button><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
+      <h2>Grafik</h2><div class="row gstyle"><button data-gs="valheim" hidden>Valheim Original</button><button data-gs="real" title="Gemalte Texturen (textures/*.jpg)">Realistisch</button><button data-gs="natur">Natur</button><button data-gs="full">Einfach</button><button data-gs="simple">Blöcke</button></div>
       <div class="sub originalStatus" role="status" hidden></div>
       <details class="perf"><summary>Leistung &amp; Grafik</summary>
         <div class="qrow"><label for="vwq-sh">Schatten</label><select id="vwq-sh" data-q="shadows"><option value="0">Aus (schnell)</option><option value="1">An – berechnet im Stillstand</option></select></div>
-        <div class="qrow"><label for="vwq-de">Grafik</label><select id="vwq-de" data-q="detail"><option value="valheim">Valheim Original (Modelle &amp; Texturen)</option><option value="real">Realistisch (gemalte Texturen)</option><option value="natur">Natur-Texturen (Holz, Stein, Stroh)</option><option value="full">Einfach texturiert (einfärbbar)</option><option value="simple">Blöcke (am schnellsten)</option></select></div>
+        <div class="qrow"><label for="vwq-de">Grafik</label><select id="vwq-de" data-q="detail"><option value="valheim" hidden disabled>Valheim Original (Modelle &amp; Texturen)</option><option value="real">Realistisch (gemalte Texturen)</option><option value="natur">Natur-Texturen (Holz, Stein, Stroh)</option><option value="full">Einfach texturiert (einfärbbar)</option><option value="simple">Blöcke (am schnellsten)</option></select></div>
         <div class="qrow"><label for="vwq-na">Natur</label><select id="vwq-na" data-q="nature"><option value="low">Wenig</option><option value="mid">Mittel</option><option value="high">Alles</option></select></div>
         <div class="qrow"><label for="vwq-re">Auflösung</label><select id="vwq-re" data-q="res"><option value="1">100 %</option><option value="0.75">75 %</option><option value="0.5">50 %</option></select></div>
         <div class="qrow"><label for="vwq-ra">Sichtweite</label><select id="vwq-ra" data-q="range"><option value="near">Nah</option><option value="mid">Mittel</option><option value="far">Weit</option></select></div>
@@ -415,6 +415,8 @@
       const texBase = (() => { const sc = [...document.scripts].find((x) => /viewer\.js/.test(x.src)); return sc ? sc.src.replace(/js\/viewer\.js.*$/, '') : ''; })();
       const originals = g.VWValheimAssets && texBase && location.protocol !== 'file:' ? g.VWValheimAssets.create(texBase, THREE) : null;
       let originalRevision = 0;
+      // Die Option erscheint nur, wenn das Grafikpaket (assets/valheim) auf dieser Seite vorhanden ist
+      if (originals) fetch(texBase + 'assets/valheim/index.json', { method: 'HEAD', cache: 'no-cache' }).then((r) => { if (!r.ok) return; $$('[data-gs="valheim"]').forEach((b) => (b.hidden = false)); const o = $('#vwq-de option[value="valheim"]'); if (o) { o.hidden = false; o.disabled = false; } }).catch(() => {});
       function prepareOriginals(r) {
         const revision = ++originalRevision, status = $('.originalStatus');
         status.hidden = Q.detail !== 'valheim';
@@ -525,6 +527,10 @@
         const sh = bigArea ? 380 : span / 2 + 20; sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.far = bigArea ? 1600 : 1500; sc.updateProjectionMatrix();
         if (!bigArea) { sun.position.set(-span * 0.3, span * 0.45 + 120, span * 0.25); sun.target.position.set(0, 0, 0); }
         applyEnvironment(r, bigArea);
+        // „Valheim Original“ rendert in sRGB: die übrigen (in sRGB angegebenen) Farben dafür nach linear umrechnen, sonst wirkt alles blass
+        const LIN = Q.detail === 'valheim';
+        skyTex.encoding = LIN ? THREE.sRGBEncoding : THREE.LinearEncoding; skyTex.needsUpdate = true;
+        if (LIN) { scene.fog.color.convertSRGBToLinear(); sun.color.convertSRGBToLinear(); if (hemi) { hemi.color.convertSRGBToLinear(); hemi.groundColor.convertSRGBToLinear(); } water.material.color.convertSRGBToLinear(); }
         const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF;
         // Gelände
         const NX = r.nx, NZ = r.nz, RS = r.res; const hu = b64u8(r.h); const H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2);
@@ -547,6 +553,7 @@
           if (e > 70) tmp.lerp(new THREE.Color(0xe8eef2), Math.min(1, (e - 70) / 40));
           if (sl > 0.7) tmp.lerp(cRock, Math.min(1, (sl - 0.7) * 1.5));
           tmp.offsetHSL(0, 0, (Math.sin(x * 0.37) * Math.cos(z * 0.29) + Math.sin(x * 0.11 + z * 0.13)) * 0.03);
+          if (LIN) tmp.convertSRGBToLinear();
           col[k * 3] = tmp.r; col[k * 3 + 1] = tmp.g; col[k * 3 + 2] = tmp.b;
         }
         const MK = r.mask ? b64u8(r.mask) : null;

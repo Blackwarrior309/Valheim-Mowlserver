@@ -11,12 +11,12 @@ VER=$(python3 -c "import json;print(json.load(open('$ROOT/mod/thunderstore/manif
 grep -q "Version = \"$VER\"" "$ROOT/mod/ValheimWeltLive/Plugin.cs" || { echo "Version $VER in manifest.json != Plugin.cs"; exit 1; }
 OUT="$ROOT/dist"; TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$OUT"
-web() { mkdir -p "$1"; cp "$ROOT/index.html" "$1/"; cp -r "$ROOT/css" "$ROOT/js" "$ROOT/lib" "$ROOT/plans" "$ROOT/textures" "$1/"; if [ -d "$ROOT/assets/valheim" ]; then mkdir -p "$1/assets"; cp -r "$ROOT/assets/valheim" "$1/assets/"; fi; }
+web() { mkdir -p "$1"; cp "$ROOT/index.html" "$1/"; cp -r "$ROOT/css" "$ROOT/js" "$ROOT/lib" "$ROOT/plans" "$ROOT/textures" "$1/"; if [ "$2" != "public" ] && [ -d "$ROOT/assets/valheim" ]; then mkdir -p "$1/assets"; cp -r "$ROOT/assets/valheim" "$1/assets/"; fi; }
 
 # Thunderstore
 T="$TMP/ts"; mkdir -p "$T/plugins"
 cp "$ROOT/mod/thunderstore/"{manifest.json,icon.png,README.md,CHANGELOG.md} "$T/"
-cp "$DLL" "$T/plugins/ValheimWeltLive.dll"; web "$T/plugins/web"
+cp "$DLL" "$T/plugins/ValheimWeltLive.dll"; web "$T/plugins/web" public   # Thunderstore: nie Original-Spieldaten mitliefern
 (cd "$T" && rm -f "$OUT/ValheimWeltLive-$VER-thunderstore.zip" && zip -qr "$OUT/ValheimWeltLive-$VER-thunderstore.zip" .)
 
 # manual
