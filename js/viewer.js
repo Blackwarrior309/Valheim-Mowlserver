@@ -1303,7 +1303,7 @@
       // ---- Mitspieler im Browser: Position und Name laufen über einen öffentlichen MQTT-Broker (kein Server nötig, nichts am Spielserver)
       const MP = { cli: null, loading: false, me: Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join(''), peers: new Map(), lastPub: 0, lastMsg: '', mine: new Map() };
       const inviteRoom = new URLSearchParams(location.search).get('room');
-      const mpRoom = () => 'vwelt/' + (inviteRoom && /^[a-zA-Z0-9_-]{16,80}$/.test(inviteRoom) ? 'invite/' + inviteRoom + '/' : '') + (location.host + location.pathname).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 60) + '/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
+      const mpRoom = () => 'vwelt/' + /* alle Besucher dieser Karte in einem gemeinsamen Raum */ (location.host + location.pathname).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 60) + '/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
       const NAME_IN = $('.walkName');
       let myName = ''; try { myName = (localStorage.getItem('vw-walk-name') || '').trim().slice(0, 24); } catch (e) { }
       if (!myName) myName = 'Wikinger ' + MP.me.slice(0, 3).toUpperCase();
