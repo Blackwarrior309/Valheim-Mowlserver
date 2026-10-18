@@ -1,0 +1,29 @@
+# Lag-Diagnose: aktuellen Spielstand vom Server holen und auswerten (nur lesen). Ergebnis als Hinweis „Lag-Diagnose“ am Lauf.
+name: Lag-Diagnose
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository != 'Blackwarrior309/Valheim-welt' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Spielstand holen
+        env:
+          VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
+          VS_FTP_PORT: ${{ secrets.VS_FTP_PORT }}
+          VS_FTP_USER: ${{ secrets.VS_FTP_USER }}
+          VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
+          VS_FTP_DIR: ${{ secrets.VS_FTP_DIR }}
+          VS_WORLD: ${{ secrets.VS_WORLD }}
+          VS_STRIP_IDS: 'true'
+          VS_DATA: ${{ runner.temp }}/diag
+          VS_OUT: ${{ runner.temp }}/diag/welt.vwelt
+        run: node sync/sync.cjs --force > /dev/null || true
+      - name: Auswerten
+        run: node sync/diagnose.cjs "$RUNNER_TEMP/diag/welt-cache"
