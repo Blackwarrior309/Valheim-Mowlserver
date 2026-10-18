@@ -502,7 +502,7 @@
     const strip = !!opts.stripIds;
     const snap = {
       format: 'vwelt', version: FORMAT_VERSION, created: new Date().toISOString(), generator: 'Valheim Welt-Viewer (inoffiziell)',
-      world: { name: world.name, seed: world.seedName, worldGen: world.worldGen, modifiers: world.modifiers },
+      world: { name: world.name, seed: world.seedName, worldGen: world.worldGen, modifiers: world.modifiers, time: dbi.netTime ? { net: Math.round(dbi.netTime), at: opts.saveTime || Date.now() } : undefined }, // Spielzeit (Sekunden) beim Speichern
       crafted: (() => { // Wer hat welche (noch vorhandenen) Gegenstände hergestellt – aus Kisten, Ständern und vom Boden
         const by = {}; const add = ([h, st, , who]) => { if (!who) return; const nm = D.items[h] || ('Unbekannt (0x' + (h >>> 0).toString(16) + ')'); const e = by[who] || (by[who] = { n: 0, i: {} }); e.n += st; e.i[nm] = (e.i[nm] || 0) + st; };
         conts.forEach((c) => c.inv.forEach(add)); loose.forEach(add);

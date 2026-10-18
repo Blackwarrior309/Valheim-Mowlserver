@@ -107,6 +107,9 @@
       <h2>Gebiet</h2><select class="reg" style="width:100%"></select>
       <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button><button class="walkBtn">🚶 Laufen (G)</button></div><div class="row" style="margin-top:6px"><input class="walkName" type="text" maxlength="24" placeholder="Dein Name für Mitspieler" title="So sehen dich andere, die gerade auch auf dieser Karte laufen" style="flex:1;font:inherit;font-size:13px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"></div>
       <div class="tl" hidden><h2>Zeitraffer</h2><div class="row" style="flex-wrap:nowrap;align-items:center"><button class="tlPlay" aria-label="Abspielen">▶</button><input type="range" class="tlR" min="0" max="0" value="0" style="flex:1;min-width:0"></div><div class="sub tlInfo" style="margin-top:4px"></div><div class="tlList" style="max-height:170px;overflow:auto;margin-top:6px"></div></div>
+      <h2>Tageszeit</h2><div class="row dnRow"><button class="dnPause" title="Uhr anhalten / weiterlaufen lassen">⏸</button><input class="dnSlider" type="range" min="0" max="1440" step="5" style="flex:1;min-width:0"><b class="dnClock" style="min-width:44px;text-align:right;font-variant-numeric:tabular-nums">12:00</b></div>
+      <div class="row" style="margin-top:6px"><select class="dnMode" style="flex:1;min-width:0"><option value="server">Wie auf dem Server</option><option value="normal">Eigener Ablauf (1 Tag = 30 Min., wie im Spiel)</option><option value="fast">Schnell (1 Tag = 3 Min.)</option></select></div>
+      <div class="sub dnInfo" style="margin-top:4px"></div>
       <h2>Gebäude exportieren</h2>
       <div class="row"><button class="selMode">☝ Auswählen</button><select class="selHow" style="flex:1"><option value="0">Zusammenhängendes Gebäude</option><option value="6">Umkreis 6 m</option><option value="12">Umkreis 12 m</option><option value="25">Umkreis 25 m</option><option value="1">Einzelnes Teil</option></select></div>
       <div class="row" style="margin-top:6px"><button class="selAll">Alles im Gebiet</button><button class="selClr">Leeren</button></div>
@@ -457,8 +460,46 @@
         const e = (!big && ENV[bioAt((X0 + X1) / 2, (Z0 + Z1) / 2)]) || ENV[1];
         const top = new THREE.Color(e.sky).lerp(new THREE.Color(0x3d6a96), 0.45); paintSky(top, e.fog); scene.background = skyTex; scene.fog.color.setHex(e.fog);
         if (hemi) { hemi.color.setHex(e.hemi); hemi.groundColor.setHex(e.ground); }
-        sun.color.setHex(e.sun); water.material.color.setHex(e.water);
+        sun.color.setHex(e.sun); water.material.color.setHex(e.water); ENVB.top = top.clone(); ENVB.fog = new THREE.Color(e.fog);
       }
+      // ---- Tag und Nacht: t = Tagesanteil (0 Mitternacht, 0,5 Mittag), wie EnvMan im Spiel (1 Tag = 1800 s Spielzeit)
+      const ENVB = { top: new THREE.Color(0x6d93b8), fog: new THREE.Color(0xb9d0d5) }; let ENVL = null;
+      const DN = Object.assign({ mode: 'server', paused: false, t: 0.5 }, (() => { try { return JSON.parse(localStorage.getItem('vw-daynight') || '{}'); } catch (e) { return {}; } })());
+      let dnT = DN.t, dnLast = performance.now(), dnShadowT = -1, dnSky = -1;
+      const sunDir = new THREE.Vector3(-0.55, 0.8, 0.45).normalize();
+      const C_NTOP = new THREE.Color(0x0b1630), C_NHOR = new THREE.Color(0x1d2c47), C_SET = new THREE.Color(0xe39a5c), C_MOON = new THREE.Color(0x9fb4e0), C_NHEMI = new THREE.Color(0x3a4a6e), tc1 = new THREE.Color(), tc2 = new THREE.Color();
+      const serverT = () => { const W2 = S.world && S.world.time; if (!W2) return null; const sec = W2.net + (Date.now() - W2.at) / 1000; return { t: ((sec % 1800) + 1800) % 1800 / 1800, day: Math.floor(sec / 1800) + 1 }; };
+      function captureEnv(LIN) { ENVL = { sun: sun.color.clone(), hemi: hemi ? hemi.color.clone() : null, ground: hemi ? hemi.groundColor.clone() : null, fog: scene.fog.color.clone(), water: water.material.color.clone(), LIN }; dnSky = -1; applyTime(true); }
+      function applyTime(force) {
+        if (!ENVL) return; const t = dnT, a = (t - 0.25) * Math.PI * 2, el = Math.sin(a) + 0.25; // +0,25: lange Abende wie im Spiel (hell ca. 5–21 Uhr)
+        const day = THREE.MathUtils.smoothstep(el, -0.15, 0.3), set = el > -0.2 ? 1 - THREE.MathUtils.smoothstep(Math.abs(el), 0.05, 0.4) : 0;
+        if (el > -0.05) sunDir.set(-Math.cos(a) * 0.85, Math.max(0.08, el), 0.45).normalize(); else sunDir.set(Math.cos(a) * 0.6, 0.75, -0.35).normalize(); // nachts: Mond gegenüber, gleichbleibend hoch
+        const moon = el <= -0.05;
+        sun.intensity = moon ? 0.15 + 0.3 * THREE.MathUtils.smoothstep(-el, 0.05, 0.35) : 1.2 * Math.max(0.15, day); sun.color.copy(moon ? C_MOON : tc1.copy(ENVL.sun).lerp(C_SET, set * 0.6)); if (ENVL.LIN && moon) sun.color.convertSRGBToLinear();
+        if (hemi) { hemi.intensity = 0.62 * (0.45 + 0.55 * day); hemi.color.copy(ENVL.hemi).lerp(ENVL.LIN ? tc2.copy(C_NHEMI).convertSRGBToLinear() : C_NHEMI, 1 - day); }
+        const fogN = ENVL.LIN ? tc2.copy(C_NHOR).convertSRGBToLinear() : C_NHOR; scene.fog.color.copy(ENVL.fog).lerp(fogN, (1 - day) * 0.85);
+        water.material.color.copy(ENVL.water).multiplyScalar(0.35 + 0.65 * day);
+        const key = Math.round(t * 400); if (force || key !== dnSky) { dnSky = key; tc1.copy(ENVB.top).lerp(C_NTOP, (1 - day) * 0.9); tc2.copy(ENVB.fog).lerp(C_NHOR, (1 - day) * 0.85).lerp(C_SET, set * 0.45 * day); paintSky(tc1, tc2); }
+        if (!bigArea && reg) { const span = Math.max(reg.bounds[1] - reg.bounds[0], reg.bounds[3] - reg.bounds[2]); sun.position.copy(sunDir).multiplyScalar(span * 0.6 + 200); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld(); }
+        if (Math.abs(t - dnShadowT) > 0.004 || force) { dnShadowT = t; shadowFresh = false; }
+        const h = Math.floor(t * 24), m = Math.floor((t * 24 - h) * 60); const ck = $('.dnClock'); if (ck) ck.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+        const sl = $('.dnSlider'); if (sl && document.activeElement !== sl) sl.value = Math.round(t * 1440);
+        invalidate();
+      }
+      function dnSave() { DN.t = dnT; try { localStorage.setItem('vw-daynight', JSON.stringify(DN)); } catch (e) { } }
+      function dnTick() {
+        const now = performance.now(), dt = (now - dnLast) / 1000; dnLast = now;
+        if (!DN.paused) {
+          if (DN.mode === 'server') { const st = serverT(); if (st) { dnT = st.t; $('.dnInfo').textContent = T('Tag') + ' ' + fmt(st.day) + ' · ' + T('Spielzeit vom Server, läuft weiter'); } else { DN.mode = 'normal'; $('.dnMode').value = 'normal'; } }
+          if (DN.mode !== 'server') { dnT = (dnT + dt / (DN.mode === 'fast' ? 180 : 1800)) % 1; $('.dnInfo').textContent = ''; }
+        } else $('.dnInfo').textContent = T('Angehalten');
+        applyTime(false);
+      }
+      setInterval(() => { if (running) dnTick(); }, 1000);
+      $('.dnPause').onclick = () => { DN.paused = !DN.paused; $('.dnPause').textContent = DN.paused ? '▶' : '⏸'; if (!DN.paused && DN.mode === 'server') DN.mode = 'normal', $('.dnMode').value = 'normal'; dnSave(); dnTick(); };
+      $('.dnSlider').oninput = (e) => { dnT = +e.target.value / 1440; if (DN.mode === 'server') { DN.mode = 'normal'; $('.dnMode').value = 'normal'; } dnSave(); applyTime(false); };
+      $('.dnMode').onchange = (e) => { DN.mode = e.target.value; if (DN.mode === 'server') DN.paused = false; $('.dnPause').textContent = DN.paused ? '▶' : '⏸'; dnSave(); dnTick(); };
+      $('.dnMode').value = DN.mode; $('.dnPause').textContent = DN.paused ? '▶' : '⏸';
       const box = new THREE.BoxGeometry(1, 1, 1);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler(0, 0, 0, 'YXZ'), sv = new THREE.Vector3(), pv = new THREE.Vector3(), tmp = new THREE.Color();
       const mats = { leaf: new THREE.MeshLambertMaterial({ color: 0x3f6e2a }), fir: new THREE.MeshLambertMaterial({ color: 0x2f5a3a }), swamp: new THREE.MeshLambertMaterial({ color: 0x5a6b3a }), ygg: new THREE.MeshLambertMaterial({ color: 0x8fb8c8 }), trunk: new THREE.MeshLambertMaterial({ color: 0x5a4330 }), rock: new THREE.MeshLambertMaterial({ color: 0x7c786f }), bush: new THREE.MeshLambertMaterial({ color: 0x557a33 }) };
@@ -653,12 +694,13 @@
         ren.outputEncoding = Q.detail === 'valheim' ? THREE.sRGBEncoding : THREE.LinearEncoding;
         const span = Math.max(X1 - X0, Z1 - Z0); bigArea = span > 2000; const sc = sun.shadow.camera;
         const sh = bigArea ? 380 : span / 2 + 20; sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.far = bigArea ? 1600 : 1500; sc.updateProjectionMatrix();
-        if (!bigArea) { sun.position.set(-span * 0.3, span * 0.45 + 120, span * 0.25); sun.target.position.set(0, 0, 0); }
+        if (!bigArea) { sun.position.copy(sunDir).multiplyScalar(span * 0.6 + 200); sun.target.position.set(0, 0, 0); }
         applyEnvironment(r, bigArea);
         // „Valheim Original“ rendert in sRGB: die übrigen (in sRGB angegebenen) Farben dafür nach linear umrechnen, sonst wirkt alles blass
         const LIN = Q.detail === 'valheim';
         skyTex.encoding = LIN ? THREE.sRGBEncoding : THREE.LinearEncoding; skyTex.needsUpdate = true;
         if (LIN) { scene.fog.color.convertSRGBToLinear(); sun.color.convertSRGBToLinear(); if (hemi) { hemi.color.convertSRGBToLinear(); hemi.groundColor.convertSRGBToLinear(); } water.material.color.convertSRGBToLinear(); }
+        captureEnv(LIN);
         const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF; if (r.id === 'seed') { scene.fog.near = 6000 * RF; scene.fog.far = 32000 * RF; }
         // Gelände
         { const SPN = g.VW_DATA && g.VW_DATA.pieces; if (SPN) r.types.forEach((t) => { const sp = SPN[t[0]]; if (sp) { t[1] = sp[1]; t[2] = sp[2]; t[3] = sp[3]; t[4] = sp[4]; t[5] = sp[5]; } }); } // ältere Snapshots: aktuelle Maße nehmen
@@ -788,7 +830,7 @@
       let shadowFresh = false, lastMove = 0;
       function refreshShadow() {
         if (!sun.castShadow || !reg) return;
-        if (bigArea) { const c = tgt; sun.target.position.set(c.x, c.y, c.z); sun.position.set(c.x - 300, c.y + 500, c.z + 250); }
+        if (bigArea) { const c = tgt; sun.target.position.set(c.x, c.y, c.z); sun.position.set(c.x + sunDir.x * 650, c.y + sunDir.y * 650, c.z + sunDir.z * 650); }
         sun.target.updateMatrixWorld(); ren.shadowMap.needsUpdate = true; shadowFresh = true; invalidate();
       }
       let shadowPasses = 0;
