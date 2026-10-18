@@ -201,12 +201,15 @@
     // Biome → Grundfarbe (ohne Biomdaten: klassisches Grün)
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
-      ['deaths', '✝', '#ff6b5a', 'Tode'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
+      ['deaths', '✝', '#ff6b5a', 'Tode'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
       ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
       ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager']];
     const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
     const LOCK = {}; Object.values((g.VW_DATA && g.VW_DATA.locations) || {}).forEach((l) => { if (l[2]) LOCK[l[0]] = l[2]; });
     const locCat = (l) => LOCK[l.k] || l.c || 'b';
+    const PIN_IC = { 0: '🔥', 1: '🏠', 2: '🔨', 3: '●', 4: '✦', 9: '☠' };
+    const PIN_N = { '$enemy_eikthyr': 'Eikthyr', '$enemy_gdking': 'Der Älteste', '$enemy_bonemass': 'Knochenmasse', '$enemy_dragon': 'Moder', '$enemy_goblinking': 'Yagluth', '$enemy_seekerqueen': 'Die Königin', '$enemy_fader': 'Fader' };
+    const pinName = (p) => { const n = p.n || ''; if (PIN_N[n]) return T(PIN_N[n]); if (/^\$hud_pin_hildir/.test(n)) return 'Hildir'; return n.replace(/^\$\w+_/, ''); };
     const FOG = 110; // Abdunklung unerkundeter Gebiete auf der fertigen Weltkarte (0–255)
     const BIO_COL = [null, [111, 154, 69], [92, 86, 52], [196, 202, 208], [52, 86, 50], [190, 172, 88], [92, 52, 42], [226, 236, 244], null, [84, 82, 104]];
     let BIOU = null, BIOS = null;
@@ -246,7 +249,7 @@
     // ================= Karte (2D) =================
     const map = (function () {
       const cv = $('canvas.map'), ctx = cv.getContext('2d');
-      let img = null, fog = null, view = { cx: 0, cz: 0, s: 0.1 }, hover = null;
+      let img = null, fog = null, fogTab = null, view = { cx: 0, cz: 0, s: 0.1 }, hover = null;
       function build() {
         const o = S.overview; const u = b64u8(o.h); const c = document.createElement('canvas'); c.width = o.nx; c.height = o.nz;
         const x = c.getContext('2d'), id = x.createImageData(o.nx, o.nz), fc = document.createElement('canvas'); fc.width = o.nx; fc.height = o.nz; const fx = fc.getContext('2d'), fd = fx.createImageData(o.nx, o.nz);
@@ -255,7 +258,16 @@
           if (!v) { a = 0; r = gg = b = 0; } else { const e = v - 100; if (e < 0) { const t = Math.min(1, -e / 25); r = 40 + 30 * (1 - t); gg = 90 + 40 * (1 - t); b = 120 + 30 * (1 - t); } else if (e < 2) { r = 205; gg = 190; b = 140; } else { const bc = BIO_COL[bioAt(o.x0 + (i + 0.5) * o.res, o.z0 + (j + 0.5) * o.res)]; if (bc) { const t = Math.min(1, (e - 2) / 90); r = bc[0] + (235 - bc[0]) * t * 0.35; gg = bc[1] + (240 - bc[1]) * t * 0.35; b = bc[2] + (245 - bc[2]) * t * 0.35; if (e > 75) { const s2 = Math.min(1, (e - 75) / 40); r += (240 - r) * s2; gg += (244 - gg) * s2; b += (248 - b) * s2; } } else { const t = Math.min(1, (e - 2) / 60); r = 110 + 90 * t; gg = 150 + 50 * t; b = 70 + 100 * t; } } }
           id.data[k] = r; id.data[k + 1] = gg; id.data[k + 2] = b; id.data[k + 3] = a; fd.data[k] = 14; fd.data[k + 1] = 22; fd.data[k + 2] = 30; fd.data[k + 3] = a ? 0 : FOG;
         }
-        x.putImageData(id, 0, 0); img = c; fx.putImageData(fd, 0, 0); fog = fc;
+        x.putImageData(id, 0, 0); img = c; fx.putImageData(fd, 0, 0); fog = fc; fogTab = null;
+        const TM = S.tableMap; if (TM && TM.bits) { // auf dem Kartentisch aufgedeckt ODER Daten im Spielstand = erkundet
+          const tb = b64u8(TM.bits), N = TM.size, tc = document.createElement('canvas'); tc.width = tc.height = N; const tx = tc.getContext('2d'), td = tx.createImageData(N, N);
+          for (let py = 0; py < N; py++) for (let px = 0; px < N; px++) {
+            const b = py * N + px; let e = (tb[b >> 3] >> (b & 7)) & 1;
+            if (!e) { const wx = (px + 0.5 - N / 2) * TM.pixel, wz = (py + 0.5 - N / 2) * TM.pixel, oi = Math.floor((wx - o.x0) / o.res), oj = Math.floor((wz - o.z0) / o.res); if (oi >= 0 && oj >= 0 && oi < o.nx && oj < o.nz && u[oj * o.nx + oi]) e = 1; }
+            const k = ((N - 1 - py) * N + px) * 4; td.data[k] = 14; td.data[k + 1] = 22; td.data[k + 2] = 30; td.data[k + 3] = e ? 0 : FOG;
+          }
+          tx.putImageData(td, 0, 0); fogTab = { c: tc, ext: N / 2 * TM.pixel };
+        }
         const NAMES = ['', 'Wiesen', 'Sumpf', 'Berge', 'Schwarzwald', 'Ebenen', 'Aschelande', 'Tiefer Norden', '', 'Nebellande'];
         $('.biolg').innerHTML = S.biomes ? 'Biome' + (S.biomes.src === 'Weltgenerator' ? ' (exakt)' : ' (geschätzt)') + ':<br>' + [1, 4, 2, 3, 5, 9, 6, 7].map((k) => `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 3px 0 6px;vertical-align:-1px;background:rgb(${BIO_COL[k].join(',')})"></span>${NAMES[k]}`).join('') : '';
         // passend einpassen
@@ -311,8 +323,9 @@
         if (ML.seed && seedImg) { const [bx, bz, bs] = seedBox, [sx, sy] = toS(bx, bz + bs); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = seedSrc ? 1 : 0.62; ctx.drawImage(seedImg, sx, sy, bs * view.s, bs * view.s); ctx.globalAlpha = 1; } // unerkundet: blasser
         if (ML.seed && seedImg && seedSrc) { // fertige Weltkarte: überall scharf, Unerkundetes nur abgedunkelt (wie der Nebel im Spiel)
           const ow = o.nx * o.res * view.s, oh = o.nz * o.res * view.s, [wx, wy] = toS(0, 0);
-          ctx.fillStyle = `rgba(14,22,30,${FOG / 255})`; ctx.beginPath(); ctx.arc(wx, wy, 10500 * view.s, 0, Math.PI * 2); ctx.rect(ax + ow, ay, -ow, oh); ctx.fill('evenodd');
-          ctx.imageSmoothingEnabled = true; ctx.drawImage(fog, ax, ay, ow, oh);
+          if (fogTab) { const [fx0, fy0] = toS(-fogTab.ext, fogTab.ext), fs = 2 * fogTab.ext * view.s; ctx.save(); ctx.beginPath(); ctx.arc(wx, wy, 10500 * view.s, 0, Math.PI * 2); ctx.clip(); ctx.imageSmoothingEnabled = true; ctx.drawImage(fogTab.c, fx0, fy0, fs, fs); ctx.restore(); }
+          else { ctx.fillStyle = `rgba(14,22,30,${FOG / 255})`; ctx.beginPath(); ctx.arc(wx, wy, 10500 * view.s, 0, Math.PI * 2); ctx.rect(ax + ow, ay, -ow, oh); ctx.fill('evenodd');
+          ctx.imageSmoothingEnabled = true; ctx.drawImage(fog, ax, ay, ow, oh); }
         } else { ctx.imageSmoothingEnabled = view.s < 0.5; ctx.drawImage(img, ax, ay, o.nx * o.res * view.s, o.nz * o.res * view.s); }
         // Weltrand
         const [cx0, cy0] = toS(0, 0); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx0, cy0, 10000 * view.s, 0, Math.PI * 2); ctx.stroke();
@@ -323,6 +336,8 @@
           if (st[1] === 'tri') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y + 4); ctx.lineTo(x - 5, y + 4); ctx.closePath(); } else if (st[1] === 'dot') ctx.arc(x, y, 3.5, 0, Math.PI * 2); else if (st[1] === 'dia') { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); } else ctx.rect(x - 3.5, y - 3.5, 7, 7);
           ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
           if ((st[2] && view.s > 0.12) || l.k === 'StartTemple' || view.s > 0.35) { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
+        if (ML.pins) { ctx.textBaseline = 'middle'; (S.pins || []).forEach((p) => { const [x, y] = toS(p.x, p.z); const ic = PIN_IC[p.t] || '•'; ctx.globalAlpha = p.c ? 0.5 : 1; ctx.font = (p.t === 9 ? 'bold 15px' : '13px') + ' system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = p.t === 9 ? '#ffb4a8' : '#ffe08a'; ctx.strokeText(ic, x, y); ctx.fillText(ic, x, y);
+            if (view.s > 0.25) { const nm = pinName(p); const t = (nm ? nm + ' · ' : '') + (p.by || ''); if (t) { ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y + 13); ctx.fillStyle = '#fff3c9'; ctx.fillText(t, x, y + 13); } } ctx.globalAlpha = 1; }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
         if (ML.portals) S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
         if (ML.players) livePlayers().forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d9ffe3'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(p.name, x, y + 18); ctx.font = '12px system-ui,sans-serif'; });
         if (ML.bases) S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const rr = Math.max(5, Math.min(14, 3 + Math.sqrt(b.pieces) / 8)); ctx.fillStyle = hover === i ? '#ffd27a' : '#e0a854'; ctx.strokeStyle = '#1b1408'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(T(b.name), x, y - rr - 4); ctx.font = '12px system-ui,sans-serif'; });
@@ -341,7 +356,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, pins: true, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -379,10 +394,10 @@
       function layersChanged() {
         $$('[data-ml]').forEach((b) => (b.checked = !!ML[b.dataset.ml]));
         const cnt = {}; (S.locations || []).forEach((l) => { const c = 'L_' + locCat(l); cnt[c] = (cnt[c] || 0) + 1; });
-        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length;
+        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; cnt.pins = (S.pins || []).length;
         $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_')) lb.hidden = !cnt[k]; });
         $('[data-fk="seed"]').hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
-        $('[data-fk="heat"]').hidden = !EX.days.length;
+        $('[data-fk="heat"]').hidden = !EX.days.length; $('[data-fk="pins"]').hidden = !(S.pins || []).length;
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
         if (EX.days.length && !$('.hPl').options.length) {
           const names = new Set(); Promise.resolve(heatDays(7)).then((ds) => { ds.forEach((d) => Object.keys(d.players || {}).forEach((n) => names.add(n))); $('.hPl').innerHTML = '<option value="">Alle Spieler</option>' + [...names].sort().map((n) => `<option>${esc(n)}</option>`).join(''); });
@@ -1529,22 +1544,23 @@ ${board()}
     // Bestenliste: Tode (Grabsteine), gebaute Teile, Spielzeit und Strecke (Laufwege, nur mit Server-Mod)
     let boardDays = null;
     function board() {
-      const P = {}; const get = (n) => P[n] || (P[n] = { n, deaths: 0, pieces: 0, secs: 0, dist: 0, made: 0 });
+      const P = {}; const get = (n) => P[n] || (P[n] = { n, deaths: 0, pieces: 0, secs: 0, dist: 0, made: 0, pins: 0, boss: 0 });
+      const PN = S.pins || []; PN.forEach((p) => { if (p.by) { const q = get(p.by); q.pins++; if (p.t === 9) q.boss++; } });
       const CR = S.crafted || []; CR.forEach(([n, k]) => (get(n).made += k));
       (S.characters || []).forEach((c) => { if (c.name) get(c.name).pieces += c.pieces || 0; });
       const D = allDeaths(); D.forEach((d) => { if (d.n) get(d.n).deaths++; });
       if (EX.days.length && !boardDays) { heatDays(0).then((ds) => { boardDays = ds; if (tab === 'info') info(); }); }
       (boardDays || []).forEach((d) => Object.entries(d.players || {}).forEach(([n, p]) => { const q = get(n); q.secs += (p.n || 0) * (d.iv || 10); q.dist += p.dist || 0; }));
-      const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs || p.made).sort((a, b) => b.pieces - a.pieces);
+      const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs || p.made || p.pins).sort((a, b) => b.pieces - a.pieces);
       if (!rows.length) return '';
       const hasT = !!(boardDays && boardDays.length);
       const hm = (s) => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; };
       const top = (k) => Math.max(0, ...rows.map((r) => r[k]));
-      const cell = (r, k, v) => `<td class="n">${r[k] && r[k] === top(k) ? '👑 ' : ''}${v}</td>`;
+      const cell = (r, k, v) => `<td class="n" style="white-space:nowrap">${r[k] && r[k] === top(k) ? '👑 ' : ''}${v}</td>`;
       const last = D.filter((d) => d.t || d.seen).sort((a, b) => (b.t || b.seen) - (a.t || a.seen)).slice(0, 8);
       return `<div class="vw-panel" style="margin-top:18px"><h2 style="margin-top:0">Bestenliste</h2>
-<table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${CR.length ? '<td class="n sub">Hergestellt</td>' : ''}${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
-${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${CR.length ? cell(r, 'made', fmt(r.made)) : ''}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
+<table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${CR.length ? '<td class="n sub">Hergestellt</td>' : ''}${PN.length ? '<td class="n sub" title="Pins auf dem Kartentisch (☠ = Bosse gefunden)" style="white-space:nowrap">📍 Pins</td>' : ''}${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
+${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${CR.length ? cell(r, 'made', fmt(r.made)) : ''}${PN.length ? cell(r, 'pins', fmt(r.pins) + (r.boss ? ' · ☠ ' + r.boss : '')) : ''}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
 ${CR.length ? `<h2>Hergestellte Gegenstände</h2>${CR.map(([n, k, it]) => `<details><summary>${esc(n)} <span class="sub">· ${fmt(k)}</span></summary><table>${it.slice(0, 40).map(([nm, c]) => `<tr><td>${esc(T(nm))}</td><td class="n">${fmt(c)}</td></tr>`).join('')}</table>${it.length > 40 ? `<div class="sub">… und ${fmt(it.length - 40)} weitere</div>` : ''}</details>`).join('')}<div class="sub" style="margin-top:6px">Nur Gegenstände, die noch in Kisten, Ständern oder am Boden liegen – was Spieler gerade bei sich tragen, steht nicht in der Welt-Datei.</div>` : ''}
 ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc(d.n)}</td><td class="sub">${new Date(d.t || d.seen).toLocaleString(LOC(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}${d.t ? '' : ' (gefunden)'}</td><td class="n sub">x ${Math.round(d.x)} / z ${Math.round(d.z)}</td></tr>`).join('')}</table>` : ''}
 <div class="sub" style="margin-top:8px">Tode werden über Grabsteine erfasst, die beim Speichern des Servers noch liegen.</div></div>`;

@@ -227,11 +227,11 @@
     // Sammeln
     const GROUND = new Set(D.ground), NAT = D.nature, PREF = D.prefabs, SPEC = D.pieces, CONT = D.containers;
     const H_PORTAL = new Set(['portal_wood', 'portal_stone', 'portal'].map(stable));
-    const H_BED = new Set(['bed', 'piece_bed02'].map(stable)), H_SIGN = stable('sign'), H_TOMB = stable('Player_tombstone');
+    const H_BED = new Set(['bed', 'piece_bed02'].map(stable)), H_SIGN = stable('sign'), H_TOMB = stable('Player_tombstone'), H_MAPT = stable('piece_cartographytable'), K_DATA = stable('data');
     let gx = new Float32Array(1 << 16), gn = 0; // Bodenpunkte x,y,z
     const gCells = new Set(), alt = []; // Ersatz-Bodenpunkte für Gebiete ohne bekannte Pflanzen (z. B. Aschelande)
     const pushG = (x, y, z) => { if (gn * 3 + 3 > gx.length) { const t = new Float32Array(gx.length * 2); t.set(gx); gx = t; } gx[gn * 3] = x; gx[gn * 3 + 1] = y; gx[gn * 3 + 2] = z; gn++; };
-    const pieces = []; const nature = []; const signs = []; const portals = []; const beds = []; const conts = []; const tombs = []; const loose = [];
+    const mapTables = []; const pieces = []; const nature = []; const signs = []; const portals = []; const beds = []; const conts = []; const tombs = []; const loose = [];
     let total = 0;
     const visitor = (prefab, x, y, z, yaw, scale, L, S, B, I) => {
           if (y > 2000 || Math.abs(x) > 12000 || Math.abs(z) > 12000) return;
@@ -243,6 +243,7 @@
           else if (cr === undefined && !(name && (SPEC[name] || name[0] === '_')) && !H_PORTAL.has(prefab) && y > WATER - 40) { if (alt.length < 3e6) alt.push(x, y, z); }
           const nk = NAT[prefab]; if (nk) nature.push([nk, x, y, z, yaw, scale, name]);
           if (cr === undefined) { const bh = hintOf(prefab); if (bh) { const k = Math.floor(x / BR) + ',' + Math.floor(z / BR); let v = bioVotes.get(k); if (!v) bioVotes.set(k, (v = new Uint16Array(10))); v[bh]++; } }
+          if (prefab === H_MAPT && B && B[K_DATA]) mapTables.push({ x, z, d: B[K_DATA] });
           if (H_PORTAL.has(prefab)) portals.push({ tag: (S && S[K.tag]) || '', x, y, z });
           else if (prefab === H_SIGN && S && S[K.text]) signs.push({ x, y, z, t: clean(S[K.text]), a: S[K.author] || '', an: S[K_AUTHOR_NAME] || '', c: cr !== undefined ? cr.toString() : '' });
           else if (H_BED.has(prefab) && S && S[K.ownerName]) beds.push({ x, y, z, n: S[K.ownerName], o: L && L[K.owner] !== undefined ? L[K.owner].toString() : '' });
@@ -305,6 +306,27 @@
       if (charAcct[id]) { const best = Object.entries(charAcct[id]).sort((a, b) => b[1] - a[1])[0][0]; acct = best; }
       return { id, name: charName[id] || '', account: acct ? (steamName[acct] || acctDisplay[acct] || '') : '', steam: acct, pieces: builderCount[id] };
     });
+    // Kartentische: gemeinsam aufgedeckte Karte + Pins mit Ersteller (Minimap.GetSharedMapData, Version 3)
+    const tablePins = [], pinSeen = new Set(); let tableBits = null, tableSize = 0;
+    mapTables.forEach((t) => {
+      try {
+        const u = (t.d[0] === 0x1f && t.d[1] === 0x8b) ? gunzip(t.d) : t.d; const r = new R(u); const ver = r.i32(); if (ver < 3) return;
+        const n = r.i32(), bits = r.bytes(n), sz = Math.round(Math.sqrt(n));
+        if (!tableBits) { tableBits = new Uint8Array(n); tableSize = sz; } if (sz === tableSize) for (let i = 0; i < n; i++) if (bits[i]) tableBits[i] = 1;
+        const pc = r.i32();
+        for (let i = 0; i < pc; i++) {
+          const owner = r.i64().toString(), name = r.str(), x = r.f32(); r.f32(); const z = r.f32(), type = r.i32(), checked = r.u8(), author = r.str();
+          const key = Math.round(x) + ',' + Math.round(z) + ',' + type; if (pinSeen.has(key)) continue; pinSeen.add(key);
+          tablePins.push({ n: name, x: Math.round(x), z: Math.round(z), t: type, c: checked ? 1 : 0, by: charName[owner] || steamName[author] || acctDisplay[author] || '' });
+        }
+      } catch (e) { warnings.push('Kartentisch nicht lesbar: ' + e.message); }
+    });
+    let tableMap = null;
+    if (tableBits) { // auf 1024² (24 m) verkleinern, 1 Bit je Pixel
+      const S2 = tableSize >> 1, out = new Uint8Array(Math.ceil(S2 * S2 / 8));
+      for (let y = 0; y < S2; y++) for (let x = 0; x < S2; x++) { const a = (2 * y) * tableSize + 2 * x; if (tableBits[a] | tableBits[a + 1] | tableBits[a + tableSize] | tableBits[a + tableSize + 1]) { const b = y * S2 + x; out[b >> 3] |= 1 << (b & 7); } }
+      tableMap = { size: S2, pixel: 24, tables: mapTables.length, bits: b64(out) };
+    }
     const ownerLabel = {}; characters.forEach((c, i) => { ownerLabel[c.id] = (c.name || 'Unbekannt ' + (i + 1)) + (c.account ? ' (' + c.account + ')' : ''); });
 
     // Basen finden: Raster 32 m, verbundene Zellen (mit 1 Zelle Lücke)
@@ -489,7 +511,7 @@
       players: world.players.map((p) => strip ? { name: p.name } : { name: p.name, platform: p.platform }),
       characters: characters.map((c) => strip ? { name: c.name, account: c.account, pieces: c.pieces } : { name: c.name, account: c.account, steam: c.steam, pieces: c.pieces }),
       bosses: dbi.keys.filter((k) => k.startsWith('defeated_')).map((k) => k.slice(9)),
-      globalKeys: dbi.keys, locations: dbi.locations,
+      globalKeys: dbi.keys, locations: dbi.locations, pins: tablePins, tableMap,
       portals: portals.map((p) => ({ tag: p.tag, x: Math.round(p.x), z: Math.round(p.z) })),
       // Grabsteine: Todeszeit = Spielstand-Zeit minus (Weltzeit jetzt − Weltzeit beim Tod); Weltzeit in .NET-Ticks (100 ns)
       tombs: tombs.map((b) => { const ref = opts.saveTime || Date.now(); const t = b.tod && dbi.netTime ? Math.round(ref - (dbi.netTime - b.tod / 1e7) * 1000) : null; return { n: b.n, x: Math.round(b.x), y: Math.round(b.y), z: Math.round(b.z), t: t && t > 1.5e12 && t <= ref + 6e4 ? t : null, items: b.items }; }),
