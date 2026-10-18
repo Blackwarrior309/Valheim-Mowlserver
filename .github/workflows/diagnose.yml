@@ -13,6 +13,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # gleicher Zwischenspeicher wie die Live-Karte (kennt den Weltordner, nur lesen – wird hier nicht gespeichert)
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/sync-data
+          key: sync-${{ github.run_id }}
+          restore-keys: sync-
       - name: Spielstand holen
         env:
           VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
@@ -22,13 +28,13 @@ jobs:
           VS_FTP_DIR: ${{ secrets.VS_FTP_DIR }}
           VS_WORLD: ${{ secrets.VS_WORLD }}
           VS_STRIP_IDS: 'true'
-          VS_DATA: ${{ runner.temp }}/diag
-          VS_OUT: ${{ runner.temp }}/diag/welt.vwelt
-        run: node sync/sync.cjs --force > "$RUNNER_TEMP/sync.log" 2>&1 || true
+          VS_DATA: ${{ runner.temp }}/sync-data
+          VS_OUT: ${{ runner.temp }}/diag.vwelt
+        run: node sync/sync.cjs > "$RUNNER_TEMP/sync.log" 2>&1 || true
       - name: Auswerten
         run: |
-          if ! node sync/diagnose.cjs "$RUNNER_TEMP/diag/welt-cache" 2> "$RUNNER_TEMP/err.txt"; then
+          if ! node sync/diagnose.cjs "$RUNNER_TEMP/sync-data/welt-cache" 2> "$RUNNER_TEMP/err.txt"; then
             # Fehler sichtbar machen (lange Zahlen wie Steam-IDs geschwärzt)
-            { tail -n 15 "$RUNNER_TEMP/sync.log"; tail -n 5 "$RUNNER_TEMP/err.txt"; find "$RUNNER_TEMP/diag" -maxdepth 3 | head -20; } | sed -E 's/[0-9]{15,20}/***/g' | while IFS= read -r l; do echo "::warning title=Diagnose-Fehler::$l"; done
+            { tail -n 15 "$RUNNER_TEMP/sync.log"; tail -n 5 "$RUNNER_TEMP/err.txt"; find "$RUNNER_TEMP/sync-data" -maxdepth 3 | head -20; } | sed -E 's/[0-9]{15,20}/***/g' | while IFS= read -r l; do echo "::warning title=Diagnose-Fehler::$l"; done
             exit 1
           fi
