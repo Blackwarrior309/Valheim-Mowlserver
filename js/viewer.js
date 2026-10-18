@@ -103,7 +103,7 @@
   <div class="vw-pane" data-p="3d" hidden><canvas class="gl"></canvas><div class="vw-labels"></div>
     <div class="vw-side s3"><button class="vw-mob" data-min>Menü</button>
       <h2>Gebiet</h2><select class="reg" style="width:100%"></select>
-      <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button><button class="walkBtn">🚶 Laufen (G)</button></div>
+      <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button><button class="walkBtn">🚶 Laufen (G)</button></div><div class="row" style="margin-top:6px"><input class="walkName" type="text" maxlength="24" placeholder="Dein Name für Mitspieler" title="So sehen dich andere, die gerade auch auf dieser Karte laufen" style="flex:1;font:inherit;font-size:13px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"></div>
       <div class="tl" hidden><h2>Zeitraffer</h2><div class="row" style="flex-wrap:nowrap;align-items:center"><button class="tlPlay" aria-label="Abspielen">▶</button><input type="range" class="tlR" min="0" max="0" value="0" style="flex:1;min-width:0"></div><div class="sub tlInfo" style="margin-top:4px"></div><div class="tlList" style="max-height:170px;overflow:auto;margin-top:6px"></div></div>
       <h2>Gebäude exportieren</h2>
       <div class="row"><button class="selMode">☝ Auswählen</button><select class="selHow" style="flex:1"><option value="0">Zusammenhängendes Gebäude</option><option value="6">Umkreis 6 m</option><option value="12">Umkreis 12 m</option><option value="25">Umkreis 25 m</option><option value="1">Einzelnes Teil</option></select></div>
@@ -504,7 +504,7 @@
       let tgt = new THREE.Vector3(), dist = 400, yaw = -0.6, pit = 0.9;
       function views(v) {
         if (fly) toggleFly(false);
-        if (walk) toggleWalk(false);
+        const prevRegId = reg && reg.id;
         let c = reg ? W(reg.center[0], 34, reg.center[1]) : new THREE.Vector3();
         if (reg && reg.id === 'world' && S.bases[0] && v !== 'top') c = W(S.bases[0].center[0], 34, S.bases[0].center[1]);
         if (v === 'top') { tgt.copy(c); dist = Math.max(reg.bounds[1] - reg.bounds[0], reg.bounds[3] - reg.bounds[2]) * 1.15; pit = 1.52; yaw = 0; }
@@ -591,6 +591,8 @@
           }
         }
         recolor(colorMode);
+        heroColors(Q.detail === 'valheim');
+        if (typeof walk !== 'undefined' && walk) { buildColliders(); if (reg.id !== prevRegId && !teleporting) spawn(); } // Laufmodus bleibt bei Neuladen (Live-Update, Originalgrafik) aktiv
         // Natur
         natG = new THREE.Group(); content.add(natG);
         let N = r.nature || {};
@@ -886,6 +888,7 @@
       }
 
       // ---- Laufmodus: Figur in 3rd/1st Person, Kollision mit Bauteilen, Türen und Portale (E)
+      let teleporting = false;
       let walk = false, wyaw = 0, wpit = 0.25, wdist = 4.5, vy = 0, onGround = false, anim = 0, lockLook = false, wmsg = '', wmsgT = 0;
       const pos = new THREE.Vector3(), WB = $('.walkBtn'), ACT = $('.vw-act2'), PROMPT = $('.vw-prompt');
       let OBB = [], GRID = new Map(), DOORS = [], TER = null;
@@ -959,19 +962,73 @@
         }
       }
       // Figur aus einfachen Formen (eigenes Modell, kein Spiel-Asset)
-      const HERO = new THREE.Group(); HERO.visible = false; scene.add(HERO);
-      const hm = (c) => new THREE.MeshLambertMaterial({ color: c });
-      const part = (geo, mat, x, y, z, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; (parent || HERO).add(m); return m; };
-      const skin = hm(0xe0b090), tunic = hm(0x6d4a2b), pants = hm(0x4a4038), iron = hm(0x8a8f95), beard = hm(0xb0602a), boots = hm(0x2e2620);
-      const legL = new THREE.Group(), legR = new THREE.Group(), armL = new THREE.Group(), armR = new THREE.Group();
-      [[legL, -0.13], [legR, 0.13]].forEach(([g, x]) => { g.position.set(x, 0.85, 0); HERO.add(g); part(new THREE.BoxGeometry(0.2, 0.75, 0.22), pants, 0, -0.4, 0, g); part(new THREE.BoxGeometry(0.22, 0.14, 0.32), boots, 0, -0.78, 0.04, g); });
-      part(new THREE.BoxGeometry(0.5, 0.62, 0.3), tunic, 0, 1.15, 0); part(new THREE.BoxGeometry(0.54, 0.08, 0.33), boots, 0, 0.9, 0);
-      [[armL, -0.33], [armR, 0.33]].forEach(([g, x]) => { g.position.set(x, 1.42, 0); HERO.add(g); part(new THREE.BoxGeometry(0.15, 0.6, 0.17), tunic, 0, -0.27, 0, g); part(new THREE.BoxGeometry(0.13, 0.12, 0.14), skin, 0, -0.62, 0, g); });
-      part(new THREE.SphereGeometry(0.17, 12, 10), skin, 0, 1.62, 0);
-      const beardM = part(new THREE.ConeGeometry(0.15, 0.32, 8), beard, 0, 1.45, 0.08); beardM.rotation.x = Math.PI;
-      part(new THREE.SphereGeometry(0.185, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), iron, 0, 1.66, 0);
-      [-1, 1].forEach((s) => { const h = part(new THREE.ConeGeometry(0.045, 0.25, 6), hm(0xe8e0c8), s * 0.2, 1.8, 0); h.rotation.z = -s * 0.9; });
+      const HERO_MATS = []; let heroLin = false;
+      function heroColors(lin) { if (lin === heroLin) return; heroLin = lin; HERO_MATS.forEach((m) => { m.color.setHex(m.userData.hex); if (lin) m.color.convertSRGBToLinear(); }); }
+      function makeHero(tunicCol) {
+        const G = new THREE.Group();
+        const hm = (c) => { const m = new THREE.MeshLambertMaterial({ color: c }); m.userData.hex = c; if (heroLin) m.color.convertSRGBToLinear(); HERO_MATS.push(m); return m; };
+        const part = (geo, mat, x, y, z, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; (parent || G).add(m); return m; };
+        const skin = hm(0xe0b090), tunic = hm(tunicCol), pants = hm(0x4a4038), iron = hm(0x8a8f95), beard = hm(0xb0602a), boots = hm(0x2e2620);
+        const legL = new THREE.Group(), legR = new THREE.Group(), armL = new THREE.Group(), armR = new THREE.Group();
+        [[legL, -0.13], [legR, 0.13]].forEach(([g2, x]) => { g2.position.set(x, 0.85, 0); G.add(g2); part(new THREE.BoxGeometry(0.2, 0.75, 0.22), pants, 0, -0.4, 0, g2); part(new THREE.BoxGeometry(0.22, 0.14, 0.32), boots, 0, -0.78, 0.04, g2); });
+        part(new THREE.BoxGeometry(0.5, 0.62, 0.3), tunic, 0, 1.15, 0); part(new THREE.BoxGeometry(0.54, 0.08, 0.33), boots, 0, 0.9, 0);
+        [[armL, -0.33], [armR, 0.33]].forEach(([g2, x]) => { g2.position.set(x, 1.42, 0); G.add(g2); part(new THREE.BoxGeometry(0.15, 0.6, 0.17), tunic, 0, -0.27, 0, g2); part(new THREE.BoxGeometry(0.13, 0.12, 0.14), skin, 0, -0.62, 0, g2); });
+        part(new THREE.SphereGeometry(0.17, 12, 10), skin, 0, 1.62, 0);
+        const beardM = part(new THREE.ConeGeometry(0.15, 0.32, 8), beard, 0, 1.45, 0.08); beardM.rotation.x = Math.PI;
+        part(new THREE.SphereGeometry(0.185, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), iron, 0, 1.66, 0);
+        [-1, 1].forEach((sg) => { const h = part(new THREE.ConeGeometry(0.045, 0.25, 6), hm(0xe8e0c8), sg * 0.2, 1.8, 0); h.rotation.z = -sg * 0.9; });
+        return { g: G, legL, legR, armL, armR };
+      }
+      const H0 = makeHero(0x6d4a2b), HERO = H0.g, legL = H0.legL, legR = H0.legR, armL = H0.armL, armR = H0.armR; HERO.visible = false; scene.add(HERO);
 
+      // ---- Mitspieler im Browser: Position und Name laufen über einen öffentlichen MQTT-Broker (kein Server nötig, nichts am Spielserver)
+      const MP = { cli: null, loading: false, me: Math.random().toString(36).slice(2, 10), peers: new Map(), lastPub: 0, lastMsg: '' };
+      const mpRoom = () => 'vwelt/' + (location.host + location.pathname).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 60) + '/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
+      const NAME_IN = $('.walkName');
+      let myName = ''; try { myName = localStorage.getItem('vw-walk-name') || ''; } catch (e) { }
+      if (!myName) myName = 'Wikinger ' + MP.me.slice(0, 3).toUpperCase();
+      NAME_IN.value = myName; NAME_IN.onchange = () => { myName = (NAME_IN.value || '').trim().slice(0, 24) || myName; NAME_IN.value = myName; try { localStorage.setItem('vw-walk-name', myName); } catch (e) { } MP.lastPub = 0; };
+      function mpStart() {
+        if (MP.cli || MP.loading || !texBase || location.protocol === 'file:') return; MP.loading = true;
+        const url = new URLSearchParams(location.search).get('mqtt') || 'wss://broker.emqx.io:8084/mqtt';
+        const go = () => { try {
+          const c = g.mqtt.connect(url, { clientId: 'vw_' + MP.me, clean: true, connectTimeout: 15000, reconnectPeriod: 4000, keepalive: 30, will: { topic: mpRoom() + '/p/' + MP.me, payload: '', qos: 0, retain: false } });
+          MP.cli = c; c.on('connect', () => { c.subscribe(mpRoom() + '/p/+'); MP.lastPub = 0; }); c.on('message', onPeer); c.on('error', (e) => console.warn('Mitspieler:', e && e.message));
+        } catch (e) { console.warn('Mitspieler nicht verfügbar:', e && e.message); } };
+        if (g.mqtt) go(); else { const sc = document.createElement('script'); sc.src = texBase + 'lib/mqtt.min.js'; sc.onload = go; sc.onerror = () => { MP.loading = false; }; document.head.appendChild(sc); }
+      }
+      const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
+      function onPeer(topic, msg) {
+        const id = topic.split('/').pop(); if (id === MP.me) return;
+        let d = null; try { d = msg && msg.length ? JSON.parse(new TextDecoder().decode(msg)) : null; } catch (e) { }
+        let P = MP.peers.get(id);
+        if (!d) { if (P) { scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id); invalidate(); } return; }
+        if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
+        Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = '🧍 ' + P.n; invalidate();
+      }
+      function mpPublish(now, moving) {
+        if (!MP.cli || !MP.cli.connected) return;
+        const d = { n: myName, x: +(pos.x + CX).toFixed(2), y: +(pos.y + WL).toFixed(2), z: +(CZ - pos.z).toFixed(2), r: +HERO.rotation.y.toFixed(2), m: moving ? 1 : 0 };
+        const j = JSON.stringify(d); if (j === MP.lastMsg && now - MP.lastPub < 3000) return; if (now - MP.lastPub < 120) return;
+        MP.cli.publish(mpRoom() + '/p/' + MP.me, j, { qos: 0 }); MP.lastMsg = j; MP.lastPub = now;
+      }
+      function mpLeave() { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + MP.me, '', { qos: 0 }); MP.lastMsg = ''; }
+      function mpTick(dt) {
+        if (!MP.peers.size) return; const now = performance.now(); let moved = false; const pr = pane.getBoundingClientRect();
+        for (const [id, P] of MP.peers) {
+          if (now - P.seen > 12000) { scene.remove(P.h.g); P.lab.remove(); MP.peers.delete(id); moved = true; continue; }
+          const k = Math.min(1, dt * 8); P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; P.z += (P.tz - P.z) * k;
+          let dr = P.tr - P.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); P.h.g.rotation.y += dr * k;
+          const inside = reg && P.x >= reg.bounds[0] - 50 && P.x <= reg.bounds[1] + 50 && P.z >= reg.bounds[2] - 50 && P.z <= reg.bounds[3] + 50;
+          P.h.g.visible = !!inside; P.h.g.position.set(P.x - CX, P.y - WL, CZ - P.z);
+          if (P.run) { P.anim += dt * 9; moved = true; } else P.anim *= 0.85;
+          const sw = Math.sin(P.anim) * (P.run ? 0.7 : 0); P.h.legL.rotation.x = sw; P.h.legR.rotation.x = -sw; P.h.armL.rotation.x = -sw * 0.8; P.h.armR.rotation.x = sw * 0.8;
+          if (Math.abs(P.tx - P.x) + Math.abs(P.tz - P.z) > 0.01) moved = true;
+          pv2.set(P.x - CX, P.y - WL + 2.2, CZ - P.z).project(cam); const vis = inside && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05;
+          P.lab.style.display = vis ? 'block' : 'none'; if (vis) { P.lab.style.left = ((pv2.x + 1) / 2 * pr.width) + 'px'; P.lab.style.top = ((1 - pv2.y) / 2 * pr.height) + 'px'; }
+        }
+        if (moved) invalidate();
+      }
       function say(t) { wmsg = t; wmsgT = performance.now(); }
       function placeAt(x, z, y) { pos.set(x, y !== undefined ? y : groundY(x, z, 500) , z); vy = 0; }
       function spawn() { // auf den nächsten Boden eines Gebäudes stellen, sonst aufs nächste Land
@@ -981,7 +1038,7 @@
         for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
         placeAt(tgt.x, tgt.z);
       }
-      if (/[?&]debug/.test(location.search)) g.__walk = { groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
+      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
         if (on && !reg) return;
@@ -992,12 +1049,13 @@
           buildColliders(); spawn(); wyaw = yaw + Math.PI; wpit = 0.25; wdist = 4.5;
           cam.near = 0.08; cam.updateProjectionMatrix(); if (innerWidth <= 760) $('.s3').classList.add('min');
         } else {
-          if (document.pointerLockElement === cv) document.exitPointerLock();
+          if (document.pointerLockElement === cv) document.exitPointerLock(); mpLeave();
           tgt.copy(pos); tgt.y += 1; dist = 30; yaw = wyaw - Math.PI; pit = 0.5; cam.near = 0.5; cam.updateProjectionMatrix();
         }
         invalidate();
       }
       WB.onclick = () => toggleWalk();
+      addEventListener('beforeunload', () => { try { mpLeave(); } catch (e) { } });
       function lookWalk(dx, dy) { wyaw -= dx * 0.0042; wpit = Math.max(-1.2, Math.min(1.35, wpit + dy * 0.0035)); }
       cv.addEventListener('click', () => { if (walk && innerWidth > 760 && document.pointerLockElement !== cv && cv.requestPointerLock) cv.requestPointerLock(); });
       document.addEventListener('mousemove', (e) => { if (walk && document.pointerLockElement === cv) lookWalk(e.movementX, e.movementY); });
@@ -1027,7 +1085,7 @@
         const dest = P.find((p) => p !== me && p.tag === me.tag && Math.hypot(p.x - me.x, p.z - me.z) > 6);
         if (!dest) { say('Portal „' + me.tag + '“ hat kein Gegenstück'); return; }
         const inside = (r) => dest.x >= r.bounds[0] && dest.x <= r.bounds[1] && dest.z >= r.bounds[2] && dest.z <= r.bounds[3];
-        if (!inside(reg)) { const A = areas(); let i = A.findIndex((r) => r.id !== 'world' && inside(r)); if (i < 0) i = A.findIndex((r) => inside(r)); if (i < 0) { say('Ziel liegt außerhalb der geladenen Karte'); return; } const keepWalk = walk; walk = false; selectRegion(i); walk = keepWalk; buildColliders(); }
+        if (!inside(reg)) { const A = areas(); let i = A.findIndex((r) => r.id !== 'world' && inside(r)); if (i < 0) i = A.findIndex((r) => inside(r)); if (i < 0) { say('Ziel liegt außerhalb der geladenen Karte'); return; } teleporting = true; try { selectRegion(i); } finally { teleporting = false; } }
         const dx = dest.x - CX, dz = -(dest.z - CZ); const back = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw));
         // Höhe: Fuß des Ziel-Portals (Portale im Snapshot haben nur x/z), sonst Gelände
         let pb = null, pd2 = 8; OBB.forEach((b) => { if (!b.portal) return; const d = Math.hypot(b.c.x - dx, b.c.z - dz); if (d < pd2) { pd2 = d; pb = b; } });
@@ -1062,7 +1120,7 @@
         else anim *= 0.85;
         const sw = Math.sin(anim) * (l > 0.05 ? 0.7 : 0) * (onGround ? 1 : 0.3);
         legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw * 0.8; armR.rotation.x = sw * 0.8;
-        HERO.position.copy(pos);
+        HERO.position.copy(pos); mpPublish(performance.now(), l > 0.05 || !onGround);
         // Kamera: hinter dem Kopf, Mausrad = Abstand bis in die Ich-Perspektive; nicht durch Wände
         const head = pos.clone(); head.y += 1.62;
         const dir = new THREE.Vector3(-Math.sin(wyaw) * Math.cos(wpit), Math.sin(wpit), -Math.cos(wyaw) * Math.cos(wpit));
@@ -1089,6 +1147,7 @@
         if (!running) return;
         const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
         if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit();
+        mpTick(dt);
         if (bigArea) { scene.fog.far = Math.max(14000 * ({ near: 0.5, mid: 1, far: 2 }[Q.range] || 1), (fly ? 0 : dist) * 2.2); scene.fog.near = scene.fog.far * 0.2; }
         cam.updateMatrixWorld();
         const key = cam.matrixWorld.elements.map((v) => v.toFixed(3)).join(',');
@@ -1242,7 +1301,7 @@
       })();
       if (opts.history) TL.init(opts.history);
 
-      function start() { if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } }
+      function start() { mpStart(); if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } }
       function stop() { running = false; }
       // Basis-Auswahl
       const sel = $('.reg');
