@@ -909,7 +909,7 @@
             const c = new THREE.Vector3(a[o] - CX, a[o + 1] - WL + YO(ty), -(a[o + 2] - CZ));
             if (tilt && alongX) eu.set(0, -a[o + 3] * Math.PI / 180, tilt, 'YXZ'); else eu.set(-tilt, -a[o + 3] * Math.PI / 180, 0, 'YXZ');
             const qq = new THREE.Quaternion().setFromEuler(eu), h = new THREE.Vector3(ty[1] / 2, ty[2] / 2, ty[3] / 2);
-            const door = /door|gate/i.test(nm) && !/portal|drawbridge/i.test(nm), portal = /^portal/i.test(nm), chest = im.userData.cat === 'chest', cloth = /cloth|banner|rug|carpet|torch|Candle|lantern|garland|sapling|mistletoe/i.test(nm);
+            const door = /door|gate|grate/i.test(nm) && !/portal|drawbridge|cloth/i.test(nm), portal = /^portal/i.test(nm), chest = im.userData.cat === 'chest', cloth = /cloth|banner|rug|carpet|torch|Candle|lantern|garland|sapling|mistletoe/i.test(nm);
             const r = Math.hypot(h.x, h.y, h.z);
             const ramp = /stair|ladder/i.test(nm); // Treppen/Leitern: begehbare Rampe statt Klotz
             const b = { c, q: qq, iq: qq.clone().invert(), h, r, door, portal, chest, ramp, open: false, pass: cloth, im, k, ty };
