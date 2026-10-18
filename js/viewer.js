@@ -514,7 +514,7 @@
         gable: prism([[-0.5, -0.5], [0.5, -0.5], [0, 0.5]]),
         ridge: (() => { const g = prism([[-0.5, -0.5], [0.5, -0.5], [0, 0.5]]); g.rotateY(Math.PI / 2); return g; })()
       };
-      const YO = (ty) => (/stair|stepladder/i.test(ty[0]) && !/spiral/i.test(ty[0]) ? ty[2] / 2 : 0); // Treppen: Bezugspunkt unten
+      const YO = (ty) => (ty[5] != null ? ty[5] : /stair|stepladder/i.test(ty[0]) && !/spiral/i.test(ty[0]) ? ty[2] / 2 : 0); // Bezugspunkt: aus dem Spiel gemessen (Truhen, Portale … stehen auf dem Boden)
       function shapeOf(name) {
         if (/pole|stone_pillar_round|groundtorch|walltorch|brazierceiling|spice|mortarandpestle|spinningwheel|treasure_stack|treasure_pile|stone_pile|coal_pile|spiralstair|chest_barrel|piece_pot\d|fire_pit_iron|bonfire|Candle|brazierfloor|xmastree/.test(name)) return 'cyl';
         if (/wood_wall_log_4x0\.5|wood_log_(26|45)|_log$|wood_core_stack/.test(name)) return 'logx';
@@ -566,7 +566,7 @@
         if (LIN) { scene.fog.color.convertSRGBToLinear(); sun.color.convertSRGBToLinear(); if (hemi) { hemi.color.convertSRGBToLinear(); hemi.groundColor.convertSRGBToLinear(); } water.material.color.convertSRGBToLinear(); }
         const RF = { near: 0.5, mid: 1, far: 2 }[Q.range] || 1; scene.fog.near = (bigArea ? 2500 : span * 0.9) * RF; scene.fog.far = (bigArea ? 14000 : span * 2.6 + 400) * RF;
         // Gelände
-        { const SPN = g.VW_DATA && g.VW_DATA.pieces; if (SPN) r.types.forEach((t) => { const sp = SPN[t[0]]; if (sp) { t[1] = sp[1]; t[2] = sp[2]; t[3] = sp[3]; t[4] = sp[4]; } }); } // ältere Snapshots: aktuelle Maße nehmen
+        { const SPN = g.VW_DATA && g.VW_DATA.pieces; if (SPN) r.types.forEach((t) => { const sp = SPN[t[0]]; if (sp) { t[1] = sp[1]; t[2] = sp[2]; t[3] = sp[3]; t[4] = sp[4]; t[5] = sp[5]; } }); } // ältere Snapshots: aktuelle Maße nehmen
         const NX = r.nx, NZ = r.nz, RS = r.res; const hu = b64u8(r.h); const H = new Int16Array(hu.buffer, hu.byteOffset, hu.byteLength / 2);
         TER = { H, NX, NZ, RS, X0, Z0 };
         const hAt = (i, j) => H[Math.min(NZ - 1, Math.max(0, j)) * NX + Math.min(NX - 1, Math.max(0, i))] / 10;

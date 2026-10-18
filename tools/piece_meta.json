@@ -1,0 +1,6162 @@
+{
+"ArmorStand": {
+"de": "Rüstungsständer",
+"mat": "Wood",
+"size": [
+1.35,
+2.03,
+1.13
+],
+"yoff": 1.01
+},
+"ArmorStand_Female": {
+"de": "Rüstungsständer",
+"mat": "Wood",
+"size": [
+1.59,
+1.93,
+0.59
+]
+},
+"ArmorStand_Male": {
+"de": "[piece_armorstand_male]",
+"mat": "Wood",
+"size": [
+1.61,
+1.93,
+0.59
+]
+},
+"Ashlands_Arch1": {
+"de": "Steinwand 1x1",
+"mat": "Ancient",
+"size": [
+2.97,
+3.98,
+1.97
+]
+},
+"Ashlands_Arch2": {
+"de": "Steinwand 1x1",
+"mat": "Ancient",
+"size": [
+4.15,
+5.58,
+1.97
+]
+},
+"Ashlands_WallBlock_1x2x2": {
+"de": "Steinwand 1x1",
+"mat": "Marble",
+"size": [
+1.03,
+2.04,
+1.12
+]
+},
+"Ashlands_WallBlock_base": {
+"de": "Steinwand 1x1",
+"mat": "Marble",
+"size": [
+2.12,
+2.06,
+1.23
+]
+},
+"BakedPoteitr": {
+"de": "Gebackene Poteitr",
+"mat": "Wood",
+"size": [
+0.53,
+0.41,
+0.53
+]
+},
+"BarleyWine": {
+"de": "Gerstenwein",
+"mat": "Wood",
+"size": [
+0.41,
+50.47,
+0.28
+]
+},
+"BatteringRam": {
+"de": "Rammbock",
+"mat": "Wood",
+"size": [
+3.94,
+2.65,
+5.21
+],
+"yoff": 1.54
+},
+"Beech_Sapling": {
+"de": "Buchenschößling",
+"size": [
+0.97,
+1.56,
+0.93
+]
+},
+"Birch_Sapling": {
+"de": "Birkenschössling",
+"size": [
+0.7,
+1.87,
+0.56
+]
+},
+"BlackSoup": {
+"de": "Schwarzsuppe",
+"mat": "Wood",
+"size": [
+0.65,
+50.56,
+0.65
+]
+},
+"BloodPudding": {
+"de": "Blutpudding",
+"mat": "Wood",
+"size": [
+0.64,
+50.38,
+0.45
+]
+},
+"Blueberries": {
+"de": "Blaubeeren",
+"mat": "Wood",
+"size": [
+0.36,
+50.31,
+0.31
+]
+},
+"BoarJerky": {
+"de": "Wildschweindörrfleisch",
+"mat": "Wood",
+"size": [
+0.38,
+50.09,
+0.34
+]
+},
+"BogWitch_Fire_Pit": {
+"de": "Lagerfeuer",
+"size": [
+1.66,
+0.6,
+1.68
+]
+},
+"Bread": {
+"de": "Brot",
+"mat": "Wood",
+"size": [
+0.45,
+50.36,
+0.91
+]
+},
+"Candle_resin": {
+"de": "Harzkerze",
+"mat": "Wood",
+"size": [
+0.25,
+0.32,
+0.25
+],
+"yoff": 0.14
+},
+"Candle_resin_bogwitch": {
+"de": "Harzkerze",
+"size": [
+0.25,
+0.32,
+0.25
+]
+},
+"Carrot": {
+"de": "Karotte",
+"mat": "Wood",
+"size": [
+0.29,
+51.25,
+0.89
+]
+},
+"CarrotSoup": {
+"de": "Karottensuppe",
+"mat": "Wood",
+"size": [
+0.53,
+50.43,
+0.44
+]
+},
+"Cart": {
+"de": "Karren",
+"mat": "Wood",
+"size": [
+2.05,
+1.47,
+3.39
+],
+"yoff": 0.67
+},
+"Catapult": {
+"de": "Katapult",
+"mat": "Wood",
+"size": [
+4.4,
+3.97,
+6.37
+],
+"yoff": 2.21
+},
+"Cloudberry": {
+"de": "Moltebeeren",
+"mat": "Wood",
+"size": [
+0.42,
+50.44,
+0.48
+]
+},
+"CookedAsksvinMeat": {
+"de": "Gekochter Asksvin-Schweif",
+"mat": "Wood",
+"size": [
+1.15,
+50.67,
+0.85
+]
+},
+"CookedBjornMeat": {
+"de": "Gekochtes Bärenfleisch",
+"mat": "Wood",
+"size": [
+1.55,
+50.03,
+0.62
+]
+},
+"CookedBoneMawSerpentMeat": {
+"de": "Gekochtes Knochenschlund-Fleisch",
+"mat": "Wood",
+"size": [
+1.06,
+50.68,
+1.43
+]
+},
+"CookedBugMeat": {
+"de": "Gekochtes Sucherfleisch",
+"mat": "Wood",
+"size": [
+1.76,
+50.5,
+0.46
+]
+},
+"CookedChickenMeat": {
+"de": "Gekochtes Hühnerfleisch",
+"mat": "Wood",
+"size": [
+0.91,
+50.08,
+0.32
+]
+},
+"CookedDeerMeat": {
+"de": "Gekochtes Hirschfleisch",
+"mat": "Wood",
+"size": [
+0.85,
+50.11,
+0.43
+]
+},
+"CookedEgg": {
+"de": "Gekochtes Ei",
+"mat": "Wood",
+"size": [
+0.97,
+50.01,
+0.59
+]
+},
+"CookedHareMeat": {
+"de": "Gekochtes Hasenfleisch",
+"mat": "Wood",
+"size": [
+1.81,
+50.04,
+0.64
+]
+},
+"CookedLoxMeat": {
+"de": "Gekochtes Lox-Fleisch.",
+"mat": "Wood",
+"size": [
+1.49,
+5.84,
+51.24
+]
+},
+"CookedMeat": {
+"de": "Gekochtes Wildschweinfleisch",
+"mat": "Wood",
+"size": [
+0.99,
+50.44,
+0.65
+]
+},
+"CookedMooseMeat": {
+"de": "Gekochtes Elchfleisch",
+"mat": "Wood",
+"size": [
+3.23,
+50.29,
+0.92
+]
+},
+"CookedSealBlubber": {
+"de": "Gekochter Robbenblubber",
+"mat": "Wood",
+"size": [
+0.83,
+50.06,
+0.56
+]
+},
+"CookedVoltureMeat": {
+"de": "Gekochtes Vulkangeier-Fleisch",
+"mat": "Wood",
+"size": [
+1.33,
+50.58,
+1.12
+]
+},
+"CookedWolfMeat": {
+"de": "Gekochtes Wolfsfleisch",
+"mat": "Wood",
+"size": [
+1.1,
+50.39,
+0.98
+]
+},
+"DeerStew": {
+"de": "Hirscheintopf",
+"mat": "Wood",
+"size": [
+0.77,
+50.55,
+0.68
+]
+},
+"Eyescream": {
+"de": "Augencreme",
+"mat": "Wood",
+"size": [
+0.38,
+50.47,
+0.35
+]
+},
+"FeastAshlands": {
+"de": "Aschenlande-Feinschmeckertopf",
+"mat": "Wood",
+"size": [
+3.08,
+1.28,
+2.43
+],
+"yoff": 0.53
+},
+"FeastBlackforest": {
+"de": "Düsterwald-Buffetplatte",
+"mat": "Wood",
+"size": [
+3.08,
+0.42,
+2.43
+],
+"yoff": 0.12
+},
+"FeastDeepNorth": {
+"de": "Nördliche Morgenkost",
+"mat": "Wood",
+"size": [
+3.08,
+1.54,
+2.43
+],
+"yoff": 0.64
+},
+"FeastMeadows": {
+"de": "Ganzes gebratenes Wiesenwildschwein",
+"mat": "Wood",
+"size": [
+3.08,
+0.83,
+2.43
+],
+"yoff": 0.27
+},
+"FeastMistlands": {
+"de": "Pilzallerlei à la Nebellande",
+"mat": "Wood",
+"size": [
+3.08,
+0.51,
+2.43
+],
+"yoff": 0.13
+},
+"FeastMountains": {
+"de": "Herzhafter Bergholzfällereintopf",
+"mat": "Wood",
+"size": [
+3.08,
+0.79,
+2.43
+],
+"yoff": 0.29
+},
+"FeastOceans": {
+"de": "Matrosenfreude",
+"mat": "Wood",
+"size": [
+3.08,
+0.45,
+2.43
+]
+},
+"FeastPlains": {
+"de": "Ebenen-Kuchenpicknick",
+"mat": "Wood",
+"size": [
+3.08,
+0.69,
+2.43
+],
+"yoff": 0.15
+},
+"FeastSwamps": {
+"de": "Sumpfglück",
+"mat": "Wood",
+"size": [
+3.66,
+0.69,
+2.43
+],
+"yoff": 0.22
+},
+"Fiddleheadfern": {
+"de": "Straußenfarn",
+"mat": "Wood",
+"size": [
+0.48,
+50.52,
+0.48
+]
+},
+"FierySvinstew": {
+"de": "Feuriger Svin-Eintopf",
+"mat": "Wood",
+"size": [
+0.75,
+50.5,
+0.63
+]
+},
+"FirTree_Sapling": {
+"de": "Tannenschößling",
+"size": [
+0.78,
+0.93,
+0.69
+]
+},
+"FirTree_big_Sapling": {
+"de": "Zimmerholzschössling",
+"size": [
+1.3,
+1.63,
+1.15
+]
+},
+"FishAndBread": {
+"de": "Fisch und Brot",
+"mat": "Wood",
+"size": [
+0.63,
+50.67,
+0.36
+]
+},
+"FishCooked": {
+"de": "Gekochter Fisch",
+"mat": "Wood",
+"size": [
+0.51,
+50.45,
+0.59
+]
+},
+"FishSoup": {
+"de": "Fischsuppe",
+"mat": "Wood",
+"size": [
+0.75,
+50.48,
+0.61
+]
+},
+"FishWraps": {
+"de": "Fischhappen",
+"mat": "Wood",
+"size": [
+0.38,
+50.29,
+0.62
+]
+},
+"GlowWorm": {
+"de": "Leuchtende Larve",
+"mat": "Wood",
+"size": [
+0.32,
+0.51,
+0.71
+]
+},
+"Honey": {
+"de": "Honig",
+"mat": "Wood",
+"size": [
+0.6,
+50.11,
+0.59
+]
+},
+"HoneyGlazedChicken": {
+"de": "Huhn in Honigmarinade",
+"mat": "Wood",
+"size": [
+0.8,
+50.82,
+0.94
+]
+},
+"Kale": {
+"de": "Grünkohl",
+"mat": "Wood",
+"size": [
+0.35,
+0.55,
+0.53
+]
+},
+"KaleChips": {
+"de": "Grünkohlchips",
+"mat": "Wood",
+"size": [
+0.72,
+0.49,
+0.49
+]
+},
+"Karve": {
+"de": "Karve",
+"mat": "Wood",
+"size": [
+8.04,
+9.41,
+19.66
+],
+"yoff": 3.62
+},
+"Lingonberry": {
+"de": "Preiselbeeren",
+"mat": "Wood",
+"size": [
+0.29,
+50.24,
+0.32
+]
+},
+"Lingondricka": {
+"de": "Preiselbeersaft",
+"mat": "Wood",
+"size": [
+0.25,
+50.77,
+0.67
+]
+},
+"LoxPie": {
+"de": "Lox-Fleischpastete",
+"mat": "Wood",
+"size": [
+0.93,
+0.55,
+0.77
+]
+},
+"MagicallyStuffedShroom": {
+"de": "Gefüllter Pilz",
+"mat": "Wood",
+"size": [
+0.63,
+50.59,
+0.47
+]
+},
+"MarinatedGreens": {
+"de": "Mariniertes Grüngemüse",
+"mat": "Wood",
+"size": [
+0.79,
+50.51,
+0.58
+]
+},
+"MashedMeat": {
+"de": "Püriertes Fleisch",
+"mat": "Wood",
+"size": [
+0.7,
+50.65,
+0.74
+]
+},
+"MeadBugRepellent": {
+"de": "Todeskito-Abwehrgebräu",
+"mat": "Wood",
+"size": [
+0.28,
+50.39,
+0.47
+]
+},
+"MeadBzerker": {
+"de": "Met der Berserkir",
+"mat": "Wood",
+"size": [
+0.34,
+50.6,
+0.47
+]
+},
+"MeadEitrLingering": {
+"de": "Met für längeres Eitr",
+"mat": "Wood",
+"size": [
+1.32,
+50.48,
+0.44
+]
+},
+"MeadEitrMinor": {
+"de": "Met für etwas Eitr",
+"mat": "Wood",
+"size": [
+0.24,
+50.46,
+0.63
+]
+},
+"MeadFrostResist": {
+"de": "Met des Frostwiderstands",
+"mat": "Wood",
+"size": [
+0.18,
+50.75,
+0.6
+]
+},
+"MeadHasty": {
+"de": "Ratatosk-Tonikum",
+"mat": "Wood",
+"size": [
+0.25,
+50.53,
+0.45
+]
+},
+"MeadHealthLingering": {
+"de": "Met für längere Heilung",
+"mat": "Wood",
+"size": [
+0.41,
+50.59,
+0.48
+]
+},
+"MeadHealthMajor": {
+"de": "Sehr gesunder Met",
+"mat": "Wood",
+"size": [
+0.47,
+50.66,
+0.55
+]
+},
+"MeadHealthMedium": {
+"de": "Sehr gesunder Met.",
+"mat": "Wood",
+"size": [
+0.32,
+50.56,
+0.49
+]
+},
+"MeadHealthMinor": {
+"de": "Gesunder Met",
+"mat": "Wood",
+"size": [
+0.21,
+50.36,
+0.52
+]
+},
+"MeadLightfoot": {
+"de": "Leichtfuß-Met",
+"mat": "Wood",
+"size": [
+0.32,
+50.69,
+0.54
+]
+},
+"MeadPoisonResist": {
+"de": "Met des Giftwiderstands",
+"mat": "Wood",
+"size": [
+0.2,
+50.58,
+0.49
+]
+},
+"MeadStaminaLingering": {
+"de": "Met für längere Ausdauer",
+"mat": "Wood",
+"size": [
+0.21,
+0.47,
+0.43
+]
+},
+"MeadStaminaMedium": {
+"de": "Mittlerer Ausdauer-Met",
+"mat": "Wood",
+"size": [
+1.12,
+50.58,
+0.49
+]
+},
+"MeadStaminaMinor": {
+"de": "Geringer Ausdauer-Met",
+"mat": "Wood",
+"size": [
+1.08,
+50.41,
+0.58
+]
+},
+"MeadStrength": {
+"de": "Met der Trollstärke",
+"mat": "Wood",
+"size": [
+0.31,
+50.61,
+0.47
+]
+},
+"MeadSwimmer": {
+"de": "Trank des Vananidr",
+"mat": "Wood",
+"size": [
+0.36,
+50.75,
+0.54
+]
+},
+"MeadTamer": {
+"de": "Gebräu des Tiergeflüsters",
+"mat": "Wood",
+"size": [
+0.26,
+50.51,
+0.43
+]
+},
+"MeadTasty": {
+"de": "Köstlicher Met",
+"mat": "Wood",
+"size": [
+0.17,
+50.69,
+0.5
+]
+},
+"MeadTrollPheromones": {
+"de": "Troll-Liebestrank",
+"mat": "Wood",
+"size": [
+0.47,
+50.83,
+0.59
+]
+},
+"MeatPlatter": {
+"de": "Fleischplatte",
+"mat": "Wood",
+"size": [
+0.99,
+50.71,
+0.78
+]
+},
+"MeatballsMashedPoteitr": {
+"de": "Fleischbällchen und Poteitr",
+"mat": "Wood",
+"size": [
+0.7,
+1.4,
+0.68
+]
+},
+"MinceMeatSauce": {
+"de": "Hackfleischsoße",
+"mat": "Wood",
+"size": [
+0.73,
+50.44,
+0.57
+]
+},
+"MisthareSupreme": {
+"de": "Nebelhase de luxe",
+"mat": "Wood",
+"size": [
+0.7,
+50.5,
+0.64
+]
+},
+"MooseKebab": {
+"de": "Fleisch im Brot",
+"mat": "Wood",
+"size": [
+0.61,
+1.44,
+0.46
+]
+},
+"Morkhalla_ChestAncient": {
+"de": "Uralte Truhe",
+"mat": "Iron",
+"size": [
+4.17,
+2.13,
+3.42
+]
+},
+"Morkhalla_Stonepile": {
+"de": "Schwarzer Marmorhaufen",
+"mat": "Wood",
+"size": [
+2.58,
+0.81,
+2.8
+]
+},
+"Morkhalla_firepit": {
+"de": "Lagerfeuer",
+"size": [
+3.0,
+1.93,
+3.0
+]
+},
+"Mushroom": {
+"de": "Pilz",
+"mat": "Wood",
+"size": [
+0.39,
+50.42,
+0.33
+]
+},
+"MushroomBzerker": {
+"de": "Giftpilz",
+"mat": "Wood",
+"size": [
+0.56,
+50.5,
+0.54
+]
+},
+"MushroomJotunPuffs": {
+"de": "Jotun-Bläschen",
+"mat": "Wood",
+"size": [
+0.62,
+51.13,
+0.41
+]
+},
+"MushroomMagecap": {
+"de": "Magierhut",
+"mat": "Wood",
+"size": [
+0.46,
+51.62,
+0.23
+]
+},
+"MushroomOmelette": {
+"de": "Pilzomelett",
+"mat": "Wood",
+"size": [
+0.7,
+50.45,
+0.57
+]
+},
+"MushroomSmokePuff": {
+"de": "Rauchwölkchen",
+"mat": "Wood",
+"size": [
+0.5,
+0.62,
+0.46
+]
+},
+"MushroomYellow": {
+"de": "Gelber Pilz",
+"mat": "Wood",
+"size": [
+0.36,
+50.42,
+0.28
+]
+},
+"NeckTailGrilled": {
+"de": "Gegrillter Nixenschwanz",
+"mat": "Wood",
+"size": [
+0.73,
+50.55,
+2.17
+]
+},
+"OLD_wood_roof": {
+"de": "Wood roof",
+"mat": "Wood",
+"size": [
+2.05,
+1.74,
+2.9
+]
+},
+"OLD_wood_roof_icorner": {
+"de": "Wood roof icorner",
+"mat": "Wood",
+"size": [
+2.69,
+1.36,
+2.74
+]
+},
+"OLD_wood_roof_ocorner": {
+"de": "Wood roof ocorner",
+"mat": "Wood",
+"size": [
+2.76,
+1.53,
+2.79
+]
+},
+"OLD_wood_roof_top": {
+"de": "Wood roof ridge",
+"mat": "Wood",
+"size": [
+2.14,
+1.1,
+2.84
+]
+},
+"OLD_wood_wall_roof": {
+"de": "Wood wall roof",
+"mat": "Wood",
+"size": [
+2.42,
+1.61,
+0.4
+]
+},
+"Oak_Sapling": {
+"de": "Eichenschössling",
+"size": [
+1.5,
+1.46,
+1.59
+]
+},
+"Oat": {
+"de": "Hafer",
+"mat": "Wood",
+"size": [
+0.39,
+50.02,
+0.51
+]
+},
+"OatMilk": {
+"de": "Hafermilch",
+"mat": "Wood",
+"size": [
+0.59,
+1.33,
+0.28
+]
+},
+"OatmealLingonberryJam": {
+"de": "Haferflocken",
+"mat": "Wood",
+"size": [
+0.6,
+1.46,
+0.55
+]
+},
+"Onion": {
+"de": "Zwiebel",
+"mat": "Wood",
+"size": [
+0.32,
+50.45,
+0.25
+]
+},
+"OnionSoup": {
+"de": "Zwiebelsuppe",
+"mat": "Wood",
+"size": [
+0.77,
+50.62,
+0.71
+]
+},
+"OvenPancake": {
+"de": "Ofenpfannkuchen",
+"mat": "Wood",
+"size": [
+0.98,
+0.4,
+0.47
+]
+},
+"Pancakes": {
+"de": "Pfannkuchen",
+"mat": "Wood",
+"size": [
+0.7,
+1.27,
+0.57
+]
+},
+"Piece_flametal_beam": {
+"de": "Flammenkern-Balken",
+"mat": "Iron",
+"size": [
+2.14,
+0.53,
+0.59
+]
+},
+"Piece_flametal_pillar": {
+"de": "Flammenkern-Säule",
+"mat": "Iron",
+"size": [
+0.53,
+2.03,
+0.52
+],
+"yoff": 0.99
+},
+"Piece_grausten_floor_1x1": {
+"de": "Grausten-Boden 1x1",
+"mat": "Ashstone",
+"size": [
+1.13,
+0.68,
+1.14
+]
+},
+"Piece_grausten_floor_2x2": {
+"de": "Grausten-Boden 2x2",
+"mat": "Ashstone",
+"size": [
+2.27,
+0.69,
+2.29
+]
+},
+"Piece_grausten_floor_4x4": {
+"de": "Grausten-Boden 4x4",
+"mat": "Ashstone",
+"size": [
+4.53,
+0.65,
+4.58
+]
+},
+"Piece_grausten_pillar_arch": {
+"de": "Mittlerer Grausten-Bogen",
+"mat": "Ashstone",
+"size": [
+2.85,
+3.12,
+1.28
+],
+"yoff": 0.91
+},
+"Piece_grausten_pillar_arch_small": {
+"de": "Kleiner Grausten-Bogen",
+"mat": "Ashstone",
+"size": [
+1.38,
+1.4,
+0.58
+],
+"yoff": 0.54
+},
+"Piece_grausten_pillarbase_medium": {
+"de": "Mittlere Grausten-Säule",
+"mat": "Ashstone",
+"size": [
+1.04,
+1.05,
+1.07
+],
+"yoff": 0.51
+},
+"Piece_grausten_pillarbase_small": {
+"de": "Kleine Grausten-Säule",
+"mat": "Ashstone",
+"size": [
+0.53,
+1.01,
+0.52
+],
+"yoff": 0.5
+},
+"Piece_grausten_pillarbase_tapered": {
+"de": "Konische Grausten-Säule",
+"mat": "Ashstone",
+"size": [
+1.03,
+2.06,
+1.02
+],
+"yoff": 1.0
+},
+"Piece_grausten_pillarbase_tapered_inverted": {
+"de": "Konische Grausten-Säule, invertiert",
+"mat": "Ashstone",
+"size": [
+1.07,
+2.06,
+1.1
+],
+"yoff": 1
+},
+"Piece_grausten_pillarbeam_medium": {
+"de": "Mittlerer Grausten-Balken",
+"mat": "Ashstone",
+"size": [
+1.14,
+1.04,
+1.13
+]
+},
+"Piece_grausten_pillarbeam_small": {
+"de": "Kleiner Grausten-Balken",
+"mat": "Ashstone",
+"size": [
+1.1,
+0.53,
+0.6
+]
+},
+"Piece_grausten_stone_ladder": {
+"de": "Steile Grausten-Treppe",
+"mat": "Ashstone",
+"size": [
+1.18,
+2.91,
+2.51
+],
+"yoff": 0.55
+},
+"Piece_grausten_wall_1x2": {
+"de": "Grausten-Wand 1x2",
+"mat": "Ashstone",
+"size": [
+1.16,
+2.05,
+0.47
+],
+"yoff": 1.02
+},
+"Piece_grausten_wall_2x2": {
+"de": "Grausten-Wand 2x2",
+"mat": "Ashstone",
+"size": [
+2.21,
+2.04,
+0.45
+],
+"yoff": 1.02
+},
+"Piece_grausten_wall_4x2": {
+"de": "Grausten-Wand 4x2",
+"mat": "Ashstone",
+"size": [
+4.32,
+2.04,
+0.46
+],
+"yoff": 1.02
+},
+"Piece_grausten_wall_arch": {
+"de": "Grausten-Wandbogen",
+"mat": "Ashstone",
+"size": [
+2.21,
+2.04,
+0.45
+],
+"yoff": 1.02
+},
+"Piece_grausten_wall_arch_inverted": {
+"de": "Grausten-Wandbogen (invertiert)",
+"mat": "Ashstone",
+"size": [
+2.26,
+2.36,
+0.43
+],
+"yoff": 0.85
+},
+"Piece_grausten_window_2x2": {
+"de": "Grausten-Fenster 2x2",
+"mat": "Ashstone",
+"size": [
+2.13,
+2.04,
+0.5
+],
+"yoff": 1.02
+},
+"Piece_grausten_window_4x2": {
+"de": "Grausten-Fenster 4x2",
+"mat": "Ashstone",
+"size": [
+4.26,
+2.04,
+0.4
+],
+"yoff": 1.02
+},
+"PineTree_Sapling": {
+"de": "Kiefernschößling",
+"size": [
+0.52,
+1.31,
+0.46
+]
+},
+"PiquantPie": {
+"de": "Pikante Pastete",
+"mat": "Wood",
+"size": [
+1.82,
+50.43,
+0.7
+]
+},
+"Placeable_HardRock": {
+"de": "Mysteriöser Stein",
+"mat": "Wood",
+"size": [
+0.65,
+0.47,
+0.67
+],
+"yoff": 0.2
+},
+"Placeable_Stone": {
+"de": "Stein",
+"mat": "Stone",
+"size": [
+0.51,
+0.3,
+0.53
+]
+},
+"Poteitr": {
+"de": "Poteitr",
+"mat": "Wood",
+"size": [
+0.39,
+50.12,
+0.51
+]
+},
+"Pukeberries": {
+"de": "Brechbeeren",
+"mat": "Wood",
+"size": [
+0.39,
+0.22,
+0.42
+]
+},
+"PulledBear": {
+"de": "Zerrupftes Bärenfleisch",
+"mat": "Wood",
+"size": [
+0.69,
+50.38,
+0.46
+]
+},
+"QueensJam": {
+"de": "Beerenmarmelade",
+"mat": "Wood",
+"size": [
+0.33,
+50.38,
+0.26
+]
+},
+"Raft": {
+"de": "Floß",
+"mat": "Wood",
+"size": [
+11.64,
+7.51,
+16.5
+],
+"yoff": 2.28
+},
+"Raspberry": {
+"de": "Himbeeren",
+"mat": "Wood",
+"size": [
+0.26,
+50.44,
+0.27
+]
+},
+"RoastedCrustPie": {
+"de": "Geröstete Krustenpastete",
+"mat": "Wood",
+"size": [
+1.81,
+50.58,
+0.77
+]
+},
+"RottenMeat": {
+"de": "Verdorbenes Fleisch",
+"mat": "Wood",
+"size": [
+0.44,
+0.43,
+0.84
+]
+},
+"RoyalJelly": {
+"de": "Königliches Gelee",
+"mat": "Wood",
+"size": [
+0.61,
+0.61,
+0.67
+]
+},
+"Salad": {
+"de": "Salat",
+"mat": "Wood",
+"size": [
+0.71,
+50.7,
+0.81
+]
+},
+"Sausages": {
+"de": "Würste",
+"mat": "Wood",
+"size": [
+1.31,
+50.25,
+1.22
+]
+},
+"ScorchingMedley": {
+"de": "Verbranntes Gemisch",
+"mat": "Wood",
+"size": [
+0.7,
+50.57,
+0.66
+]
+},
+"SealSoup": {
+"de": "Robbenfleischsuppe",
+"mat": "Wood",
+"size": [
+0.63,
+1.56,
+0.62
+]
+},
+"SeekerAspic": {
+"de": "Suchersülze",
+"mat": "Wood",
+"size": [
+0.7,
+50.5,
+0.72
+]
+},
+"SerpentMeatCooked": {
+"de": "Gekochtes Schlangenfleisch",
+"mat": "Wood",
+"size": [
+2.0,
+50.68,
+1.78
+]
+},
+"SerpentStew": {
+"de": "Schlangeneintopf",
+"mat": "Wood",
+"size": [
+0.71,
+50.48,
+0.62
+]
+},
+"ShocklateSmoothie": {
+"de": "Schmutz-Shake",
+"mat": "Wood",
+"size": [
+0.35,
+50.39,
+0.36
+]
+},
+"SizzlingBerryBroth": {
+"de": "Brodelnde Beerenbrühe",
+"mat": "Wood",
+"size": [
+0.45,
+50.28,
+0.37
+]
+},
+"Sled": {
+"de": "[tool_sled]",
+"mat": "Wood",
+"size": [
+1.58,
+1.4,
+3.7
+]
+},
+"SmokedFish": {
+"de": "Räucherfisch",
+"mat": "Wood",
+"size": [
+0.57,
+1.36,
+0.65
+]
+},
+"SmokedMooseMeat": {
+"de": "Geräuchertes Elchfleisch",
+"mat": "Wood",
+"size": [
+0.75,
+1.44,
+0.47
+]
+},
+"SparklingShroomshake": {
+"de": "Prickelnder Pilzshake",
+"mat": "Wood",
+"size": [
+0.38,
+50.45,
+0.41
+]
+},
+"SpicyMarmalade": {
+"de": "Würzige Marmelade",
+"mat": "Wood",
+"size": [
+0.35,
+50.3,
+0.28
+]
+},
+"Trailership": {
+"de": "Longship",
+"mat": "Wood",
+"size": [
+11.64,
+12.57,
+35.43
+]
+},
+"TreasureChest_ashland_stone": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"TreasureChest_blackforest": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_charredfortress": {
+"de": "Verkohlte Truhe",
+"mat": "Stone",
+"size": [
+2.71,
+2.27,
+1.76
+]
+},
+"TreasureChest_deepnorth_village": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_dvergr_loose_stone": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+2.01,
+2.24,
+2.01
+]
+},
+"TreasureChest_dvergrtower": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.39,
+1.21,
+0.77
+]
+},
+"TreasureChest_dvergrtown": {
+"de": "Chest",
+"mat": "HardWood",
+"size": [
+1.39,
+1.21,
+0.78
+]
+},
+"TreasureChest_fCrypt": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"TreasureChest_forestcrypt": {
+"de": "Chest",
+"mat": "Stone",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"TreasureChest_forestcrypt_hildir": {
+"de": "Chest",
+"mat": "HardWood",
+"size": [
+1.39,
+1.21,
+0.78
+]
+},
+"TreasureChest_heath": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_heath_hildir": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_meadows": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_meadows_01": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_meadows_02": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_meadows_buried": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_meadows_combat": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_memorial_buried": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_morkhalla": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+2.61,
+1.85,
+1.58
+]
+},
+"TreasureChest_mountaincave": {
+"de": "Chest",
+"mat": "Stone",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"TreasureChest_mountaincave_hildir": {
+"de": "Chest",
+"mat": "HardWood",
+"size": [
+1.39,
+1.21,
+0.78
+]
+},
+"TreasureChest_mountains": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_plains_stone": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"TreasureChest_plainsfortress_hildir": {
+"de": "Chest",
+"mat": "HardWood",
+"size": [
+1.39,
+1.21,
+0.78
+]
+},
+"TreasureChest_sunkencrypt": {
+"de": "Chest",
+"mat": "Stone",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"TreasureChest_swamp": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"TreasureChest_trollcave": {
+"de": "Chest",
+"mat": "Stone",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"TurnipStew": {
+"de": "Rübeneintopf",
+"mat": "Wood",
+"size": [
+0.63,
+50.45,
+0.53
+]
+},
+"VikingCupcake": {
+"de": "Glasiertes Süßbrot",
+"mat": "Wood",
+"size": [
+0.4,
+0.54,
+0.49
+]
+},
+"VikingShip": {
+"de": "Langschiff",
+"mat": "Wood",
+"size": [
+11.64,
+12.57,
+35.43
+],
+"yoff": 4.72
+},
+"VikingShip_Ashlands": {
+"de": "Drakkar",
+"mat": "Wood",
+"size": [
+15.23,
+19.74,
+35.59
+],
+"yoff": 8.02
+},
+"VineAsh_sapling": {
+"de": "Aschrebe",
+"size": [
+1.43,
+1.29,
+1.35
+]
+},
+"VineGreen_sapling": {
+"de": "Efeu",
+"size": [
+1.43,
+1.29,
+1.35
+]
+},
+"Vineberry": {
+"de": "Weinbeerentraube",
+"mat": "Wood",
+"size": [
+0.87,
+0.44,
+0.49
+]
+},
+"WolfJerky": {
+"de": "Wolfsdörrfleisch",
+"mat": "Wood",
+"size": [
+0.41,
+50.09,
+0.51
+]
+},
+"WolfMeatSkewer": {
+"de": "Wolfsspieß",
+"mat": "Wood",
+"size": [
+0.54,
+50.59,
+0.91
+]
+},
+"YggdrasilPorridge": {
+"de": "Yggdrasil-Haferbrei",
+"mat": "Wood",
+"size": [
+0.63,
+50.59,
+0.64
+]
+},
+"artisan_ext1": {
+"de": "Handwerkspresse",
+"mat": "Wood",
+"size": [
+1.36,
+1.9,
+0.65
+],
+"yoff": 0.95
+},
+"ashwood_arch_big": {
+"de": "Aschenholzbogen",
+"mat": "Wood",
+"size": [
+2.37,
+2.22,
+0.49
+],
+"yoff": 1.1
+},
+"ashwood_arch_bottom": {
+"de": "Unteres Aschenholzkreuz",
+"mat": "Wood",
+"size": [
+1.16,
+1.49,
+0.41
+]
+},
+"ashwood_arch_top": {
+"de": "Oberes Aschenholzkreuz",
+"mat": "Wood",
+"size": [
+1.18,
+1.08,
+0.45
+]
+},
+"ashwood_beam_1m": {
+"de": "Aschenholzbalken, 1 m",
+"mat": "Wood",
+"size": [
+1.05,
+0.4,
+0.47
+]
+},
+"ashwood_beam_2m": {
+"de": "Aschenholzbalken, 2 m",
+"mat": "Wood",
+"size": [
+2.24,
+0.4,
+0.51
+],
+"yoff": -1
+},
+"ashwood_bed": {
+"de": "Aschenholzbett",
+"mat": "Wood",
+"size": [
+1.84,
+1.08,
+3.35
+],
+"yoff": 0.45
+},
+"ashwood_deco_floor": {
+"de": "Dekorativer Aschenholzboden",
+"mat": "Wood",
+"size": [
+2.27,
+0.43,
+2.29
+]
+},
+"ashwood_decowall_2x2": {
+"de": "Dekorative Aschenholzwand",
+"mat": "Wood",
+"size": [
+2.25,
+2.02,
+0.32
+]
+},
+"ashwood_decowall_divider": {
+"de": "Aschenholztrenner",
+"mat": "Wood",
+"size": [
+1.11,
+2.01,
+0.24
+]
+},
+"ashwood_decowall_tree": {
+"de": "Dekoratives Aschenholzfenster",
+"mat": "Wood",
+"size": [
+2.25,
+1.06,
+0.2
+],
+"yoff": -0.51
+},
+"ashwood_door": {
+"de": "Aschenholztür",
+"mat": "Wood",
+"size": [
+2.0,
+3.01,
+0.51
+],
+"yoff": 1.5
+},
+"ashwood_floor_1x1": {
+"de": "Aschenholzboden 1x1",
+"mat": "Wood",
+"size": [
+1.21,
+0.32,
+1.18
+]
+},
+"ashwood_floor_2x2": {
+"de": "Aschenholzboden 2x2",
+"mat": "Wood",
+"size": [
+2.27,
+0.35,
+2.29
+]
+},
+"ashwood_halfwall_1x2": {
+"de": "Aschenholzwand (halb)",
+"mat": "Wood",
+"size": [
+2.19,
+1.05,
+0.33
+],
+"yoff": 0.48
+},
+"ashwood_pole_1m": {
+"de": "Aschenholzpfosten, 1 m",
+"mat": "Wood",
+"size": [
+0.41,
+1.03,
+0.41
+],
+"yoff": -0.49
+},
+"ashwood_pole_2m": {
+"de": "Aschenholzpfosten, 2 m",
+"mat": "Wood",
+"size": [
+0.44,
+2.04,
+0.41
+]
+},
+"ashwood_quarterwall_1x1": {
+"de": "Aschenholzwand (viertel)",
+"mat": "Wood",
+"size": [
+1.25,
+1.03,
+0.38
+],
+"yoff": 0.51
+},
+"ashwood_stair": {
+"de": "Aschenholztreppe",
+"mat": "Wood",
+"size": [
+1.15,
+1.27,
+2.09
+],
+"yoff": 0.48
+},
+"ashwood_wall_2x2": {
+"de": "Aschenholzwand",
+"mat": "Wood",
+"size": [
+2.24,
+2.04,
+0.34
+]
+},
+"ashwood_wall_arch": {
+"de": "Aschenholz-Wandbogen",
+"mat": "Wood",
+"size": [
+1.12,
+1.05,
+0.31
+],
+"yoff": 0.52
+},
+"ashwood_wall_beam_26": {
+"de": "Aschenholzbalken, 26 °",
+"mat": "Wood",
+"size": [
+2.56,
+1.64,
+0.49
+]
+},
+"ashwood_wall_beam_26_alt": {
+"de": "Aschenholzbalken, 26 °",
+"mat": "Wood",
+"size": [
+2.65,
+1.91,
+0.51
+]
+},
+"ashwood_wall_beam_45": {
+"de": "Aschenholzbalken, 45 °",
+"mat": "Wood",
+"size": [
+2.62,
+2.44,
+0.54
+]
+},
+"ashwood_wall_beam_45_alt": {
+"de": "Aschenholzbalken, 45 °",
+"mat": "Wood",
+"size": [
+2.83,
+2.71,
+0.5
+]
+},
+"ashwood_wall_beam_67": {
+"de": "Aschenholzbalken 67°",
+"mat": "Wood",
+"size": [
+2.62,
+4.74,
+0.53
+]
+},
+"ashwood_wall_cross_26": {
+"de": "Aschenholzdach-26°-Kreuz",
+"mat": "Wood",
+"size": [
+2.35,
+1.56,
+0.48
+],
+"yoff": 0.51
+},
+"ashwood_wall_cross_26_alt": {
+"de": "Aschenholzdach-26°-Kreuz",
+"mat": "Wood",
+"size": [
+2.42,
+1.87,
+0.52
+]
+},
+"ashwood_wall_cross_45": {
+"de": "Aschenholzdach-45°-Kreuz",
+"mat": "Wood",
+"size": [
+2.7,
+2.42,
+0.47
+],
+"yoff": 0.98
+},
+"ashwood_wall_cross_45_alt": {
+"de": "Aschenholzdach-45°-Kreuz",
+"mat": "Wood",
+"size": [
+2.8,
+2.66,
+0.52
+]
+},
+"ashwood_wall_cross_67": {
+"de": "Aschenholzdach 67° (Kreuz)",
+"mat": "Wood",
+"size": [
+2.8,
+4.41,
+0.48
+],
+"yoff": 1.94
+},
+"ashwood_wall_roof_26": {
+"de": "Aschenholzwand-26°-Dach",
+"mat": "Wood",
+"size": [
+2.5,
+1.65,
+0.5
+]
+},
+"ashwood_wall_roof_26_upsidedown": {
+"de": "Aschenholzwand-26°-Dach (invertiert)",
+"mat": "Wood",
+"size": [
+2.51,
+1.65,
+0.48
+]
+},
+"ashwood_wall_roof_45": {
+"de": "Aschenholzwand-45°-Dach",
+"mat": "Wood",
+"size": [
+2.6,
+2.45,
+0.48
+]
+},
+"ashwood_wall_roof_45_upsidedown": {
+"de": "Aschenholzwand-45°-Dach (invertiert)",
+"mat": "Wood",
+"size": [
+2.46,
+2.43,
+0.43
+]
+},
+"ashwood_wall_roof_67_a": {
+"de": "Aschenholzwand 67°",
+"mat": "Wood",
+"size": [
+2.75,
+4.87,
+0.5
+]
+},
+"ashwood_wall_roof_67_upsidedown": {
+"de": "Aschenholzwand 67° (invertiert)",
+"mat": "Wood",
+"size": [
+2.54,
+4.3,
+0.43
+]
+},
+"bar_ancientmetal_stack": {
+"de": "[piece_ancientmetalstack]",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+]
+},
+"bar_blackmetal_stack": {
+"de": "Stapel Schwarzmetall",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+],
+"yoff": 0.51
+},
+"bar_bronze_stack": {
+"de": "Stapel Bronze",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+],
+"yoff": 0.51
+},
+"bar_copper_stack": {
+"de": "Stapel Kupfer",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+],
+"yoff": 0.51
+},
+"bar_flametal_stack": {
+"de": "Stapel Flammenkern",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+],
+"yoff": 0.51
+},
+"bar_gold_stack": {
+"de": "Stapel Blutgold",
+"mat": "Wood",
+"size": [
+1.32,
+1.02,
+1.35
+],
+"yoff": 0.51
+},
+"bar_iron_stack": {
+"de": "Stapel Eisen",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+],
+"yoff": 0.51
+},
+"bar_silver_stack": {
+"de": "Stapel Silber",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+],
+"yoff": 0.51
+},
+"bar_tin_stack": {
+"de": "Stapel Zinn",
+"mat": "Wood",
+"size": [
+0.67,
+1.01,
+0.68
+],
+"yoff": 0.51
+},
+"bed": {
+"de": "Bett",
+"mat": "Wood",
+"size": [
+2.24,
+0.74,
+3.78
+],
+"yoff": 0.33
+},
+"blackforge": {
+"de": "Schwarzschmiede",
+"mat": "Wood",
+"size": [
+4.31,
+1.31,
+2.08
+],
+"yoff": 0.66
+},
+"blackforge_ext1": {
+"de": "Schwarzschmiede-Kühler",
+"mat": "Wood",
+"size": [
+1.57,
+0.34,
+0.53
+],
+"yoff": 0.17
+},
+"blackforge_ext2_vise": {
+"de": "Schraubstock",
+"mat": "Wood",
+"size": [
+0.71,
+1.22,
+0.84
+],
+"yoff": 0.59
+},
+"blackforge_ext3_metalcutter": {
+"de": "Metallschneider",
+"mat": "Wood",
+"size": [
+0.71,
+1.14,
+0.66
+],
+"yoff": 0.57
+},
+"blackforge_ext4_gemcutter": {
+"de": "Juwelenschneider",
+"mat": "Wood",
+"size": [
+1.2,
+0.7,
+0.98
+],
+"yoff": 0.35
+},
+"blackforge_ext5_apron": {
+"de": "Schmiedeschürze",
+"mat": "Wood",
+"size": [
+1.29,
+1.52,
+0.3
+]
+},
+"blackmarble_1x1": {
+"de": "Schwarze Marmor 1x1x1",
+"mat": "Marble",
+"size": [
+1.14,
+1.04,
+1.1
+]
+},
+"blackmarble_2x1x1": {
+"de": "Schwarzer Marmor 2x1x1",
+"mat": "Marble",
+"size": [
+2.12,
+1.04,
+1.16
+]
+},
+"blackmarble_2x2_enforced": {
+"de": "Verstärkter schwarzer Marmor",
+"mat": "Iron",
+"size": [
+2.62,
+2.06,
+2.62
+]
+},
+"blackmarble_2x2x1": {
+"de": "Schwarzer Marmor 2x2x1",
+"mat": "Marble",
+"size": [
+2.17,
+2.05,
+1.06
+]
+},
+"blackmarble_2x2x2": {
+"de": "Schwarzer Marmor 2x2x2",
+"mat": "Marble",
+"size": [
+2.27,
+2.13,
+2.29
+]
+},
+"blackmarble_arch": {
+"de": "Schwarzes Marmorgewölbe",
+"mat": "Marble",
+"size": [
+2.23,
+2.09,
+1.14
+]
+},
+"blackmarble_base_1": {
+"de": "Schwarzer Marmorsockel",
+"mat": "Marble",
+"size": [
+2.19,
+2.1,
+1.38
+]
+},
+"blackmarble_base_2": {
+"de": "Breiter schwarzer Marmorsockel",
+"mat": "Marble",
+"size": [
+2.72,
+2.31,
+2.27
+]
+},
+"blackmarble_basecorner": {
+"de": "Schwarzer Marmorsockel, Ecke",
+"mat": "Marble",
+"size": [
+2.07,
+2.11,
+2.08
+]
+},
+"blackmarble_column_1": {
+"de": "Schwarze Marmorsäule, klein",
+"mat": "Marble",
+"size": [
+1.06,
+1.04,
+1.09
+]
+},
+"blackmarble_column_2": {
+"de": "Schwarze Marmorsäule, breit",
+"mat": "Marble",
+"size": [
+2.12,
+1.08,
+2.15
+]
+},
+"blackmarble_column_3": {
+"de": "Schwarze Marmorsäule, hoch",
+"mat": "Marble",
+"size": [
+2.09,
+8.09,
+2.11
+]
+},
+"blackmarble_creep_4x1x1": {
+"de": "Schwarzer Marmor 2x2x1",
+"mat": "Marble",
+"size": [
+1.03,
+4.09,
+1.06
+]
+},
+"blackmarble_creep_4x2x1": {
+"de": "Schwarzer Marmor 2x2x1",
+"mat": "Marble",
+"size": [
+2.07,
+4.09,
+1.06
+]
+},
+"blackmarble_creep_slope_inverted_1x1x2": {
+"de": "Schwarzes Marmorgesims",
+"mat": "Marble",
+"size": [
+1,
+1.97,
+1
+]
+},
+"blackmarble_creep_slope_inverted_2x2x1": {
+"de": "Schwarzes Marmorgesims",
+"mat": "Marble",
+"size": [
+2,
+0.98,
+2
+]
+},
+"blackmarble_creep_stair": {
+"de": "Schwarze Marmortreppe",
+"mat": "Marble",
+"size": [
+2.0,
+1,
+2
+]
+},
+"blackmarble_floor": {
+"de": "Schwarzer Marmorboden",
+"mat": "Marble",
+"size": [
+2.27,
+1.11,
+2.29
+]
+},
+"blackmarble_floor_large": {
+"de": "Schwarzer Marmorboden, 4x4",
+"mat": "Marble",
+"size": [
+8.12,
+2.12,
+8.12
+]
+},
+"blackmarble_floor_triangle": {
+"de": "Schwarzer Marmorboden, Dreieck",
+"mat": "Marble",
+"size": [
+2.14,
+1.07,
+2.17
+]
+},
+"blackmarble_head01": {
+"de": "Bronzekopf 1",
+"mat": "Iron",
+"size": [
+1.06,
+1.07,
+1.05
+]
+},
+"blackmarble_head02": {
+"de": "Bronzekopf 2",
+"mat": "Iron",
+"size": [
+1.0,
+1.02,
+1.01
+]
+},
+"blackmarble_head_big01": {
+"de": "Schwarzer Marmorkopf 1, groß",
+"mat": "Marble",
+"size": [
+2.2,
+2.12,
+2.18
+]
+},
+"blackmarble_head_big02": {
+"de": "Schwarzer Marmorkopf 2, groß",
+"mat": "Marble",
+"size": [
+2.01,
+2.04,
+2.02
+]
+},
+"blackmarble_out_1": {
+"de": "Schwarzes Marmorgesims",
+"mat": "Marble",
+"size": [
+2.22,
+2.1,
+1.38
+]
+},
+"blackmarble_out_2": {
+"de": "Schwarzes Marmorgesims, breit",
+"mat": "Marble",
+"size": [
+2.22,
+2.12,
+2.27
+]
+},
+"blackmarble_outcorner": {
+"de": "Schwarzes Marmorgesims, Ecke",
+"mat": "Marble",
+"size": [
+2.09,
+2.11,
+2.11
+]
+},
+"blackmarble_pile": {
+"de": "Schwarzer Marmorhaufen",
+"mat": "Wood",
+"size": [
+1.91,
+0.99,
+2.01
+],
+"yoff": 0.42
+},
+"blackmarble_slope_1x2": {
+"de": "Schwarze Marmorschräge",
+"mat": "Marble",
+"size": [
+1.04,
+2.0,
+1.11
+]
+},
+"blackmarble_slope_inverted_1x2": {
+"de": "Schwarze Marmorschräge, invertiert",
+"mat": "Marble",
+"size": [
+1,
+1.97,
+1
+]
+},
+"blackmarble_stair": {
+"de": "Schwarze Marmortreppe",
+"mat": "Marble",
+"size": [
+2.31,
+1.59,
+2.25
+],
+"yoff": 0.29
+},
+"blackmarble_stair_corner": {
+"de": "Schwarze Marmortreppe, rechts",
+"mat": "Marble",
+"size": [
+2.0,
+1.01,
+2
+]
+},
+"blackmarble_stair_corner_left": {
+"de": "Schwarze Marmortreppe, links",
+"mat": "Marble",
+"size": [
+2.0,
+1.01,
+2
+]
+},
+"blackmarble_tile_floor_1x1": {
+"de": "Schwarze Marmorbodenfliese, klein",
+"mat": "Wood",
+"size": [
+1.18,
+0.3,
+1.17
+]
+},
+"blackmarble_tile_floor_2x2": {
+"de": "Schwarze Marmorbodenfliese, groß",
+"mat": "Wood",
+"size": [
+2.29,
+0.33,
+2.29
+]
+},
+"blackmarble_tile_wall_1x1": {
+"de": "Schwarze Marmorwandfliese, klein",
+"mat": "Wood",
+"size": [
+1.14,
+1.05,
+0.34
+]
+},
+"blackmarble_tile_wall_2x2": {
+"de": "Schwarze Marmorwandfliese, groß",
+"mat": "Wood",
+"size": [
+2.27,
+2.09,
+0.43
+]
+},
+"blackmarble_tile_wall_2x4": {
+"de": "Schwarze Marmorwandfliese, hoch",
+"mat": "Wood",
+"size": [
+2.26,
+4.17,
+0.5
+]
+},
+"blackmarble_tip": {
+"de": "Schwarze Marmorspitze (Viertel)",
+"mat": "Marble",
+"size": [
+1.1,
+2.04,
+1.14
+]
+},
+"blackwood_stack": {
+"de": "Aschenholzstapel",
+"mat": "Wood",
+"size": [
+2.21,
+0.69,
+2.21
+]
+},
+"blastfurnace": {
+"de": "Hochofen",
+"mat": "Stone",
+"size": [
+3.74,
+5.61,
+3.92
+],
+"yoff": 2.46
+},
+"bone_stack": {
+"de": "Knochenstapel",
+"mat": "Wood",
+"size": [
+1.07,
+0.63,
+1.06
+],
+"yoff": 0.25
+},
+"bonfire": {
+"de": "Signalfeuer",
+"mat": "Wood",
+"size": [
+5.08,
+4.66,
+4.96
+],
+"yoff": 1.82
+},
+"cauldron_ext1_spice": {
+"de": "Gewürzaufhänger",
+"mat": "Wood",
+"size": [
+2.17,
+2.27,
+0.57
+],
+"yoff": 0.17
+},
+"cauldron_ext3_butchertable": {
+"de": "Metzgertisch",
+"mat": "Wood",
+"size": [
+1.27,
+1.37,
+1.25
+],
+"yoff": 0.69
+},
+"cauldron_ext4_pots": {
+"de": "Töpfe und Pfannen",
+"mat": "Wood",
+"size": [
+2.0,
+2.1,
+0.85
+],
+"yoff": -0.14
+},
+"cauldron_ext5_mortarandpestle": {
+"de": "Mörser und Stößel",
+"mat": "Wood",
+"size": [
+2.02,
+0.94,
+0.99
+],
+"yoff": 0.47
+},
+"cauldron_ext6_rollingpins": {
+"de": "Teigrollen und Schneidbretter",
+"mat": "Wood",
+"size": [
+0.86,
+1.66,
+0.38
+],
+"yoff": 0.66
+},
+"cauldron_ext7_smoker": {
+"de": "Räucherkammer",
+"mat": "Wood",
+"size": [
+1.17,
+1.18,
+0.89
+],
+"yoff": 0.59
+},
+"charcoal_kiln": {
+"de": "Kohlenmeiler",
+"mat": "Stone",
+"size": [
+4.74,
+3.73,
+5.53
+],
+"yoff": 1.23
+},
+"charred_shieldgenerator": {
+"de": "Schildgenerator",
+"mat": "Stone",
+"size": [
+4.74,
+8.1,
+4.93
+]
+},
+"coal_pile": {
+"de": "Kohlehaufen",
+"mat": "Wood",
+"size": [
+1.71,
+1.03,
+2.09
+],
+"yoff": 0.43
+},
+"crystal_wall_1x1": {
+"de": "Kristallwand 1x1",
+"mat": "Wood",
+"size": [
+1.27,
+1.18,
+0.39
+],
+"yoff": 0.51
+},
+"cultivate": {
+"de": "Kultivieren"
+},
+"darkwood_arch": {
+"de": "Dunkelholzbogen",
+"mat": "Wood",
+"size": [
+2.46,
+2.23,
+0.57
+],
+"yoff": 1.1
+},
+"darkwood_beam": {
+"de": "Dunkelholzbalken 2 m",
+"mat": "Wood",
+"size": [
+2.24,
+0.49,
+0.51
+],
+"yoff": 0.22
+},
+"darkwood_beam4x4": {
+"de": "Dunkelholzbalken 4 m",
+"mat": "Wood",
+"size": [
+4.19,
+0.55,
+0.49
+],
+"yoff": 0.21
+},
+"darkwood_beam_26": {
+"de": "Dunkelholzbalken, 26°",
+"mat": "Wood",
+"size": [
+2.45,
+1.57,
+0.55
+]
+},
+"darkwood_beam_45": {
+"de": "Dunkelholzbalken, 45°",
+"mat": "Wood",
+"size": [
+2.54,
+2.46,
+2.37
+]
+},
+"darkwood_beam_67": {
+"de": "[piece_darkwoodbeam67]",
+"mat": "Wood",
+"size": [
+2.7,
+4.8,
+0.55
+]
+},
+"darkwood_decowall": {
+"de": "Geschnitzter Dunkelholztrenner",
+"mat": "Wood",
+"size": [
+1.12,
+2.0,
+0.2
+],
+"yoff": 1
+},
+"darkwood_gate": {
+"de": "Dunkelholztor",
+"mat": "HardWood",
+"size": [
+2.49,
+4.01,
+0.59
+],
+"yoff": 2.0
+},
+"darkwood_pole": {
+"de": "Dunkelholzpfosten 2 m",
+"mat": "Wood",
+"size": [
+0.56,
+2.02,
+0.49
+]
+},
+"darkwood_pole4": {
+"de": "Dunkelholzpfosten 4 m",
+"mat": "Wood",
+"size": [
+0.62,
+4.05,
+0.49
+]
+},
+"darkwood_raven": {
+"de": "Rabenverzierung",
+"mat": "Wood",
+"size": [
+0.73,
+1.77,
+3.26
+],
+"yoff": 0.34
+},
+"darkwood_roof": {
+"de": "Schindeldach 26°",
+"mat": "Wood",
+"size": [
+2.56,
+2.7,
+2.87
+]
+},
+"darkwood_roof_45": {
+"de": "Schindeldach 45°",
+"mat": "Wood",
+"size": [
+2.58,
+2.81,
+2.93
+]
+},
+"darkwood_roof_67": {
+"de": "Schindeldach 67°",
+"mat": "Wood",
+"size": [
+2.53,
+5.07,
+2.91
+]
+},
+"darkwood_roof_icorner": {
+"de": "Schindeldach 26°-Innenecke",
+"mat": "Wood",
+"size": [
+2.73,
+1.66,
+2.89
+]
+},
+"darkwood_roof_icorner_45": {
+"de": "Schindeldach 45°-Innenecke",
+"mat": "Wood",
+"size": [
+3.22,
+3.02,
+3.4
+]
+},
+"darkwood_roof_icorner_67": {
+"de": "Schindeldach 67°-Innenecke",
+"mat": "Wood",
+"size": [
+2.97,
+5.01,
+3.02
+]
+},
+"darkwood_roof_ocorner": {
+"de": "Schindeldach 26°-Außenecke",
+"mat": "Wood",
+"size": [
+3.1,
+3.02,
+3.08
+]
+},
+"darkwood_roof_ocorner_45": {
+"de": "Schindeldach 45°-Außenecke",
+"mat": "Wood",
+"size": [
+3.02,
+2.9,
+3.03
+]
+},
+"darkwood_roof_ocorner_67": {
+"de": "Schindeldach 67°-Außenecke",
+"mat": "Wood",
+"size": [
+3.07,
+5.14,
+3.1
+]
+},
+"darkwood_roof_top": {
+"de": "Schindeldachfirst 26°",
+"mat": "Wood",
+"size": [
+2.53,
+1.44,
+3.47
+]
+},
+"darkwood_roof_top_45": {
+"de": "Schindeldachfirst 45°",
+"mat": "Wood",
+"size": [
+2.53,
+1.85,
+3.78
+]
+},
+"darkwood_roof_top_67": {
+"de": "Schindeldachfirst 67°",
+"mat": "Wood",
+"size": [
+2.53,
+3.4,
+3.3
+]
+},
+"darkwood_wolf": {
+"de": "Wolfsverzierung",
+"mat": "Wood",
+"size": [
+0.97,
+2.05,
+2.53
+],
+"yoff": 0.3
+},
+"dverger_guardstone": {
+"de": "Wächterstein",
+"mat": "Stone",
+"size": [
+1.03,
+1.61,
+0.79
+]
+},
+"dvergrprops_wood_floor": {
+"de": "Holzboden 2x2",
+"mat": "Wood",
+"size": [
+3.42,
+0.46,
+2.54
+]
+},
+"dvergrprops_wood_stair": {
+"de": "Holzstufen",
+"mat": "Wood",
+"size": [
+2.75,
+1.32,
+3.9
+]
+},
+"eitrrefinery": {
+"de": "Eitr-Raffinerie",
+"mat": "Wood",
+"size": [
+5.64,
+4.42,
+2.95
+],
+"yoff": 2.2
+},
+"fermenter": {
+"de": "Fermentierer",
+"mat": "Wood",
+"size": [
+1.68,
+2.2,
+2.02
+],
+"yoff": 1.1
+},
+"fire_pit": {
+"de": "Lagerfeuer",
+"mat": "Wood",
+"size": [
+1.6,
+0.42,
+1.51
+],
+"yoff": 0.12
+},
+"fire_pit_haldor": {
+"de": "Lagerfeuer",
+"size": [
+1.6,
+0.42,
+1.51
+]
+},
+"fire_pit_hildir": {
+"de": "Lagerfeuer",
+"size": [
+1.5,
+1.08,
+1.5
+]
+},
+"fire_pit_iron": {
+"de": "Feuerschalen-Eisen",
+"mat": "Wood",
+"size": [
+1.5,
+1.08,
+1.5
+],
+"yoff": 0.54
+},
+"flametal_gate": {
+"de": "Flammenkern-Tor",
+"mat": "Iron",
+"size": [
+1.65,
+5.45,
+0.6
+],
+"yoff": 2.74
+},
+"flint_pile": {
+"de": "Haufen Feuerstein",
+"mat": "Wood",
+"size": [
+1.8,
+0.72,
+1.86
+],
+"yoff": 0.28
+},
+"forge": {
+"de": "Schmiede",
+"mat": "Wood",
+"size": [
+2.07,
+1.36,
+1.25
+],
+"yoff": 0.59
+},
+"forge_ext1": {
+"de": "Schmiede-Blasebalg",
+"mat": "Wood",
+"size": [
+1.76,
+1.91,
+1.59
+],
+"yoff": 0.95
+},
+"forge_ext2": {
+"de": "Ambosse",
+"mat": "Wood",
+"size": [
+0.84,
+0.84,
+0.9
+],
+"yoff": 0.42
+},
+"forge_ext3": {
+"de": "Schleifscheibe",
+"mat": "Wood",
+"size": [
+0.75,
+1.41,
+1.05
+],
+"yoff": 0.71
+},
+"forge_ext4": {
+"de": "Schmiedeamboss",
+"mat": "Wood",
+"size": [
+0.9,
+1.4,
+1.27
+],
+"yoff": 0.74
+},
+"forge_ext5": {
+"de": "Schmiede-Kühlvorrichtung",
+"mat": "Wood",
+"size": [
+0.95,
+1,
+0.94
+],
+"yoff": 0.5
+},
+"forge_ext6": {
+"de": "Schmiede-Werkzeuggestell",
+"mat": "Wood",
+"size": [
+2.5,
+0.94,
+0.41
+],
+"yoff": -0.23
+},
+"fuling_trap": {
+"de": "Falle",
+"mat": "Iron",
+"size": [
+1.96,
+1.67,
+1.83
+]
+},
+"fuling_turret": {
+"de": "Balliste",
+"mat": "Wood",
+"size": [
+4.11,
+3.14,
+3.93
+]
+},
+"goblin_bed": {
+"mat": "Wood",
+"size": [
+2.24,
+0.74,
+3.78
+]
+},
+"grausten_pile": {
+"de": "Grausten-Haufen",
+"mat": "Wood",
+"size": [
+2.51,
+1.69,
+2.87
+],
+"yoff": 0.64
+},
+"guard_stone": {
+"de": "Wächterstein",
+"mat": "Stone",
+"size": [
+1.03,
+1.61,
+0.79
+],
+"yoff": 0.8
+},
+"guard_stone_test": {
+"de": "Guard stone",
+"mat": "Stone",
+"size": [
+2.23,
+2.11,
+1.56
+]
+},
+"hearth": {
+"de": "Feuerstelle",
+"mat": "Stone",
+"size": [
+4.17,
+0.8,
+3.12
+],
+"yoff": 0.35
+},
+"incinerator": {
+"de": "Vernichter",
+"mat": "Iron",
+"size": [
+2.4,
+11.49,
+1.7
+],
+"yoff": 5.72
+},
+"iron_floor_1x1": {
+"de": "Käfigboden 1x1",
+"mat": "Iron",
+"size": [
+1.0,
+0.24,
+1.18
+]
+},
+"iron_floor_1x1_v2": {
+"de": "Käfigboden 1x1",
+"mat": "Iron",
+"size": [
+1.0,
+0.24,
+1.18
+],
+"yoff": -0.5
+},
+"iron_floor_2x2": {
+"de": "Käfigboden 2x2",
+"mat": "Iron",
+"size": [
+2.0,
+2.29,
+2.27
+],
+"yoff": -0.14
+},
+"iron_grate": {
+"de": "Eisentor",
+"mat": "Iron",
+"size": [
+2.01,
+3.0,
+0.11
+],
+"yoff": 0.5
+},
+"iron_wall_1x1": {
+"de": "Käfigwand 1x1",
+"mat": "Iron",
+"size": [
+1.0,
+1.16,
+0.24
+],
+"yoff": 0.49
+},
+"iron_wall_1x1_rusty": {
+"de": "Käfigwand 1x1",
+"mat": "Iron",
+"size": [
+1.0,
+1.16,
+0.24
+]
+},
+"iron_wall_2x2": {
+"de": "Käfigwand 2x2",
+"mat": "Iron",
+"size": [
+2.0,
+2.16,
+0.41
+]
+},
+"itemstand": {
+"de": "Objektständer",
+"mat": "Wood",
+"size": [
+0.5,
+0.5,
+0.2
+]
+},
+"itemstandh": {
+"de": "Objektständer",
+"mat": "Wood",
+"size": [
+0.2,
+0.06,
+0.2
+]
+},
+"jute_carpet": {
+"de": "Roter Juteteppich",
+"mat": "Wood",
+"size": [
+4.0,
+0.18,
+3.29
+]
+},
+"jute_carpet_blue": {
+"de": "Blauer Juteteppich",
+"mat": "Wood",
+"size": [
+3.06,
+0.18,
+3.12
+]
+},
+"loot_chest_stone": {
+"de": "Chest",
+"mat": "Stone",
+"size": [
+2.1,
+0.65,
+1.52
+]
+},
+"loot_chest_wood": {
+"de": "Chest",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+]
+},
+"loot_deepNorth_Granary": {
+"de": "Fass",
+"mat": "Wood",
+"size": [
+0.8,
+1.0,
+0.96
+]
+},
+"loot_deepNorth_TimberHall": {
+"de": "Fass",
+"mat": "Wood",
+"size": [
+0.8,
+1.0,
+0.96
+]
+},
+"metalbar_1x2": {
+"de": "Schwarze Marmor 1x1x1",
+"mat": "Iron",
+"size": [
+2.57,
+1,
+1.41
+]
+},
+"mud_road": {
+"de": "Boden einebnen",
+"size": [
+0.04,
+10,
+0.04
+]
+},
+"obsidian_pile": {
+"de": "Haufen Obsidian",
+"mat": "Wood",
+"size": [
+2.07,
+0.73,
+2.07
+]
+},
+"path": {
+"de": "Befestigen"
+},
+"paved_road": {
+"de": "Pflasterstraße",
+"size": [
+0.04,
+10,
+0.04
+]
+},
+"piece_ArcheryTarget": {
+"de": "Zielscheibe",
+"mat": "Wood",
+"size": [
+2.05,
+2.0,
+0.42
+]
+},
+"piece_CelebrationGarland": {
+"de": "Blumengirlande",
+"mat": "Wood",
+"size": [
+4.18,
+1.17,
+0.42
+],
+"yoff": 0.23
+},
+"piece_EternalPyre": {
+"de": "Ewiger Scheiterhaufen",
+"mat": "Stone",
+"size": [
+1.55,
+3.08,
+1.53
+]
+},
+"piece_FaderEmbers": {
+"de": "Ewiger Scheiterhaufen",
+"mat": "Stone",
+"size": [
+1.46,
+3.91,
+1.41
+]
+},
+"piece_FairylightGarland": {
+"de": "Feenlichter",
+"mat": "Wood",
+"size": [
+4.14,
+1.22,
+0.14
+],
+"yoff": 0.14
+},
+"piece_FrostFoundry": {
+"de": "Frost-Gießerei",
+"mat": "Stone",
+"size": [
+4.94,
+1.37,
+5.56
+],
+"yoff": 0.38
+},
+"piece_FrostKiln": {
+"de": "Eisiger Brennofen",
+"mat": "Stone",
+"size": [
+7.38,
+4.0,
+9.78
+],
+"yoff": 1.96
+},
+"piece_Lavalantern": {
+"de": "Lavalaterne",
+"mat": "Wood",
+"size": [
+0.38,
+0.83,
+0.38
+],
+"yoff": 0.41
+},
+"piece_MeadCauldron": {
+"de": "Metkocher",
+"mat": "Wood",
+"size": [
+1.33,
+1.24,
+0.87
+],
+"yoff": 0.46
+},
+"piece_TrainingDummy": {
+"de": "Schlachtenbruder",
+"size": [
+2.53,
+2.14,
+0.88
+],
+"yoff": 1.04
+},
+"piece_artisanstation": {
+"de": "Handwerkstisch",
+"mat": "Wood",
+"size": [
+3.02,
+2.6,
+1.93
+],
+"yoff": 1.28
+},
+"piece_asksvinskeleton": {
+"de": "Asksvin-Skelett",
+"mat": "Wood",
+"size": [
+3.34,
+1.95,
+1.66
+],
+"yoff": 0.96
+},
+"piece_banner01": {
+"de": "Schwarzes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner02": {
+"de": "Blaues Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner03": {
+"de": "Weiß-rot gestreiftes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner04": {
+"de": "Rotes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner05": {
+"de": "Grünes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner06": {
+"de": "Blau",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner07": {
+"de": "Weiß-blau gestreiftes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner08": {
+"de": "Gelbes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner09": {
+"de": "Lilafarbenes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner10": {
+"de": "Orangefarbenes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_banner11": {
+"de": "Weißes Banner",
+"mat": "Wood",
+"size": [
+0.2,
+3.03,
+1.41
+],
+"yoff": -1.41
+},
+"piece_barber": {
+"de": "Barbierstelle",
+"mat": "Wood",
+"size": [
+2,
+1.44,
+1.5
+],
+"yoff": 0.72
+},
+"piece_bathtub": {
+"de": "Badezuber",
+"mat": "Wood",
+"size": [
+3.29,
+2.32,
+3.73
+],
+"yoff": 1.1
+},
+"piece_bed02": {
+"de": "Drachenbett",
+"mat": "Wood",
+"size": [
+3.26,
+1.79,
+4.32
+],
+"yoff": 0.84
+},
+"piece_beehive": {
+"de": "Bienenstock",
+"mat": "Wood",
+"size": [
+1.81,
+1.97,
+1.99
+],
+"yoff": 0.8
+},
+"piece_bench01": {
+"de": "Bank",
+"mat": "Wood",
+"size": [
+2.72,
+0.59,
+0.91
+],
+"yoff": 0.26
+},
+"piece_bench_runed": {
+"de": "Geschnitzte Bank",
+"mat": "Wood",
+"size": [
+2.22,
+0.92,
+0.7
+],
+"yoff": 0.46
+},
+"piece_birdnest": {
+"de": "Vogelnest",
+"mat": "Wood",
+"size": [
+0.91,
+1.41,
+1.16
+]
+},
+"piece_blackmarble_bench": {
+"de": "Schwarze Marmorbank",
+"mat": "Marble",
+"size": [
+2.81,
+1.01,
+0.64
+],
+"yoff": 0.5
+},
+"piece_blackmarble_table": {
+"de": "Schwarzer Marmortisch",
+"mat": "Marble",
+"size": [
+2.75,
+0.82,
+1.49
+],
+"yoff": 0.41
+},
+"piece_blackmarble_throne": {
+"de": "Schwarzer Marmorthron",
+"mat": "Marble",
+"size": [
+1.73,
+2.94,
+1.25
+],
+"yoff": 1.47
+},
+"piece_blackwood_bench": {
+"de": "Bank",
+"mat": "Wood",
+"size": [
+2.06,
+0.55,
+2.04
+]
+},
+"piece_blackwood_bench01": {
+"de": "Aschenholzbank",
+"mat": "Wood",
+"size": [
+3.21,
+0.55,
+3.21
+],
+"yoff": 0.28
+},
+"piece_bone_throne": {
+"de": "Knochenthron",
+"mat": "Marble",
+"size": [
+1.59,
+3.17,
+0.86
+],
+"yoff": 1.55
+},
+"piece_brazierceiling01": {
+"de": "Hängende Kohlenpfanne",
+"mat": "Wood",
+"size": [
+1,
+1.95,
+0.99
+],
+"yoff": 1.01
+},
+"piece_brazierfloor01": {
+"de": "Stehendes Feuerschale",
+"mat": "Wood",
+"size": [
+1,
+1.07,
+0.99
+],
+"yoff": -0.53
+},
+"piece_brazierfloor02": {
+"de": "Blaue stehende Feuerschale",
+"mat": "Wood",
+"size": [
+1,
+1.07,
+0.99
+],
+"yoff": -0.53
+},
+"piece_cartographytable": {
+"de": "Kartografietisch",
+"mat": "Wood",
+"size": [
+4.62,
+1.63,
+2.62
+],
+"yoff": 0.79
+},
+"piece_cauldron": {
+"de": "Kessel",
+"mat": "Wood",
+"size": [
+1.4,
+2.6,
+1.53
+],
+"yoff": 0.98
+},
+"piece_chair": {
+"de": "Hocker",
+"mat": "Wood",
+"size": [
+0.79,
+0.71,
+0.69
+],
+"yoff": 0.33
+},
+"piece_chair02": {
+"de": "Stuhl",
+"mat": "Wood",
+"size": [
+0.51,
+1.25,
+1.14
+],
+"yoff": 0.62
+},
+"piece_chair03": {
+"de": "Dunkelholzstuhl",
+"mat": "Wood",
+"size": [
+0.6,
+1.28,
+0.62
+],
+"yoff": 0.63
+},
+"piece_chair_runed": {
+"de": "Geschnitzter Stuhl",
+"mat": "Wood",
+"size": [
+0.47,
+1.24,
+1.13
+],
+"yoff": 0.59
+},
+"piece_chest": {
+"de": "Verstärkte Truhe",
+"mat": "Wood",
+"size": [
+1.84,
+1.61,
+1.03
+],
+"yoff": 0.8
+},
+"piece_chest_barrel": {
+"de": "Fass",
+"mat": "Iron",
+"size": [
+0.8,
+1.0,
+0.96
+],
+"yoff": 0.49
+},
+"piece_chest_blackmetal": {
+"de": "Schwarzmetall-Truhe",
+"mat": "Iron",
+"size": [
+2.31,
+1.61,
+1.51
+],
+"yoff": 0.81
+},
+"piece_chest_grausten": {
+"de": "Grausten-Truhe",
+"mat": "Iron",
+"size": [
+1.99,
+1.17,
+1.64
+],
+"yoff": 0.59
+},
+"piece_chest_private": {
+"de": "Persönliche Truhe",
+"mat": "Wood",
+"size": [
+0.92,
+0.8,
+0.54
+],
+"yoff": 0.4
+},
+"piece_chest_treasure": {
+"de": "Schatzkiste",
+"mat": "Wood",
+"size": [
+1.16,
+0.66,
+1.03
+],
+"yoff": 0.3
+},
+"piece_chest_warderobe": {
+"de": "Kleiderschrank",
+"mat": "Iron",
+"size": [
+1.85,
+2.67,
+1.45
+],
+"yoff": 1.34
+},
+"piece_chest_wood": {
+"de": "Truhe",
+"mat": "Wood",
+"size": [
+1.65,
+0.79,
+1.15
+],
+"yoff": 0.39
+},
+"piece_cloth_hanging_door": {
+"de": "Roter Jutevorhang",
+"mat": "Wood",
+"size": [
+0.2,
+2.6,
+1.12
+],
+"yoff": -1.2
+},
+"piece_cloth_hanging_door_blue": {
+"de": "Blaue Jutegardinen",
+"mat": "Wood",
+"size": [
+0.34,
+4.3,
+2.0
+],
+"yoff": 2.15
+},
+"piece_cloth_hanging_door_blue2": {
+"de": "Blaue Jutevorhang",
+"mat": "Wood",
+"size": [
+0.35,
+1.7,
+4.4
+],
+"yoff": 0.85
+},
+"piece_cookingstation": {
+"de": "Kochstelle",
+"mat": "Wood",
+"size": [
+1.73,
+1.29,
+0.78
+],
+"yoff": 0.47
+},
+"piece_cookingstation_iron": {
+"de": "Eiserne Kochstation",
+"mat": "Iron",
+"size": [
+4.95,
+2.72,
+1.06
+],
+"yoff": 1.06
+},
+"piece_drawbridge": {
+"de": "Zimmerholzzugbrücke",
+"mat": "Wood",
+"size": [
+6.51,
+11.65,
+4.58
+],
+"yoff": 4.62
+},
+"piece_drawbridge_log": {
+"de": "Rustikale Zugbrücke",
+"mat": "Wood",
+"size": [
+4.26,
+6.9,
+2.67
+],
+"yoff": 2.25
+},
+"piece_dvergr_lantern": {
+"de": "Dvergr-Wall-Laterne",
+"mat": "Iron",
+"size": [
+1.14,
+1.44,
+0.67
+],
+"yoff": -0.27
+},
+"piece_dvergr_lantern_pole": {
+"de": "Dvergr-Laternenpfosten",
+"mat": "Iron",
+"size": [
+1.25,
+3.53,
+0.54
+],
+"yoff": -1.23
+},
+"piece_dvergr_metal_wall_2x2": {
+"de": "Dvergr-Metallwall",
+"mat": "Iron",
+"size": [
+2.0,
+2.01,
+0.15
+]
+},
+"piece_dvergr_pole": {
+"de": "Dvergr-Pfahl",
+"mat": "HardWood",
+"size": [
+0.67,
+2.01,
+0.6
+]
+},
+"piece_dvergr_sharpstakes": {
+"de": "Dvergr-Spitzpfahl",
+"mat": "HardWood",
+"size": [
+3.08,
+2.72,
+4.19
+],
+"yoff": 0.45
+},
+"piece_dvergr_spiralstair": {
+"de": "Dvergr-Wendeltreppe, linksdrehend",
+"mat": "HardWood",
+"size": [
+2.48,
+1.33,
+2.44
+],
+"yoff": 0.55
+},
+"piece_dvergr_spiralstair_right": {
+"de": "Dvergr-Wendeltreppe, rechtsdrehend",
+"mat": "HardWood",
+"size": [
+2.48,
+1.33,
+2.44
+],
+"yoff": 0.55
+},
+"piece_dvergr_stake_wall": {
+"de": "Dvergr-Palisadenwand",
+"mat": "HardWood",
+"size": [
+2.24,
+4.55,
+1.38
+],
+"yoff": 1.75
+},
+"piece_dvergr_wood_door": {
+"de": "Dvergr-Tür",
+"mat": "HardWood",
+"size": [
+3.94,
+4.22,
+0.73
+]
+},
+"piece_dvergr_wood_wall": {
+"de": "Dvergr-Wall",
+"mat": "HardWood",
+"size": [
+5.33,
+4.05,
+1.52
+]
+},
+"piece_gift1": {
+"de": "Julklapp",
+"mat": "Wood",
+"size": [
+0.62,
+0.35,
+0.4
+],
+"yoff": 0.16
+},
+"piece_gift2": {
+"de": "Julklapp",
+"mat": "Wood",
+"size": [
+0.74,
+0.42,
+0.48
+],
+"yoff": 0.2
+},
+"piece_gift3": {
+"de": "Julklapp",
+"mat": "Wood",
+"size": [
+0.93,
+0.53,
+0.6
+],
+"yoff": 0.25
+},
+"piece_grausten_roof_45": {
+"de": "Grausten-Dach",
+"mat": "Ashstone",
+"size": [
+2.51,
+2.84,
+2.93
+]
+},
+"piece_grausten_roof_45_arch": {
+"de": "Gewölbtes Grausten-Dach",
+"mat": "Ashstone",
+"size": [
+2.49,
+2.79,
+3.02
+]
+},
+"piece_grausten_roof_45_arch_corner": {
+"de": "Gewölbte Grausten-Dachecke",
+"mat": "Ashstone",
+"size": [
+2.76,
+2.75,
+2.61
+]
+},
+"piece_grausten_roof_45_arch_corner2": {
+"de": "Gewölbte Grausten-Dachecke",
+"mat": "Ashstone",
+"size": [
+2.76,
+2.73,
+2.61
+]
+},
+"piece_grausten_roof_45_corner": {
+"de": "Grausten-Dachecke",
+"mat": "Ashstone",
+"size": [
+2.5,
+2.69,
+2.48
+]
+},
+"piece_grausten_roof_45_corner2": {
+"de": "Grausten-Dachecke",
+"mat": "Ashstone",
+"size": [
+2.49,
+2.77,
+2.48
+]
+},
+"piece_grausten_stonestair": {
+"de": "Grausten-Treppe",
+"mat": "Ashstone",
+"size": [
+2.41,
+1.59,
+2.25
+],
+"yoff": 0.28
+},
+"piece_groundtorch": {
+"de": "Stand-Eisenfackel",
+"mat": "Wood",
+"size": [
+0.23,
+1.48,
+0.24
+]
+},
+"piece_groundtorch_blue": {
+"de": "Stand-Eisenfackel (blau)",
+"mat": "Wood",
+"size": [
+0.23,
+1.48,
+0.24
+]
+},
+"piece_groundtorch_green": {
+"de": "Stand-Eisenfackel (grün)",
+"mat": "Wood",
+"size": [
+0.23,
+1.48,
+0.24
+]
+},
+"piece_groundtorch_mist": {
+"de": "Irrlichtfackel",
+"mat": "Wood",
+"size": [
+0.3,
+1.2,
+0.3
+]
+},
+"piece_groundtorch_wood": {
+"de": "Stand-Holzfackel",
+"mat": "Wood",
+"size": [
+0.12,
+1.41,
+0.12
+]
+},
+"piece_hexagonal_door": {
+"de": "Hexagonales Tor",
+"mat": "HardWood",
+"size": [
+3.94,
+4.22,
+0.75
+]
+},
+"piece_hoodedlantern": {
+"de": "Blendlaterne",
+"mat": "Wood",
+"size": [
+0.36,
+0.66,
+0.43
+],
+"yoff": 0.33
+},
+"piece_icecube": {
+"de": "Eisblock",
+"mat": "Ice",
+"size": [
+1.1,
+1.18,
+1.2
+],
+"yoff": 0.51
+},
+"piece_jackoturnip": {
+"de": "Räbenlicht",
+"mat": "Wood",
+"size": [
+0.61,
+0.69,
+0.59
+],
+"yoff": 0.34
+},
+"piece_logbench01": {
+"de": "Holzbank",
+"mat": "Wood",
+"size": [
+2.71,
+0.7,
+0.63
+],
+"yoff": 0.19
+},
+"piece_magetable": {
+"de": "Galdr-Tisch",
+"mat": "Wood",
+"size": [
+3.56,
+2.73,
+3.32
+],
+"yoff": 1.32
+},
+"piece_magetable_ext": {
+"de": "Runentisch",
+"mat": "Wood",
+"size": [
+1.01,
+1.09,
+1.01
+],
+"yoff": 0.54
+},
+"piece_magetable_ext2": {
+"de": "Unvergängliche Kerzen",
+"mat": "Wood",
+"size": [
+0.62,
+1.14,
+0.62
+],
+"yoff": 0.57
+},
+"piece_magetable_ext3": {
+"de": "Federkranz",
+"mat": "Wood",
+"size": [
+1.35,
+1.53,
+0.52
+]
+},
+"piece_magetable_ext4": {
+"de": "Standwebstuhl",
+"mat": "Wood",
+"size": [
+1.06,
+1.71,
+0.66
+],
+"yoff": 0.84
+},
+"piece_maypole": {
+"de": "Maibaum",
+"mat": "Wood",
+"size": [
+0.89,
+5.07,
+4.2
+],
+"yoff": 2.48
+},
+"piece_mistletoe": {
+"de": "Mistelzweig",
+"mat": "Wood",
+"size": [
+0.66,
+0.75,
+0.71
+],
+"yoff": 0.98
+},
+"piece_moose_throne": {
+"de": "Geweihthron",
+"mat": "Wood",
+"size": [
+2.25,
+3.69,
+1.33
+],
+"yoff": 1.83
+},
+"piece_oven": {
+"de": "Steinofen",
+"mat": "Stone",
+"size": [
+3.48,
+2.55,
+2.16
+],
+"yoff": 1.1
+},
+"piece_pot1": {
+"de": "Mittlerer grüner Topf",
+"mat": "Wood",
+"size": [
+0.78,
+1.0,
+0.78
+],
+"yoff": 0.47
+},
+"piece_pot1_cracked": {
+"de": "Mittlerer Tontopf",
+"mat": "Wood",
+"size": [
+0.78,
+1.0,
+0.78
+]
+},
+"piece_pot1_red": {
+"de": "Mittlerer roter Topf",
+"mat": "Wood",
+"size": [
+0.78,
+1.0,
+0.78
+]
+},
+"piece_pot2": {
+"de": "Großer grüner Topf",
+"mat": "Wood",
+"size": [
+0.69,
+1.6,
+0.69
+],
+"yoff": 0.8
+},
+"piece_pot2_cracked": {
+"de": "Großer Tontopf",
+"mat": "Wood",
+"size": [
+0.69,
+1.6,
+0.69
+]
+},
+"piece_pot2_red": {
+"de": "Großer roter Topf",
+"mat": "Wood",
+"size": [
+0.69,
+1.6,
+0.69
+]
+},
+"piece_pot3": {
+"de": "Kleiner grüner Topf",
+"mat": "Wood",
+"size": [
+0.93,
+0.75,
+0.92
+],
+"yoff": 0.38
+},
+"piece_pot3_cracked": {
+"de": "Kleiner Tontopf",
+"mat": "Wood",
+"size": [
+0.93,
+0.75,
+0.92
+]
+},
+"piece_pot3_red": {
+"de": "Kleiner roter Topf",
+"mat": "Wood",
+"size": [
+0.93,
+0.75,
+0.92
+]
+},
+"piece_preptable": {
+"de": "Essenszubereitungs-Tisch",
+"mat": "Wood",
+"size": [
+2.63,
+1.24,
+0.82
+],
+"yoff": 0.59
+},
+"piece_sapcollector": {
+"de": "Harzextraktor",
+"mat": "Wood",
+"size": [
+1.64,
+3.43,
+0.53
+],
+"yoff": 0.9
+},
+"piece_sharpstakes": {
+"de": "Scharfe Pfähle",
+"mat": "Wood",
+"size": [
+2.7,
+2.28,
+2.81
+],
+"yoff": 0.46
+},
+"piece_shieldgenerator": {
+"de": "Schildgenerator",
+"mat": "Stone",
+"size": [
+4.74,
+7.12,
+4.93
+],
+"yoff": 2.93
+},
+"piece_snowlantern": {
+"de": "Schneelaterne",
+"mat": "Wood",
+"size": [
+0.52,
+0.47,
+0.53
+],
+"yoff": 0.2
+},
+"piece_spinningwheel": {
+"de": "Spinnrad",
+"mat": "Wood",
+"size": [
+2.08,
+2.2,
+2.96
+],
+"yoff": 1.06
+},
+"piece_stakewall_blackwood": {
+"de": "Aschenholz-Palisadenwall",
+"mat": "Wood",
+"size": [
+2.24,
+2.73,
+3.95
+],
+"yoff": 1.32
+},
+"piece_stonecutter": {
+"de": "Steinmetz",
+"mat": "Wood",
+"size": [
+3.38,
+2.2,
+1.74
+],
+"yoff": 1.01
+},
+"piece_table": {
+"de": "Tisch",
+"mat": "Wood",
+"size": [
+3.04,
+0.83,
+1.42
+],
+"yoff": 0.4
+},
+"piece_table_oak": {
+"de": "Langer schwerer Tisch",
+"mat": "Wood",
+"size": [
+6.71,
+0.89,
+2.36
+],
+"yoff": 0.43
+},
+"piece_table_round": {
+"de": "Rundtisch",
+"mat": "Wood",
+"size": [
+2.55,
+0.88,
+2.51
+],
+"yoff": 0.42
+},
+"piece_table_runed": {
+"de": "Geschnitzter Tisch (lang)",
+"mat": "Wood",
+"size": [
+4.26,
+0.81,
+1.32
+],
+"yoff": 0.4
+},
+"piece_table_runed_small": {
+"de": "Geschnitzter Tisch (quadratisch)",
+"mat": "Wood",
+"size": [
+1.08,
+0.79,
+1.08
+],
+"yoff": 0.4
+},
+"piece_throne01": {
+"de": "Rabenthron",
+"mat": "Wood",
+"size": [
+2.19,
+2.81,
+1.05
+],
+"yoff": 1.38
+},
+"piece_throne02": {
+"de": "Steinthron",
+"mat": "Stone",
+"size": [
+1.62,
+2.96,
+1.13
+],
+"yoff": 1.48
+},
+"piece_trap_troll": {
+"de": "Falle",
+"mat": "Iron",
+"size": [
+1.96,
+1.67,
+1.83
+],
+"yoff": 0.27
+},
+"piece_turret": {
+"de": "Balliste",
+"mat": "Wood",
+"size": [
+4.11,
+3.14,
+3.93
+],
+"yoff": 1.04
+},
+"piece_walltorch": {
+"de": "Wandleuchter",
+"mat": "Wood",
+"size": [
+0.45,
+0.95,
+0.31
+],
+"yoff": 0.14
+},
+"piece_wisplure": {
+"de": "Irrlichter-Brunnen",
+"mat": "Stone",
+"size": [
+1.63,
+4.99,
+1.89
+],
+"yoff": 1.32
+},
+"piece_workbench": {
+"de": "Werkbank",
+"mat": "Wood",
+"size": [
+3.73,
+1.85,
+2.1
+],
+"yoff": 0.9
+},
+"piece_workbench_ext1": {
+"de": "Hackklotz",
+"mat": "Wood",
+"size": [
+1.05,
+1.21,
+0.72
+],
+"yoff": 0.6
+},
+"piece_workbench_ext2": {
+"de": "Gerbgestell",
+"mat": "Wood",
+"size": [
+2.41,
+1.99,
+1.22
+],
+"yoff": 0.95
+},
+"piece_workbench_ext3": {
+"de": "Dechsel",
+"mat": "Wood",
+"size": [
+2.33,
+1.54,
+1.33
+],
+"yoff": 0.41
+},
+"piece_workbench_ext4": {
+"de": "Werkzeugregal",
+"mat": "Wood",
+"size": [
+2.08,
+1.72,
+0.51
+],
+"yoff": 0.49
+},
+"piece_xmascrown": {
+"de": "Julkranz",
+"mat": "Wood",
+"size": [
+0.73,
+1.65,
+1.72
+]
+},
+"piece_xmasgarland": {
+"de": "Julgirlande",
+"mat": "Wood",
+"size": [
+0.74,
+1.51,
+4.4
+],
+"yoff": 0.94
+},
+"piece_xmastree": {
+"de": "Julbaum",
+"mat": "Wood",
+"size": [
+1.56,
+2.8,
+1.8
+],
+"yoff": 1.23
+},
+"placeable_bigrock_01": {
+"de": "Schmuckfelsen",
+"mat": "Stone",
+"size": [
+1.05,
+1.04,
+0.94
+],
+"yoff": 0.33
+},
+"placeable_bigrock_02": {
+"de": "Dekorativer Felsen",
+"mat": "Stone",
+"size": [
+1.15,
+0.69,
+0.9
+],
+"yoff": 0.2
+},
+"portal": {
+"de": "Portal",
+"mat": "Stone",
+"size": [
+4.64,
+4.75,
+5.5
+]
+},
+"portal_stone": {
+"de": "Portalstein",
+"mat": "Stone",
+"size": [
+8.62,
+6.99,
+4.26
+],
+"yoff": 3.08
+},
+"portal_wood": {
+"de": "Portal",
+"mat": "Wood",
+"size": [
+4.23,
+3.29,
+1.18
+],
+"yoff": 1.64
+},
+"raise": {
+"de": "Boden erhöhen"
+},
+"replant": {
+"de": "Gras"
+},
+"rug_Bjorn": {
+"de": "Bärenfellteppich",
+"mat": "Wood",
+"size": [
+4.25,
+1.13,
+5.07
+],
+"yoff": 0.41
+},
+"rug_asksvin": {
+"de": "Asksvin-Teppich",
+"mat": "Wood",
+"size": [
+3,
+0.02,
+3
+]
+},
+"rug_deer": {
+"de": "Läufer (Hirsch)",
+"mat": "Wood",
+"size": [
+3.11,
+0.01,
+3.11
+]
+},
+"rug_fur": {
+"de": "Läufer (Lox)",
+"mat": "Wood",
+"size": [
+3.06,
+0.08,
+3.97
+]
+},
+"rug_hare": {
+"de": "Hasenteppich",
+"mat": "Wood",
+"size": [
+1.08,
+0.02,
+1.85
+]
+},
+"rug_moose": {
+"de": "Elchfellteppich",
+"mat": "Wood",
+"size": [
+3.4,
+0.02,
+4
+]
+},
+"rug_seal": {
+"de": "Robbenhaut-Teppich",
+"mat": "Wood",
+"size": [
+1.97,
+0.01,
+2.3
+]
+},
+"rug_straw": {
+"de": "Stroh",
+"mat": "Wood",
+"size": [
+2.12,
+0.27,
+2.09
+]
+},
+"rug_wolf": {
+"de": "Läufer (Wolf)",
+"mat": "Wood",
+"size": [
+2.55,
+0.11,
+3.46
+]
+},
+"sapling_Kale": {
+"de": "Grünkohl",
+"size": [
+1.16,
+0.65,
+0.9
+]
+},
+"sapling_barley": {
+"de": "Gerste",
+"size": [
+1.43,
+1.4,
+1.46
+]
+},
+"sapling_carrot": {
+"de": "Karotte",
+"size": [
+0.35,
+0.65,
+0.26
+]
+},
+"sapling_flax": {
+"de": "Flachs",
+"size": [
+0.94,
+1.31,
+0.79
+]
+},
+"sapling_jotunpuffs": {
+"de": "Jotun-Bläschen",
+"size": [
+0.62,
+1.01,
+0.57
+]
+},
+"sapling_magecap": {
+"de": "Magierhut",
+"size": [
+0.47,
+1.33,
+0.54
+]
+},
+"sapling_oat": {
+"de": "Haferstroh",
+"size": [
+0.93,
+1.71,
+0.87
+]
+},
+"sapling_onion": {
+"de": "Zwiebel",
+"size": [
+1.1,
+1.27,
+1.11
+]
+},
+"sapling_poteitr": {
+"de": "Poteitr",
+"size": [
+0.83,
+1.01,
+0.66
+]
+},
+"sapling_seedcarrot": {
+"de": "Karottensaat",
+"size": [
+0.67,
+1.17,
+0.62
+]
+},
+"sapling_seedkale": {
+"de": "Grünkohlsaat",
+"size": [
+0.54,
+1.29,
+0.4
+]
+},
+"sapling_seedonion": {
+"de": "Zwiebelschössling",
+"size": [
+1.31,
+1.56,
+1.05
+]
+},
+"sapling_seedturnip": {
+"de": "Rübensaat",
+"size": [
+0.63,
+1.11,
+0.58
+]
+},
+"sapling_turnip": {
+"de": "Rübe",
+"size": [
+0.76,
+0.66,
+0.76
+]
+},
+"scale_halfwall_1x2": {
+"de": "Schuppenholzwand (halb)",
+"mat": "Wood",
+"size": [
+2.18,
+1.17,
+0.29
+],
+"yoff": 0.5
+},
+"scale_quarterwall_1x1": {
+"de": "Schuppenholzwand (viertel)",
+"mat": "Wood",
+"size": [
+1.27,
+1.06,
+0.29
+],
+"yoff": 0.51
+},
+"scale_wall_2x2": {
+"de": "Schuppenholzwand",
+"mat": "Wood",
+"size": [
+2.24,
+2.14,
+0.29
+]
+},
+"scale_wall_roof_26": {
+"de": "Schuppenholzwand (26° links)",
+"mat": "Wood",
+"size": [
+2.42,
+1.37,
+0.3
+]
+},
+"scale_wall_roof_26_flipped": {
+"de": "Schuppenholzwand (26° rechts)",
+"mat": "Wood",
+"size": [
+2.56,
+1.4,
+0.35
+]
+},
+"scale_wall_roof_26_upsidedown": {
+"de": "Schuppenholzwand (26° rechts) – invertiert",
+"mat": "Wood",
+"size": [
+2.24,
+1.24,
+0.25
+]
+},
+"scale_wall_roof_26_upsidedown_flipped": {
+"de": "Schuppenholzwand (26° links) – invertiert",
+"mat": "Wood",
+"size": [
+2.24,
+1.24,
+0.25
+]
+},
+"scale_wall_roof_45": {
+"de": "Schuppenholzwand (45° links)",
+"mat": "Wood",
+"size": [
+2.96,
+2.41,
+0.3
+]
+},
+"scale_wall_roof_45_flipped": {
+"de": "Schuppenholzwand (45° rechts)",
+"mat": "Wood",
+"size": [
+2.99,
+2.42,
+0.32
+]
+},
+"scale_wall_roof_45_upsidedown": {
+"de": "Schuppenholzwand (45° rechts) – invertiert",
+"mat": "Wood",
+"size": [
+2.24,
+2.37,
+0.25
+]
+},
+"scale_wall_roof_45_upsidedown_flipped": {
+"de": "Schuppenholzwand (45° links) – invertiert",
+"mat": "Wood",
+"size": [
+2.24,
+2.37,
+0.25
+]
+},
+"scale_wall_roof_67": {
+"de": "Schuppenholzwand (67° links)",
+"mat": "Wood",
+"size": [
+2.34,
+4.93,
+0.35
+]
+},
+"scale_wall_roof_67_flipped": {
+"de": "Schuppenholzwand (67° rechts)",
+"mat": "Wood",
+"size": [
+2.32,
+4.88,
+0.32
+]
+},
+"scale_wall_roof_67_upsidedown": {
+"de": "Schuppenholzwand (67° rechts) – invertiert",
+"mat": "Wood",
+"size": [
+2.24,
+4.14,
+0.25
+]
+},
+"scale_wall_roof_67_upsidedown_flipped": {
+"de": "Schuppenholzwand (67° links) – invertiert",
+"mat": "Wood",
+"size": [
+2.24,
+4.14,
+0.25
+]
+},
+"ship_construction": {
+"de": "Ship construction",
+"size": [
+11.76,
+15.65,
+26.91
+]
+},
+"siege_wall_1x1": {
+"de": "Temp Siege Wall",
+"mat": "Stone",
+"size": [
+1.14,
+1.22,
+1.29
+]
+},
+"sign": {
+"de": "Schild",
+"mat": "Wood",
+"size": [
+1,
+0.5,
+0.1
+]
+},
+"sign_notext": {
+"de": "Schild",
+"mat": "Wood",
+"size": [
+1,
+0.5,
+0.1
+]
+},
+"skull_pile": {
+"de": "Schädelhaufen",
+"mat": "Wood",
+"size": [
+1.54,
+1.06,
+1.45
+],
+"yoff": 0.44
+},
+"smelter": {
+"de": "Schmelzofen",
+"mat": "Stone",
+"size": [
+3.47,
+4.34,
+3.03
+],
+"yoff": 2.12
+},
+"stake_wall": {
+"de": "Palisadenwall",
+"mat": "Wood",
+"size": [
+2.57,
+3.6,
+1.22
+],
+"yoff": 1.58
+},
+"stave_beam_26": {
+"de": "Zimmerholzbalken 26°",
+"mat": "Timberwood",
+"size": [
+2.6,
+1.68,
+0.85
+]
+},
+"stave_beam_2m": {
+"de": "Zimmerholzbalken 2 m",
+"mat": "Timberwood",
+"size": [
+2.24,
+0.71,
+0.92
+]
+},
+"stave_beam_45": {
+"de": "Zimmerholzbalken 45°",
+"mat": "Timberwood",
+"size": [
+2.68,
+2.52,
+0.76
+]
+},
+"stave_beam_4m": {
+"de": "Zimmerholzbalken 4 m",
+"mat": "Timberwood",
+"size": [
+4.37,
+0.72,
+0.73
+]
+},
+"stave_beam_67": {
+"de": "Zimmerholzbalken 67°",
+"mat": "Timberwood",
+"size": [
+2.83,
+4.78,
+0.72
+]
+},
+"stave_deco_beam_26": {
+"de": "Verzierter Zimmerholzbalken 26°",
+"mat": "Timberwood",
+"size": [
+2.7,
+1.59,
+0.36
+]
+},
+"stave_deco_beam_2m": {
+"de": "Verzierter Zimmerholzbalken 2 m",
+"mat": "Timberwood",
+"size": [
+2.25,
+0.7,
+0.31
+]
+},
+"stave_deco_beam_45": {
+"de": "Verzierter Zimmerholzbalken 45°",
+"mat": "Timberwood",
+"size": [
+2.95,
+2.44,
+0.35
+]
+},
+"stave_deco_beam_67": {
+"de": "Verzierter Zimmerholzbalken 67°",
+"mat": "Timberwood",
+"size": [
+3.15,
+4.66,
+0.34
+]
+},
+"stave_deco_pole_2m": {
+"de": "Verzierter Zimmerholzpfosten 2 m",
+"mat": "Timberwood",
+"size": [
+0.72,
+2.03,
+0.34
+]
+},
+"stave_deco_wall_2x2": {
+"de": "Gedrechselte Zimmerholzwand",
+"mat": "Timberwood",
+"size": [
+2.32,
+2.02,
+0.81
+]
+},
+"stave_gate": {
+"de": "Zimmerholztor",
+"mat": "HardWood",
+"size": [
+2.68,
+6.54,
+0.77
+],
+"yoff": 3.23
+},
+"stave_pole_2m": {
+"de": "Zimmerholzpfosten 2 m",
+"mat": "Timberwood",
+"size": [
+0.74,
+2.06,
+0.7
+]
+},
+"stave_pole_4m": {
+"de": "Zimmerholzpfosten 4 m",
+"mat": "Timberwood",
+"size": [
+0.72,
+4.12,
+0.75
+],
+"yoff": 1.03
+},
+"stave_wall_2x2": {
+"de": "Zimmerholzwand",
+"mat": "Timberwood",
+"size": [
+2.48,
+2.05,
+0.71
+]
+},
+"stave_wall_cross_26": {
+"de": "Zimmerholzdach 26° (Kreuz)",
+"mat": "Timberwood",
+"size": [
+2.43,
+1.66,
+0.85
+],
+"yoff": 0.49
+},
+"stave_wall_cross_45": {
+"de": "Zimmerholzdach 45° (Kreuz)",
+"mat": "Timberwood",
+"size": [
+2.8,
+2.51,
+0.81
+],
+"yoff": 1.01
+},
+"stave_wall_cross_67": {
+"de": "Zimmerholzdach 67° (Kreuz)",
+"mat": "Timberwood",
+"size": [
+2.92,
+4.42,
+0.82
+],
+"yoff": 1.95
+},
+"stone_arch": {
+"de": "Steinbogen",
+"mat": "Stone",
+"size": [
+2.5,
+1.11,
+1.28
+]
+},
+"stone_fence": {
+"de": "Steinzaun",
+"mat": "Stone",
+"size": [
+2.44,
+1.15,
+1.13
+],
+"yoff": 0.5
+},
+"stone_floor": {
+"de": "Steinboden 4x4",
+"mat": "Stone",
+"size": [
+4.32,
+1.0,
+4.47
+]
+},
+"stone_floor_2x2": {
+"de": "Steinboden 2x2",
+"mat": "Stone",
+"size": [
+2.27,
+1.0,
+2.29
+]
+},
+"stone_pile": {
+"de": "Steinhaufen",
+"mat": "Wood",
+"size": [
+1.71,
+1.1,
+2.35
+],
+"yoff": 0.34
+},
+"stone_pillar": {
+"de": "Steinsäule",
+"mat": "Stone",
+"size": [
+1.22,
+2.04,
+1.26
+]
+},
+"stone_stair": {
+"de": "Steinstufen",
+"mat": "Stone",
+"size": [
+2.41,
+1.59,
+2.26
+],
+"yoff": 0.3
+},
+"stone_wall_1x1": {
+"de": "Steinwand 1x1",
+"mat": "Stone",
+"size": [
+1.18,
+1.22,
+1.29
+]
+},
+"stone_wall_2x1": {
+"de": "Steinwand 2x1",
+"mat": "Stone",
+"size": [
+2.27,
+1.22,
+1.33
+]
+},
+"stone_wall_4x2": {
+"de": "Steinwand 4x2",
+"mat": "Stone",
+"size": [
+4.28,
+2.3,
+1.56
+]
+},
+"treasure_pile": {
+"de": "Münzhaufen",
+"mat": "Wood",
+"size": [
+2.3,
+0.4,
+2.3
+],
+"yoff": 0.24
+},
+"treasure_stack": {
+"de": "Münzstapel",
+"mat": "Wood",
+"size": [
+0.48,
+0.88,
+0.58
+]
+},
+"turf_roof": {
+"de": "Wood roof",
+"mat": "Wood",
+"size": [
+2.14,
+1.99,
+2.9
+]
+},
+"turf_roof_top": {
+"de": "Wood roof ridge",
+"mat": "Wood",
+"size": [
+2.26,
+1.38,
+2.96
+]
+},
+"turf_roof_wall": {
+"de": "Wood wall roof",
+"mat": "Wood",
+"size": [
+2.48,
+1.74,
+0.4
+]
+},
+"windmill": {
+"de": "Windmühle",
+"mat": "Stone",
+"size": [
+5.42,
+8.94,
+5.75
+],
+"yoff": 3.97
+},
+"wood_beam": {
+"de": "Holzbalken 2 m",
+"mat": "Wood",
+"size": [
+2.24,
+0.4,
+0.55
+]
+},
+"wood_beam_1": {
+"de": "Holzbalken 1 m",
+"mat": "Wood",
+"size": [
+1.08,
+0.4,
+0.54
+]
+},
+"wood_beam_26": {
+"de": "Holzbalken 26°",
+"mat": "Wood",
+"size": [
+2.38,
+1.54,
+0.52
+]
+},
+"wood_beam_45": {
+"de": "Holzbalken 45°",
+"mat": "Wood",
+"size": [
+2.57,
+2.43,
+0.52
+]
+},
+"wood_beam_67": {
+"de": "Holzbalken 67°",
+"mat": "Wood",
+"size": [
+2.84,
+4.76,
+0.55
+]
+},
+"wood_core_stack": {
+"de": "Kernholzstoß",
+"mat": "Wood",
+"size": [
+2.19,
+1.48,
+2.22
+],
+"yoff": 0.6
+},
+"wood_door": {
+"de": "Holztür",
+"mat": "Wood",
+"size": [
+2.02,
+2.03,
+0.53
+]
+},
+"wood_dragon1": {
+"de": "Hölzerne Drachenverzierung",
+"mat": "Wood",
+"size": [
+0.59,
+1.49,
+3.49
+],
+"yoff": 0.49
+},
+"wood_fence": {
+"de": "Skigard",
+"mat": "Wood",
+"size": [
+2.85,
+2.3,
+0.85
+],
+"yoff": 0.99
+},
+"wood_fence_gate": {
+"de": "Skigard-Tor",
+"mat": "Wood",
+"size": [
+2.11,
+2.33,
+0.53
+],
+"yoff": 0.14
+},
+"wood_fine_stack": {
+"de": "Edelholzstoß",
+"mat": "Wood",
+"size": [
+2.21,
+1.32,
+2.16
+],
+"yoff": 0.42
+},
+"wood_floor": {
+"de": "Holzboden 2x2",
+"mat": "Wood",
+"size": [
+2.27,
+0.26,
+2.29
+]
+},
+"wood_floor_1x1": {
+"de": "Holzboden 1x1",
+"mat": "Wood",
+"size": [
+1.14,
+0.1,
+1.13
+]
+},
+"wood_frost_stack": {
+"de": "Stapel Zimmerholz",
+"mat": "Wood",
+"size": [
+3.41,
+1.79,
+2.53
+],
+"yoff": 0.34
+},
+"wood_gate": {
+"de": "Holztor",
+"mat": "Wood",
+"size": [
+2.0,
+3.03,
+0.53
+],
+"yoff": 0.49
+},
+"wood_ledge": {
+"de": "Holzsims",
+"mat": "Wood",
+"size": [
+1.11,
+0.1,
+0.65
+]
+},
+"wood_log_26": {
+"de": "Rundholzbalken 26 °",
+"mat": "HardWood",
+"size": [
+2.76,
+1.71,
+0.69
+]
+},
+"wood_log_45": {
+"de": "Rundholzbalken 45 °",
+"mat": "HardWood",
+"size": [
+2.72,
+2.69,
+0.67
+]
+},
+"wood_log_67": {
+"de": "Rundholzbalken 67°",
+"mat": "HardWood",
+"size": [
+2.85,
+4.78,
+0.55
+]
+},
+"wood_pole": {
+"de": "Holzpfosten 1 m",
+"mat": "Wood",
+"size": [
+0.42,
+1,
+0.42
+]
+},
+"wood_pole2": {
+"de": "Holzpfosten 2 m",
+"mat": "Wood",
+"size": [
+0.42,
+2,
+0.42
+]
+},
+"wood_pole_log": {
+"de": "Holzpfahl 2 m",
+"mat": "HardWood",
+"size": [
+0.54,
+2.22,
+0.56
+]
+},
+"wood_pole_log_4": {
+"de": "Holzpfahl 4 m",
+"mat": "HardWood",
+"size": [
+0.55,
+4.44,
+0.56
+]
+},
+"wood_pole_log_4_worn": {
+"de": "Holzpfahl 4 m",
+"mat": "HardWood",
+"size": [
+0.55,
+4.44,
+0.56
+]
+},
+"wood_roof": {
+"de": "Strohdach 26°",
+"mat": "Wood",
+"size": [
+2.53,
+1.99,
+3.19
+]
+},
+"wood_roof_45": {
+"de": "Strohdach 45°",
+"mat": "Wood",
+"size": [
+2.3,
+3.29,
+3.12
+]
+},
+"wood_roof_67": {
+"de": "Strohdach 67°",
+"mat": "Wood",
+"size": [
+2.46,
+5.4,
+2.96
+]
+},
+"wood_roof_icorner": {
+"de": "Strohdach 26°-Innenecke",
+"mat": "Wood",
+"size": [
+2.75,
+1.44,
+2.74
+]
+},
+"wood_roof_icorner_45": {
+"de": "Strohdach 45°-Innenecke",
+"mat": "Wood",
+"size": [
+2.69,
+2.84,
+2.72
+]
+},
+"wood_roof_icorner_67": {
+"de": "Strohdach 67°-Innenecke",
+"mat": "Wood",
+"size": [
+3.15,
+5.22,
+3.24
+]
+},
+"wood_roof_ocorner": {
+"de": "Strohdach 26°-Außenecke",
+"mat": "Wood",
+"size": [
+3.02,
+1.83,
+3.02
+]
+},
+"wood_roof_ocorner_45": {
+"de": "Strohdach 45°-Außenecke",
+"mat": "Wood",
+"size": [
+3.04,
+2.99,
+3.04
+]
+},
+"wood_roof_ocorner_67": {
+"de": "Strohdach 67°-Außenecke",
+"mat": "Wood",
+"size": [
+3.21,
+5.22,
+3.12
+]
+},
+"wood_roof_top": {
+"de": "Strohdachfirst 26°",
+"mat": "Wood",
+"size": [
+2.53,
+1.38,
+3.41
+]
+},
+"wood_roof_top_45": {
+"de": "Strohdachfirst 45°",
+"mat": "Wood",
+"size": [
+2.33,
+1.64,
+2.98
+]
+},
+"wood_roof_top_67": {
+"de": "Strohdachfirst 67°",
+"mat": "Wood",
+"size": [
+2.2,
+3.4,
+3.19
+]
+},
+"wood_stack": {
+"de": "Holzstoß",
+"mat": "Wood",
+"size": [
+2.48,
+1.3,
+2.31
+]
+},
+"wood_stair": {
+"de": "Holzstufen",
+"mat": "Wood",
+"size": [
+2.16,
+1.21,
+2.1
+],
+"yoff": 0.47
+},
+"wood_stepladder": {
+"de": "Holzleiter",
+"mat": "Wood",
+"size": [
+1.11,
+2.19,
+2.16
+],
+"yoff": 1
+},
+"wood_wall_half": {
+"de": "Holzwand (halb)",
+"mat": "Wood",
+"size": [
+2.24,
+1.06,
+0.54
+]
+},
+"wood_wall_log": {
+"de": "Rundholzbalken 2 m",
+"mat": "HardWood",
+"size": [
+2.52,
+0.58,
+0.58
+]
+},
+"wood_wall_log_4x0.5": {
+"de": "Rundholzbalken 4 m",
+"mat": "HardWood",
+"size": [
+4.68,
+0.63,
+0.61
+]
+},
+"wood_wall_quarter": {
+"de": "Holzwand 1x1",
+"mat": "Wood",
+"size": [
+1.11,
+1,
+0.48
+],
+"yoff": 0.5
+},
+"wood_wall_roof": {
+"de": "Holzwand 26°",
+"mat": "Wood",
+"size": [
+2.42,
+1.54,
+0.55
+]
+},
+"wood_wall_roof_45": {
+"de": "Holzwand 45°",
+"mat": "Wood",
+"size": [
+2.58,
+2.42,
+0.49
+]
+},
+"wood_wall_roof_45_upsidedown": {
+"de": "Holzwand 45° (invertiert)",
+"mat": "Wood",
+"size": [
+2.42,
+2.42,
+0.61
+]
+},
+"wood_wall_roof_67_a": {
+"de": "Holzwand 67°",
+"mat": "Wood",
+"size": [
+2.76,
+4.91,
+0.49
+]
+},
+"wood_wall_roof_67_upsidedown": {
+"de": "Holzwand 67° (invertiert)",
+"mat": "Wood",
+"size": [
+2.53,
+4.31,
+0.43
+]
+},
+"wood_wall_roof_a": {
+"de": "Holzwand 26°",
+"mat": "Wood",
+"size": [
+2.42,
+1.54,
+0.55
+]
+},
+"wood_wall_roof_top": {
+"de": "Holzdach 26°-Kreuz",
+"mat": "Wood",
+"size": [
+2.52,
+1.64,
+0.53
+]
+},
+"wood_wall_roof_top_45": {
+"de": "Holzdach 45°-Kreuz",
+"mat": "Wood",
+"size": [
+2.8,
+2.53,
+0.59
+]
+},
+"wood_wall_roof_top_67": {
+"de": "Holzdach 67° (Kreuz)",
+"mat": "Wood",
+"size": [
+2.92,
+4.42,
+0.56
+]
+},
+"wood_wall_roof_upsidedown": {
+"de": "Holzwand 26° (invertiert)",
+"mat": "Wood",
+"size": [
+2.27,
+1.54,
+0.4
+]
+},
+"wood_window": {
+"de": "Holzklappe",
+"mat": "Wood",
+"size": [
+1.15,
+1.05,
+0.41
+]
+},
+"wood_yggdrasil_stack": {
+"de": "Yggdrasil-Holzstapel",
+"mat": "HardWood",
+"size": [
+1.97,
+1.93,
+3.1
+],
+"yoff": 0.45
+},
+"woodiron_beam": {
+"de": "Holzeisenbalken",
+"mat": "Iron",
+"size": [
+2.2,
+0.31,
+0.39
+]
+},
+"woodiron_beam_26": {
+"de": "Holzeisenbalken, 26°",
+"mat": "Iron",
+"size": [
+2.45,
+1.46,
+0.52
+]
+},
+"woodiron_beam_45": {
+"de": "Holzeisenbalken, 45°",
+"mat": "Iron",
+"size": [
+2.46,
+2.5,
+0.42
+]
+},
+"woodiron_beam_67": {
+"de": "Holzeisenbalken, 67°",
+"mat": "Iron",
+"size": [
+2.72,
+4.7,
+0.55
+]
+},
+"woodiron_pole": {
+"de": "Holzeisenpfosten",
+"mat": "Iron",
+"size": [
+0.31,
+2.01,
+0.39
+]
+},
+"woodwall": {
+"de": "Holzwand",
+"mat": "Wood",
+"size": [
+2.25,
+2.16,
+0.53
+]
+}
+}

@@ -20,8 +20,14 @@ PN={'stone_wall_2x1':'Steinwand 2×1','stone_floor_2x2':'Steinboden 2×2','wood_
 try:
     for _k,_v in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'piece_names_de.json'),encoding='utf-8')).items(): PN.setdefault(_k,_v)
 except FileNotFoundError: pass
+# offizielle Namen und Bezugspunkt-Versatz aus dem Spiel (Hilfs-Mod ValheimWeltExport → tools/piece_meta.json)
+try:
+    META=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'piece_meta.json'),encoding='utf-8'))
+except FileNotFoundError: META={}
+for _k,_m in META.items():
+    if _m.get('de'): PN[_k]=_m['de']
 LOC={'StartTemple':'Spawn','Eikthyrnir':'Eikthyr','GDKing':'Der Älteste','Bonemass':'Knochenmasse','Dragonqueen':'Moder','GoblinKing':'Yagluth','Mistlands_DvergrBossEntrance1':'Die Königin','FaderLocation':'Fader','Vendor_BlackForest':'Haldor (Händler)','Hildir_camp':'Hildir','BogWitch_Camp':'Moorhexe'}
-out={'locations':{str(stable(k)):[k,v] for k,v in LOC.items()},'prefabs':{str(stable(n)):n for n in sorted(names)},'pieces':{k:list(v[:5]) for k,v in T.items()},
+out={'locations':{str(stable(k)):[k,v] for k,v in LOC.items()},'prefabs':{str(stable(n)):n for n in sorted(names)},'pieces':{k:list(v[:5])+([META[k]['yoff']] if k in META and 'yoff' in META[k] else []) for k,v in T.items()},
  'nature':{str(stable(n)):k for k,v in NAT.items() for n in v.split()},'ground':[stable(n) for n in GROUND],
  'items':{str(stable(k)):v for k,v in NAMES.items()},'containers':{str(stable(k)):v for k,v in CONT.items()},'pieceNames':PN}
 js='/* Generiert von tools/gen_data.py – Namens- und Bauteil-Tabellen (inoffiziell) */\n(function(g){g.VW_DATA='+json.dumps(out,ensure_ascii=False,separators=(',',':'))+';})(typeof self!=="undefined"?self:globalThis);\n'
