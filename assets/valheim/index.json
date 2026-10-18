@@ -192,7 +192,7 @@
     },
     "ashwood_door": {
       "file": "models/ashwood_door.json",
-      "version": "51cca6129445"
+      "version": "55cbbbd76ffe"
     },
     "ashwood_floor_1x1": {
       "file": "models/ashwood_floor_1x1.json",
@@ -480,7 +480,7 @@
     },
     "darkwood_gate": {
       "file": "models/darkwood_gate.json",
-      "version": "1d82713ea68d"
+      "version": "543864e60cb1"
     },
     "darkwood_pole": {
       "file": "models/darkwood_pole.json",
@@ -564,7 +564,7 @@
     },
     "flametal_gate": {
       "file": "models/flametal_gate.json",
-      "version": "999a8502408d"
+      "version": "a1a8dea1843a"
     },
     "flint_pile": {
       "file": "models/flint_pile.json",
@@ -624,7 +624,7 @@
     },
     "iron_grate": {
       "file": "models/iron_grate.json",
-      "version": "48fdf7f4a7a2"
+      "version": "a0ef11a2a310"
     },
     "iron_wall_1x1": {
       "file": "models/iron_wall_1x1.json",
@@ -964,7 +964,7 @@
     },
     "piece_hexagonal_door": {
       "file": "models/piece_hexagonal_door.json",
-      "version": "7c979ed5f414"
+      "version": "0764fa213ac7"
     },
     "piece_hoodedlantern": {
       "file": "models/piece_hoodedlantern.json",
@@ -1312,7 +1312,7 @@
     },
     "stave_gate": {
       "file": "models/stave_gate.json",
-      "version": "4f29f75cced8"
+      "version": "e8d47eaa17fe"
     },
     "stave_pole_2m": {
       "file": "models/stave_pole_2m.json",
@@ -1412,7 +1412,7 @@
     },
     "wood_door": {
       "file": "models/wood_door.json",
-      "version": "b3d11676fdfe"
+      "version": "c142b6839009"
     },
     "wood_dragon1": {
       "file": "models/wood_dragon1.json",
@@ -1424,7 +1424,7 @@
     },
     "wood_fence_gate": {
       "file": "models/wood_fence_gate.json",
-      "version": "76d0aedb43b4"
+      "version": "73aea175c6b8"
     },
     "wood_fine_stack": {
       "file": "models/wood_fine_stack.json",
@@ -1444,7 +1444,7 @@
     },
     "wood_gate": {
       "file": "models/wood_gate.json",
-      "version": "c3b4e688f0da"
+      "version": "f6741cb6232d"
     },
     "wood_log_26": {
       "file": "models/wood_log_26.json",
