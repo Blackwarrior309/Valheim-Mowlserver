@@ -1,0 +1,3 @@
+2026-10-18T13:17:25.602Z
+13:17:15 Verbinde mit FTP *** …
+13:17:25 FEHLER: FTP „PASV“: 0 FTP-Verbindung vom Server getrennt
