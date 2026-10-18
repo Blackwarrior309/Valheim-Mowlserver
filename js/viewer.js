@@ -300,7 +300,8 @@
     // ================= 3D =================
     const three = (function () {
       const cv = $('canvas.gl'), pane = $('[data-p="3d"]');
-      const Q = Object.assign({ shadows: (window.matchMedia && matchMedia('(pointer:fine)').matches && innerWidth > 900) ? '1' : '0', detail: 'natur', nature: 'mid', res: '1', range: 'mid' }, (() => { try { const o = JSON.parse(localStorage.getItem('vw-quality') || '{}'); if (o.v !== 2) { o.detail = 'natur'; o.v = 2; } return o; } catch (e) { return {}; } })());
+      const Q = Object.assign({ shadows: (window.matchMedia && matchMedia('(pointer:fine)').matches && innerWidth > 900) ? '1' : '0', detail: 'valheim', nature: 'high', res: '1', range: 'mid' }, (() => { try { const o = JSON.parse(localStorage.getItem('vw-quality') || '{}'); if (o.v !== 3) { delete o.detail; delete o.nature; o.v = 3; } return o; } catch (e) { return {}; } })());
+      // Standard: Originalgrafik und alle Natur – ohne Grafikpaket (Template) automatisch Natur-Texturen
       const ren = new THREE.WebGLRenderer({ canvas: cv, antialias: true, preserveDrawingBuffer: true });
       ren.setPixelRatio(Math.min(devicePixelRatio, 2) * +Q.res); ren.shadowMap.enabled = true; ren.shadowMap.type = THREE.PCFSoftShadowMap; ren.shadowMap.autoUpdate = false;
       let dirty = 2; const invalidate = () => { dirty = 2; };
@@ -418,7 +419,9 @@
       const originals = g.VWValheimAssets && texBase && location.protocol !== 'file:' ? g.VWValheimAssets.create(texBase, THREE) : null;
       let originalRevision = 0;
       // Die Option erscheint nur, wenn das Grafikpaket (assets/valheim) auf dieser Seite vorhanden ist
-      if (originals) fetch(texBase + 'assets/valheim/index.json', { method: 'HEAD', cache: 'no-cache' }).then((r) => { if (!r.ok) return; $$('[data-gs="valheim"]').forEach((b) => (b.hidden = false)); const o = $('#vwq-de option[value="valheim"]'); if (o) { o.hidden = false; o.disabled = false; } }).catch(() => {});
+      const noOriginals = () => { if (Q.detail !== 'valheim') return; Q.detail = 'natur'; const sel = $('[data-q="detail"]'); if (sel) sel.value = 'natur'; $$('[data-gs]').forEach((b) => b.classList.toggle('on', b.dataset.gs === 'natur')); try { if (reg) reloadKeep(); } catch (e) { } };
+      if (!originals) noOriginals();
+      if (originals) fetch(texBase + 'assets/valheim/index.json', { method: 'HEAD', cache: 'no-cache' }).then((r) => { if (!r.ok) { noOriginals(); return; } $$('[data-gs="valheim"]').forEach((b) => (b.hidden = false)); const o = $('#vwq-de option[value="valheim"]'); if (o) { o.hidden = false; o.disabled = false; } }).catch(noOriginals);
       function prepareOriginals(r) {
         const revision = ++originalRevision, status = $('.originalStatus');
         status.hidden = Q.detail !== 'valheim';
@@ -1029,6 +1032,15 @@
         }
         if (moved) invalidate();
       }
+      // Markierung des Ziels (Kiste/Tür/Portal), mit dem gerade interagiert werden kann
+      const HL = new THREE.Group(); HL.visible = false; scene.add(HL);
+      HL.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffc83d, transparent: true, opacity: 0.95, depthTest: false })));
+      HL.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffc83d, transparent: true, opacity: 0.2, depthWrite: false })));
+      HL.renderOrder = 5; let hlFor = null;
+      function highlight(b) {
+        if (b === hlFor) return; hlFor = b; HL.visible = !!b; invalidate(); if (!b) return;
+        HL.position.copy(b.c); HL.quaternion.copy(b.q); HL.scale.set(b.h.x * 2 + 0.08, b.h.y * 2 + 0.08, b.h.z * 2 + 0.08);
+      }
       function say(t) { wmsg = t; wmsgT = performance.now(); }
       function placeAt(x, z, y) { pos.set(x, y !== undefined ? y : groundY(x, z, 500) , z); vy = 0; }
       function spawn() { // auf den nächsten Boden eines Gebäudes stellen, sonst aufs nächste Land
@@ -1043,7 +1055,7 @@
         if (on === undefined) on = !walk; if (on === walk) return;
         if (on && !reg) return;
         if (on && fly) toggleFly(false);
-        walk = on; TIP.hidden = true; PROMPT.hidden = true; WB.classList.toggle('on', walk); HERO.visible = walk; HUD.hidden = CROSS.hidden = !walk; JOY.hidden = !walk || innerWidth > 760; ACT.hidden = !walk;
+        walk = on; TIP.hidden = true; PROMPT.hidden = true; highlight(null); WB.classList.toggle('on', walk); HERO.visible = walk; HUD.hidden = CROSS.hidden = !walk; JOY.hidden = !walk || innerWidth > 760; ACT.hidden = !walk;
         setShadows(!walk && Q.shadows === '1');
         if (walk) {
           buildColliders(); spawn(); wyaw = yaw + Math.PI; wpit = 0.25; wdist = 4.5;
@@ -1131,7 +1143,7 @@
         cam.position.copy(first ? head : cp);
         if (first) cam.lookAt(head.clone().addScaledVector(dir, -1)); else cam.lookAt(head.x, head.y - 0.1, head.z);
         if (pos.distanceTo(prev) > 0 || Math.abs(vy) > 0) invalidate();
-        const tg = target(); let hint = '';
+        const tg = target(); let hint = ''; highlight(tg);
         if (tg) { if (tg.chest) hint = 'Kiste öffnen'; else if (tg.door) hint = tg.open ? 'Tür schließen' : 'Tür öffnen'; else { const pp = portalOf(tg); hint = pp && pp.tag ? 'Portal „' + pp.tag + '“ benutzen' : 'Portal (ohne Namen)'; } }
         PROMPT.hidden = !hint; if (hint) PROMPT.innerHTML = `<b class="key">${innerWidth > 760 ? 'E' : '✋'}</b> ${esc(hint)}`;
         const msg = performance.now() - wmsgT < 2500 ? `<br><b style="color:var(--acc)">${esc(wmsg)}</b>` : '';
