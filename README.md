@@ -19,6 +19,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **19.10.2026**
+- Zahme Tiere: Zähler (2D-Karte unten + 3D-Menü) aufgeteilt nach Art, eigene Kartenebene 🐾 mit Namen beim Reinzoomen; mit Mod zusätzlich, wie viele gerade in deiner Nähe sind.
 - Lokaler Abriss-Spielplatz: Impulsgewehr, Bomben, Raketen, Explosionen und Physik-Trümmer mit Reset. [Bedienung und Grenzen](docs/DESTRUCTION.md).
 - Neuer Tab „Live-Spieler“: kompakte Kampfübersicht mit Live-Vitalwerten, kritischem Leben, Datenalter, Filter und Vollbild.
 - 3D: Wikinger packen und werfen – in der 3D-Ansicht mit der Maus (ziehen + loslassen), im Laufmodus mit E (hochheben) und E/Klick (werfen). Mitspieler im Laufmodus sehen das bei sich und fliegen wirklich; Mod-Figuren nur im eigenen Viewer.

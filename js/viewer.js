@@ -152,6 +152,7 @@
       <h2>Färbung</h2><div class="row"><button class="cMat on">Material</button><button class="cOwn">Erbauer</button></div><div class="legend" style="margin-top:8px"></div>
       <h2>Gebaut von</h2><table class="own"></table>
       <h2>Häufigste Bauteile</h2><table class="top"></table>
+      <div class="tmBox" hidden><h2>🐾 Zahme Tiere</h2><div class="tmList"></div></div>
       <div class="slOnline" hidden><h2>🛏 Schlafen</h2><div class="slBox"></div></div>
       <div class="sub" style="margin-top:10px">Ziehen = drehen · Rechtsklick/2 Finger = verschieben · Mausrad = Zoom · Doppelklick = hinzoomen · Kiste anklicken = Inhalt.<br><span data-en="Terrain is estimated from trees and rocks. The graphics setting controls object detail.">Gelände ist aus Bäumen und Steinen geschätzt. Die Grafikeinstellung bestimmt die Modelldetails.</span></div>
     </div>
@@ -176,6 +177,11 @@
 
     let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null, liveReceivedAt = -Infinity, party = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
+    /* Zahme Tiere aus dem Spielstand: [Art, x, z, Name, Stufe] */
+    const TAME_DE = { Wolf: 'Wolf', Wolf_cub: 'Wolfswelpe', Boar: 'Wildschwein', Boar_piggy: 'Ferkel', Lox: 'Lox', Lox_Calf: 'Lox-Kalb', Hen: 'Huhn', Chicken: 'Küken', Asksvin: 'Asksvin', Asksvin_hatchling: 'Asksvin-Junges' };
+    const tameName = (k) => TAME_DE[k] || k.replace(/_/g, ' ');
+    const tameCount = () => { const c = {}; (S.tamed || []).forEach((t) => (c[t[0]] = (c[t[0]] || 0) + 1)); return Object.entries(c).sort((a, b) => b[1] - a[1]); };
+    const tameText = () => tameCount().map(([k, n]) => `${tameName(k)} ${fmt(n)}`).join(' · ');
     const bedList = () => { const seen = new Set(), out = []; [S.world3d].concat(S.regions || []).forEach((r) => ((r && r.labels) || []).forEach((l) => { const k = l[0] === 'bed' && l[1] + '|' + Math.round(l[2]) + '|' + Math.round(l[4]); if (k && !seen.has(k)) { seen.add(k); out.push(l); } })); return out; };
     const SEEDW = { seed: '', meta: null, data: null, reg: null, regS: null };
     function seedRegion() {
@@ -236,7 +242,7 @@
       ['giant', '#9aa3ad', 'Riesenreste'], ['tissue', '#e07aa0', 'Weichgewebe'], ['blackcore', '#5a3b8a', 'Schwarzer Kern'], ['surtling', '#ffb23d', 'Surtlingkern'], ['chitin', '#7fc7b8', 'Chitin'], ['flametal', '#ff6a2a', 'Flammenmetall']];
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
-      ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
+      ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['tamed', '🐾', '#4cc36b', 'Zahme Tiere'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
       ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
       ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager'], ['_h', '', '', 'Rohstoffe']].concat(RES_K.map(([k, c, de]) => ['R_' + k, '◆', c, de]));
     const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
@@ -388,6 +394,8 @@
           if ((st[2] && view.s > 0.12) || l.k === 'StartTemple' || view.s > 0.35) { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
         if (ML.creatures && CREA.length) { ctx.textAlign = 'center'; CREA.forEach((c) => { const [x, y] = toS(c.x, c.z); const col = crCol(c); ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, c.boss ? 7 : 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             if (view.s > 0.8 || c.boss || c.tame) { const t = c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + (c.y > 3000 ? ' ⤓' : ''); ctx.font = '11px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t, x, y - 8); ctx.fillStyle = '#fff'; ctx.fillText(t, x, y - 8); } }); ctx.font = '12px system-ui,sans-serif'; }
+        if (ML.tamed && S.tamed) { ctx.textAlign = 'center'; S.tamed.forEach((t) => { const [x, y] = toS(t[1], t[2]); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            if (view.s > 1.2 && t[3]) { ctx.font = '10px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t[3], x, y - 6); ctx.fillStyle = '#dfffe6'; ctx.fillText(t[3], x, y - 6); } }); ctx.font = '12px system-ui,sans-serif'; }
         if (ML.beds) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; bedList().forEach((l) => { const [x, y] = toS(l[2], l[4]); ctx.font = '13px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.strokeText('🛏', x, y); ctx.fillStyle = '#9fd3ff'; ctx.fillText('🛏', x, y); if (view.s > 0.3) { const t = l[1] || '(ohne Name)'; ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y - 12); ctx.fillStyle = '#dff1ff'; ctx.fillText(t, x, y - 12); } }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
         if (ML.pins) { ctx.textBaseline = 'middle'; (S.pins || []).forEach((p) => { const [x, y] = toS(p.x, p.z); const ic = PIN_IC[p.t] || '•'; ctx.globalAlpha = p.c ? 0.5 : 1; ctx.font = (p.t === 9 ? 'bold 15px' : '13px') + ' system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = p.t === 9 ? '#ffb4a8' : '#ffe08a'; ctx.strokeText(ic, x, y); ctx.fillText(ic, x, y);
             if (view.s > 0.25) { const nm = pinName(p); const t = (nm ? nm + ' · ' : '') + (p.by || ''); if (t) { ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y + 13); ctx.fillStyle = '#fff3c9'; ctx.fillText(t, x, y + 13); } } ctx.globalAlpha = 1; }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
@@ -409,7 +417,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -447,7 +455,7 @@
       function layersChanged() {
         $$('[data-ml]').forEach((b) => (b.checked = !!ML[b.dataset.ml]));
         const cnt = {}; (S.locations || []).forEach((l) => { const c = 'L_' + locCat(l); cnt[c] = (cnt[c] || 0) + 1; });
-        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; Object.entries(S.resources || {}).forEach(([k, a]) => (cnt['R_' + k] = a.length / 3)); const SRc = ML.seed ? seedRes() : null; if (SRc) Object.entries(SRc).forEach(([k, a]) => { let n = 0; for (let i = 2; i < a.length; i += 3) n += a[i]; cnt['R_' + k] = (cnt['R_' + k] || 0) + n; }); cnt.pins = (S.pins || []).length; cnt.beds = bedList().length;
+        cnt.bases = S.bases.length; cnt.players = livePlayers().length; cnt.portals = (S.portals || []).length; cnt.deaths = allDeaths().length; Object.entries(S.resources || {}).forEach(([k, a]) => (cnt['R_' + k] = a.length / 3)); const SRc = ML.seed ? seedRes() : null; if (SRc) Object.entries(SRc).forEach(([k, a]) => { let n = 0; for (let i = 2; i < a.length; i += 3) n += a[i]; cnt['R_' + k] = (cnt['R_' + k] || 0) + n; }); cnt.pins = (S.pins || []).length; cnt.beds = bedList().length; cnt.tamed = (S.tamed || []).length;
         $$('.vw-filter label').forEach((lb) => { const k = lb.dataset.fk; $('.n', lb).textContent = cnt[k] ? fmt(cnt[k]) : ''; if (k.startsWith('L_') || k.startsWith('R_')) lb.hidden = !cnt[k]; }); const fh = $('.vw-filter .fh'); if (fh) fh.hidden = !Object.keys(S.resources || {}).length && !SRc;
         $('[data-fk="seed"]').hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
         $('[data-fk="heat"]').hidden = !EX.days.length; $('[data-fk="pins"]').hidden = !(S.pins || []).length; $('[data-fk="creatures"]').hidden = !CREA.length && !ML.creatures; cnt.creatures = CREA.length; { const lb = $('[data-fk="creatures"] .n'); if (lb) lb.textContent = CREA.length ? fmt(CREA.length) : ''; }
@@ -459,6 +467,7 @@
         if (ML.portals) { const N = portalNet(); info.push(`Portal-Netz: ${fmt(N.pairs.length)} Verbindungen` + (N.single.length ? ` · ohne Partner: ${N.single.map(esc).join(', ')}` : '') + (N.multi.length ? ` · mehr als 2 gleiche Namen: ${N.multi.map(esc).join(', ')}` : '') + (N.untagged ? ` · ${N.untagged} ohne Namen` : '')); }
         if (SRc && RES_K.some(([k]) => ML['R_' + k] && SRc[k])) info.push(T('Rohstoffe: ausgefüllt = im Spielstand, hohl = laut Seed in unerkundeten Orten (Anzahl daneben)'));
         if (ML.seed && seedSrc) info.push(T('Ganze Welt mit Höhen, Flüssen und Wäldern') + ' · ' + T('Quelle') + ': ' + esc(seedSrc));
+        if (ML.tamed && S.tamed) { const near = CREA.filter((c) => c.tame).length; info.push(`🐾 Zahme Tiere: ${fmt(S.tamed.length)}` + (S.tamed.length ? ' – ' + tameText() : '') + (near ? ` · gerade in deiner Nähe (Mod): ${near}` : '')); }
         if (ML.deaths) { const D = allDeaths(); info.push(`Tode: ${fmt(D.length)} erfasst` + (D.some((d) => d.open) ? ` · rot = Grabstein liegt noch` : '')); }
         baseInfo = info.join('<br>'); $('.mlInfo').innerHTML = baseInfo;
         if (ML.heat) refreshHeat(); else draw();
@@ -950,6 +959,9 @@
       function drawPlayers() {
         plG.clear(); plLab.forEach((l) => l.d.remove()); plLab = [];
         const all = livePlayers(); $('.plOnline').hidden = !all.length;
+        { const TC = tameCount(), near = CREA.filter((c) => c.tame).length; $('.tmBox').hidden = !TC.length && !near;
+          const h = `<div class="sub" style="margin-bottom:4px">${fmt((S.tamed || []).length)} im Spielstand${near ? ` · ${near} gerade in deiner Nähe (Mod)` : ''}</div>` + TC.map(([k, n]) => `<div class="r" style="display:flex;justify-content:space-between"><span>${esc(tameName(k))}</span><span>${fmt(n)}</span></div>`).join('');
+          const TL = $('.tmList'); if (TL.innerHTML !== h) TL.innerHTML = h; }
         const PL = $('.plList'), names = all.map((p) => g.VWPlayerCard.key(p)).join('|');
         if (PL.dataset.names !== names) { PL.dataset.names = names; PL.innerHTML = all.map((p, i) => `<button class="r" data-i="${i}" style="width:100%"><span>● ${esc(p.name)}</span><span class="pc"></span></button>`).join(''); }
         $$('.pc', PL).forEach((el, i) => { el.textContent = Math.round(all[i].x) + ' / ' + Math.round(all[i].z); });

@@ -227,7 +227,7 @@
     // Sammeln
     const GROUND = new Set(D.ground), NAT = D.nature, PREF = D.prefabs, SPEC = D.pieces, CONT = D.containers;
     const H_PORTAL = new Set(['portal_wood', 'portal_stone', 'portal'].map(stable));
-    const H_BED = new Set(['bed', 'piece_bed02', 'ashwood_bed', 'piece_bed_hay'].map(stable)), H_SIGN = stable('sign'), H_TOMB = stable('Player_tombstone'), H_MAPT = stable('piece_cartographytable'), K_DATA = stable('data');
+    const K_TAMED = stable('tamed'), K_TNAME = stable('TamedName'), K_LEVEL = stable('level'); const tamed = []; const H_BED = new Set(['bed', 'piece_bed02', 'ashwood_bed', 'piece_bed_hay'].map(stable)), H_SIGN = stable('sign'), H_TOMB = stable('Player_tombstone'), H_MAPT = stable('piece_cartographytable'), K_DATA = stable('data');
     let gx = new Float32Array(1 << 16), gn = 0; // Bodenpunkte x,y,z
     const gCells = new Set(), alt = []; // Ersatz-Bodenpunkte für Gebiete ohne bekannte Pflanzen (z. B. Aschelande)
     const pushG = (x, y, z) => { if (gn * 3 + 3 > gx.length) { const t = new Float32Array(gx.length * 2); t.set(gx); gx = t; } gx[gn * 3] = x; gx[gn * 3 + 1] = y; gx[gn * 3 + 2] = z; gn++; };
@@ -250,6 +250,7 @@
           else if (prefab === H_SIGN && S && S[K.text]) signs.push({ x, y, z, t: clean(S[K.text]), a: S[K.author] || '', an: S[K_AUTHOR_NAME] || '', c: cr !== undefined ? cr.toString() : '' });
           else if (H_BED.has(prefab) && S && S[K.ownerName]) beds.push({ x, y, z, n: S[K.ownerName], o: L && L[K.owner] !== undefined ? L[K.owner].toString() : '' });
           else if (prefab === H_TOMB) { let items = 0; try { if (B && B[K.items]) parseInv(B[K.items]).forEach((it) => (items += it[1])); } catch (e) { } tombs.push({ x, y, z, n: (S && S[K.ownerName]) || '', tod: L && L[K.timeOfDeath] !== undefined ? Number(L[K.timeOfDeath]) : null, items }); }
+          if (I && I[K_TAMED] && name) tamed.push([name, Math.round(x), Math.round(z), String((S && S[K_TNAME]) || '').slice(0, 40), (I && I[K_LEVEL]) || 1]); /* zahme Tiere: Art, x, z, Name, Stufe */
           if (S && S[K.crafterName]) { const ih = S[K.item] ? stable(S[K.item]) : prefab; loose.push([ih, (I && I[K.stack]) || 1, (I && I[K.quality]) || 1, S[K.crafterName]]); }
           if (CONT[prefab] && B && B[K.items]) { try { conts.push({ x, y, z, t: CONT[prefab], c: cr !== undefined ? cr.toString() : '', inv: parseInv(B[K.items]) }); } catch (e) { } }
     };
@@ -513,7 +514,7 @@
       players: world.players.map((p) => strip ? { name: p.name } : { name: p.name, platform: p.platform }),
       characters: characters.map((c) => strip ? { name: c.name, account: c.account, pieces: c.pieces } : { name: c.name, account: c.account, steam: c.steam, pieces: c.pieces }),
       bosses: dbi.keys.filter((k) => k.startsWith('defeated_')).map((k) => k.slice(9)),
-      globalKeys: dbi.keys, locations: dbi.locations, pins: tablePins, tableMap, resources: resv, // Rohstoffe: Art → [x, z, f] (f: 1 angebrochen, 2 im Dungeon)
+      globalKeys: dbi.keys, locations: dbi.locations, pins: tablePins, tableMap, resources: resv, tamed, // Rohstoffe: Art → [x, z, f] (f: 1 angebrochen, 2 im Dungeon)
       portals: portals.map((p) => ({ tag: p.tag, x: Math.round(p.x), z: Math.round(p.z) })),
       // Grabsteine: Todeszeit = Spielstand-Zeit minus (Weltzeit jetzt − Weltzeit beim Tod); Weltzeit in .NET-Ticks (100 ns)
       tombs: tombs.map((b) => { const ref = opts.saveTime || Date.now(); const t = b.tod && dbi.netTime ? Math.round(ref - (dbi.netTime - b.tod / 1e7) * 1000) : null; return { n: b.n, x: Math.round(b.x), y: Math.round(b.y), z: Math.round(b.z), t: t && t > 1.5e12 && t <= ref + 6e4 ? t : null, items: b.items }; }),
