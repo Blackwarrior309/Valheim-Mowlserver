@@ -20,6 +20,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 **19.10.2026**
 - Lokaler Abriss-Spielplatz: Impulsgewehr, Bomben, Raketen, Explosionen und Physik-Trümmer mit Reset. [Bedienung und Grenzen](docs/DESTRUCTION.md).
+- Neuer Tab „Live-Spieler“: kompakte Kampfübersicht mit Live-Vitalwerten, kritischem Leben, Datenalter, Filter und Vollbild.
 - 3D: Wikinger packen und werfen – in der 3D-Ansicht mit der Maus (ziehen + loslassen), im Laufmodus mit E (hochheben) und E/Klick (werfen). Mitspieler im Laufmodus sehen das bei sich und fliegen wirklich; Mod-Figuren nur im eigenen Viewer.
 - 3D-Menü unten: „🛏 Schlafen“ – wer im Bett liegt und wer noch fehlt (braucht Mod 0.6.2; „im Bett“ ist nur für dich und Mitspieler in deiner Nähe bekannt).
 - Betten: auch Ashwood- und Heubett werden erkannt; Lag-Diagnose läuft wieder.
