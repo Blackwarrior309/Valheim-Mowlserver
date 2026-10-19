@@ -14,6 +14,7 @@ function create({THREE:T,CANNON:C,scene,targets,ground,invalidate,status,limits=
  function index(){
   if(indexed)return;indexed=true;
   for(const im of targets()){
+   let shown=true;for(let o=im;o;o=o.parent)if(o.visible===false){shown=false;break;}if(!shown)continue;
    if(!im.isInstancedMesh||!im.geometry||!im.visible)continue;
    if(!im.geometry.boundingBox)im.geometry.computeBoundingBox();const native=im.geometry.boundingBox;if(!native||native.isEmpty())continue;
    for(let k=0;k<im.count;k++){

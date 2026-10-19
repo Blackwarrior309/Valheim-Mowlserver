@@ -22,3 +22,4 @@ test('door frames detach and restore with leaves; shared geometry and material a
 test('armageddon drains its queue in bounded batches and restores everything on exit',()=>{
  const f=fixture(24,{debris:8});f.sim.armageddon();assert.equal(f.sim.stats().destroyed,0);for(let i=0;i<5;i++)f.sim.tick(1/60);assert.equal(f.sim.stats().destroyed,24);assert.equal(f.sim.stats().debris,8);f.sim.setEnabled(false);assert.deepEqual(Array.from(f.im.instanceMatrix.array),f.initial);
 });
+test('hidden parent layers are excluded from destruction indexing',()=>{const f=fixture();f.scene.visible=false;f.sim.explode(new THREE.Vector3(0,1,0),8,12);assert.equal(f.sim.stats().destroyed,0);f.sim.reset();f.scene.visible=true;f.sim.explode(new THREE.Vector3(0,1,0),8,12);assert.equal(f.sim.stats().destroyed,4);});
