@@ -134,3 +134,23 @@ Der Mod liefert Detailwerte ausschließlich für den eigenen lokalen Charakter. 
 `Spieler.ShareDetails` (Standard `true`) steuert die zusätzlichen API-Felder und ihre Erfassung. Über die aktive Spiel-Freigabe werden sie an die Besucher desselben MQTT-Kartenraums weitergereicht. Statistikdaten liegen lokal in `BepInEx/config/ValheimWeltLive/player-stats.json`, getrennt nach Weltname, Seed und Spielername. Spielzeit, Tode und zurückgelegte Fußstrecke werden ab Erfassungsbeginn beobachtet; Besuche zählen Spieleintritt/Sitzungen. Das sind keine rückwirkenden Charakter-Gesamtwerte. Schifffahrt, Schwimmen, Teleports und Sprünge durch Wiederbelebung werden nicht als Fußstrecke gezählt. Messintervalle und Spielabstürze können kleine Abweichungen verursachen; die Datei wird ungefähr alle 30 Sekunden und beim Beenden gespeichert.
 
 Installation: Valheim beenden, die neue `ValheimWeltLive.dll` anstelle der vorhandenen DLL im Mod-Ordner ablegen und das Spiel neu starten. Für die Webfunktionen auch den mitgelieferten `web`-Ordner aktualisieren oder die aktuelle öffentliche Karte benutzen. Keine DLLs unter `valheim_Data/Managed` ersetzen.
+
+
+## Türen im Laufmodus
+
+Im Laufmodus (`G`) die Tür mit dem Fadenkreuz ansehen und `E` bzw. die Hand-Schaltfläche drücken. Reichweite: drei Meter ab Augenhöhe; feste Bauteile davor verhindern die Bedienung. Auch ein erreichbarer Rahmen kann zum Öffnen/Schließen dienen. Gedrückthalten von `E` schaltet die Tür nicht ständig um. Während der etwa 0,45 Sekunden langen Bewegung wird keine zweite Bedienung angenommen.
+
+Originalgrafik: Für `wood_door`, `wood_gate`, `wood_fence_gate`, `darkwood_gate`, `stave_gate`, `iron_grate`, `flametal_gate`, `ashwood_door` und `piece_hexagonal_door` exportiert das Grafikwerkzeug das Türblatt, den originalen Drehpunkt und vorhandene Box-Kollider getrennt vom Rahmen. Nur das Blatt dreht sich um 90 Grad, vom Spieler weg. Rahmen und Pfosten bleiben stehen. Die Kollisionsbox des Blatts folgt der Bewegung und bleibt geöffnet wirksam; Rahmen verwenden die exportierten Box-Kollider. Mesh-Kollider und komplexe Physik werden weiterhin angenähert. Natur-/Einfachgrafik nutzt einen vereinfachten Türkörper mit einem Scharnier an der Kante.
+
+Der lokale Zustand bleibt innerhalb der geöffneten Karte bei einem Grafikwechsel, Gebietswechsel und beim erneuten Betreten des Laufmodus erhalten. Ein Seitenneuladen setzt ihn zurück. Diese Bedienung simuliert Türen in der Browserkarte; sie verändert keine Türen auf dem Spielserver und synchronisiert sie nicht zwischen Browsern. Spielberechtigungen, Schlüssel und Originalgeräusche werden nicht simuliert.
+
+Prüfung: `node --test tools/test-doors.cjs` kontrolliert die Aufteilung aller neun Modelle ohne Dreiecksverlust, feste Scharniere und Öffnungsrichtung bei verschiedenen Platzierungswinkeln, Sicht/Reichweite/Verdeckung, bewegte Kollisionen und wiederholten Aufbau ohne doppelte Drehung. Der Grafikladertest prüft außerdem die Freigabe der neuen Teilgeometrien.
+
+
+## Live-Spieler während eines Kampfes
+
+Der Tab **Live-Spieler** zeigt ein dunkles Gruppen-Dashboard mit Lebens-, Ausdauer- und Eitr-Balken, gehaltenen Gegenständen und einer Schaltfläche zur Spielerkarte. Bei höchstens 25 % aktuellem Leben wird die Karte als kritisch markiert. Namen bleiben an ihrer Position, auch wenn die Werte sich ändern. Filter, Kompaktmodus, Vollbild und „In eigenem Tab öffnen“ unterstützen einen zweiten Bildschirm. Die URL-Option `view=players` öffnet direkt die Gruppenübersicht; die normale Karten-URL und der gemeinsame Mitspielerraum bleiben erhalten.
+
+Die Ansicht verbindet sich automatisch mit dem gemeinsamen Browserraum. Für Spieldaten muss eine laufende Mod-Verbindung vorhanden sein; Datenumfang und Sichtweite entsprechen dem jeweiligen Mod (ab 0.6.0 auch nahe Mitspieler). Reine Browserfiguren werden in dieser Kampfübersicht nicht als echte Spielcharaktere aufgeführt. Fehlende Werte erscheinen als „–“, nicht als volle Balken. Nach fünf Sekunden ohne neue Meldung sind Werte als veraltet markiert; spätestens nach zwanzig Sekunden werden die Vitalwerte ausgeblendet. Auch verschwundene Spieler bleiben sichtbar als offline. Diese Angaben beziehen sich auf lokal empfangene Meldungen, nicht auf fremde Rechneruhren.
+
+Die Übersicht liest dieselben Live-Daten wie die Karte; ein offener Kampf-Tab benötigt keine laufende 3D-Darstellung. Die Teilen-Datei enthält ebenfalls das Dashboard. `tools/test-live-party.cjs` prüft Frische/Offlinezustände, kritische Werte, fehlende Werte, Nullwerte und die Speichergrenze.

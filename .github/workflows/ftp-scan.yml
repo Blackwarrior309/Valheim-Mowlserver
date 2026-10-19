@@ -1,0 +1,39 @@
+# Nur lesen: Ordner auf dem Valheim-Server (FTP) auflisten und Log-Dateien suchen.
+# Ergebnis steht als Hinweis („FTP-Scan“) am Workflow-Lauf. Es wird nichts hochgeladen oder gelöscht.
+name: Server-Abfrage (nur lesen)
+on:
+  workflow_dispatch:
+    inputs:
+      scan:
+        description: 'Ordner auflisten'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository != 'Blackwarrior309/Valheim-welt' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Server-Ordner auflisten
+        if: ${{ inputs.scan }}
+        env:
+          VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
+          VS_FTP_PORT: ${{ secrets.VS_FTP_PORT }}
+          VS_FTP_USER: ${{ secrets.VS_FTP_USER }}
+          VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
+          VS_FTP_SECURE: ${{ secrets.VS_FTP_SECURE }}
+        run: node sync/ftp-scan.cjs
+      - name: Steam-Abfrage (Spielerzahl)
+        env:
+          VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
+          VS_FTP_PORT: ${{ secrets.VS_FTP_PORT }}
+          VS_FTP_USER: ${{ secrets.VS_FTP_USER }}
+          VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
+          VS_FTP_SECURE: ${{ secrets.VS_FTP_SECURE }}
+          VS_GAME_ADDR: ${{ secrets.VS_GAME_ADDR }}
+        run: node sync/server-query.cjs

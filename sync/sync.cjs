@@ -367,7 +367,7 @@ async function runOnce(cfg) {
     state.remoteDir = dir; state.worlds = worlds;
     const files = await listWorldFiles(ftp, dir, world, worlds);
     if (!files.some((f) => /\.fwl2?$/i.test(f.rel))) throw new Error('Welt „' + world + '“ nicht vollständig gefunden in ' + dir);
-    const cache = path.join(DATA, 'welt-cache', world.replace(/[^\w.-]+/g, '_'));
+    const cache = path.join(DATA, 'welt-cache', /^_main\.\d+$/.test(world) ? '_main' : world.replace(/[^\w.-]+/g, '_')); // fester Ordner: bei neuem Spielstand (_main.<Nr>) nur geänderte Gebietsdateien laden
     fs.mkdirSync(cache, { recursive: true });
     // ältere Spielstände (_main.<alte Nummer>) aus dem Zwischenspeicher entfernen
     for (const d of fs.readdirSync(path.dirname(cache))) if (d !== path.basename(cache)) try { fs.rmSync(path.join(path.dirname(cache), d), { recursive: true, force: true }); } catch (e) { }
@@ -443,7 +443,8 @@ function envConfig() {
   };
 }
 
-(async () => {
+module.exports = { FTP };
+if (!process.env.VS_SCAN_ONLY) (async () => {
   console.log('Valheim-Sync (inoffiziell) – FTP → .vwelt → GitHub\n');
   if (CI) {
     fs.mkdirSync(DATA, { recursive: true });

@@ -5,6 +5,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const THREE = require('../lib/three.min.js');
 require('../js/data.js');
+global.VWDoors = require('../js/doors.js');
 require('../js/valheim-assets.js');
 const { convert, stable } = require('../js/convert.js');
 
@@ -72,6 +73,10 @@ async function testLoader() {
   assert(model.geometry.index.count > 0);
   assert.equal(model.materials[0].map.encoding, THREE.sRGBEncoding);
   assert([...calls.values()].every((n) => n === 1), 'Concurrent requests must share cached downloads');
+  await store.prepare(['wood_door']);
+  const door = store.get('wood_door').door; assert(door && door.leaf.index.count && door.frame.index.count);
+  let disposed = 0; for (const geometry of [door.leaf, door.frame]) geometry.addEventListener('dispose', () => disposed++);
+  store.dispose(); assert.equal(disposed, 2, 'Door parts must be disposed with the asset store');
   // A missing pack must reject cleanly so the viewer can report its fallback.
   await assert.rejects(VWValheimAssets.create('missing/', THREE).prepare(['woodwall']));
 }

@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.5.0";
+        public const string Version = "0.6.2";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails;
@@ -90,7 +90,7 @@ namespace ValheimWeltLive
             if (statsNetwork != ZNet.instance) { statsSession = null; statsNetwork = ZNet.instance; }
             if (ZNet.instance == null || ZDOMan.instance == null) { statsSession = null; return; }
             float t = Time.realtimeSinceStartup;
-            if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } }
+            if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } try { creaturesJson = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); } if (t >= nextDungeon) { nextDungeon = t + 1.5f; try { dungeonJson = CollectDungeon(); } catch (Exception e) { Logger.LogDebug(e); } } }
             if (!biomeBusy && WorldGenerator.instance != null && ZNet.instance != null && (biomeGrid == null || biomeWorld != ZNet.instance.GetWorldName())) StartCoroutine(BuildBiomes());
             if (t >= nextWorld && !building) { nextWorld = t + Mathf.Max(10, cfgWorldSeconds.Value); StartCoroutine(BuildDump()); }
             if (cfgWriteFile.Value && ZNet.instance.IsServer())
@@ -202,6 +202,7 @@ namespace ValheimWeltLive
                 if (!first) sb.Append(','); first = false;
                 sb.Append("{\"name\":").Append(Json(n)).Append(",\"x\":").Append(F(p.x)).Append(",\"y\":").Append(F(p.y)).Append(",\"z\":").Append(F(p.z));
                 if (character == Player.m_localPlayer && character != null && cfgDetails.Value) AppendDetails(sb, character);
+                else if (character != null && cfgDetails.Value) AppendRemoteDetails(sb, character);
                 sb.Append('}');
             };
             if (Player.m_localPlayer != null) Add(Player.m_localPlayer.GetPlayerName(), Player.m_localPlayer.transform.position, Player.m_localPlayer);
@@ -249,6 +250,7 @@ namespace ValheimWeltLive
                 d.Append("\"health\":").Append(F(p.GetHealth())).Append(",\"maxHealth\":").Append(F(p.GetMaxHealth()));
                 d.Append(",\"stamina\":").Append(F(p.GetStamina())).Append(",\"maxStamina\":").Append(F(p.GetMaxStamina()));
                 d.Append(",\"eitr\":").Append(F(p.GetEitr())).Append(",\"maxEitr\":").Append(F(p.GetMaxEitr()));
+                if (p.InBed()) d.Append(",\"inBed\":true"); if (p.IsDead()) d.Append(",\"dead\":true");
                 d.Append(",\"playedSeconds\":").Append(F((float)stats.playedSeconds)).Append(",\"distance\":").Append(F((float)stats.distance));
                 d.Append(",\"deaths\":").Append(stats.deaths).Append(",\"visits\":").Append(stats.visits).Append(",\"since\":").Append(stats.since);
                 d.Append(",\"left\":").Append(Json(EquippedName(Hand(p, "m_leftItem")))).Append(",\"right\":").Append(Json(EquippedName(Hand(p, "m_rightItem"))));
@@ -256,6 +258,109 @@ namespace ValheimWeltLive
                 foreach (var item in p.GetInventory().GetAllItems()) if (item.m_equipped) { if (!first) d.Append(','); first = false; d.Append("{\"slot\":").Append(Json(item.m_shared.m_itemType.ToString())).Append(",\"name\":").Append(Json(EquippedName(item))).Append('}'); }
                 sb.Append(d.Append("]}"));
             } catch (Exception e) { Logger.LogDebug("Player details: " + e.Message); }
+        }
+
+        // Mitspieler in der Nähe: nur Werte, die das Spiel selbst übers Netz schickt (ZDO der Figur)
+        static readonly KeyValuePair<string, int>[] VIS = {
+            new KeyValuePair<string, int>("Rechts", ZDOVars.s_rightItem), new KeyValuePair<string, int>("Links", ZDOVars.s_leftItem),
+            new KeyValuePair<string, int>("Helm", ZDOVars.s_helmetItem), new KeyValuePair<string, int>("Brust", ZDOVars.s_chestItem),
+            new KeyValuePair<string, int>("Beine", ZDOVars.s_legItem), new KeyValuePair<string, int>("Umhang", ZDOVars.s_shoulderItem),
+            new KeyValuePair<string, int>("Gürtel", ZDOVars.s_utilityItem), new KeyValuePair<string, int>("Trinket", ZDOVars.s_trinketItem),
+            new KeyValuePair<string, int>("Rücken rechts", ZDOVars.s_rightBackItem), new KeyValuePair<string, int>("Rücken links", ZDOVars.s_leftBackItem) };
+        static readonly Dictionary<int, int> VISQ = new Dictionary<int, int> { { ZDOVars.s_rightItem, ZDOVars.s_rightItemQuality }, { ZDOVars.s_leftItem, ZDOVars.s_leftItemQuality }, { ZDOVars.s_shoulderItem, ZDOVars.s_shoulderItemQuality }, { ZDOVars.s_rightBackItem, ZDOVars.s_rightBackItemQuality }, { ZDOVars.s_leftBackItem, ZDOVars.s_leftBackItemQuality } };
+        static string ItemNameOf(int hash)
+        {
+            try { var go = ObjectDB.instance != null ? ObjectDB.instance.GetItemPrefab(hash) : null; var id = go != null ? go.GetComponent(typeof(ItemDrop)) as ItemDrop : null; if (id != null) return WeltSuche.L(id.m_itemData.m_shared.m_name); return go != null ? go.name : ""; } catch { return ""; }
+        }
+        void AppendRemoteDetails(StringBuilder sb, Player p)
+        {
+            try {
+                var zdo = ZDOMan.instance != null ? ZDOMan.instance.GetZDO(p.GetZDOID()) : null; if (zdo == null) return;
+                var d = new StringBuilder(",\"details\":{\"remote\":true");
+                d.Append(",\"health\":").Append(F(p.GetHealth())).Append(",\"maxHealth\":").Append(F(p.GetMaxHealth()));
+                d.Append(",\"stamina\":").Append(F(zdo.GetFloat(ZDOVars.s_stamina, 0f))).Append(",\"eitr\":").Append(F(zdo.GetFloat(ZDOVars.s_eitr, 0f)));
+                if (zdo.GetBool(ZDOVars.s_dead, false)) d.Append(",\"dead\":true");
+                if (zdo.GetBool(ZDOVars.s_inBed, false)) d.Append(",\"inBed\":true");
+                string left = "", right = "";
+                d.Append(",\"equipment\":["); bool first = true;
+                foreach (var kv in VIS)
+                {
+                    int h = zdo.GetInt(kv.Value, 0); if (h == 0) continue; string n = ItemNameOf(h); if (string.IsNullOrEmpty(n)) continue;
+                    int q; if (VISQ.TryGetValue(kv.Value, out q)) { int ql = zdo.GetInt(q, 0); if (ql > 1) n += " ★" + ql; }
+                    if (kv.Value == ZDOVars.s_rightItem) right = n; else if (kv.Value == ZDOVars.s_leftItem) left = n;
+                    if (!first) d.Append(','); first = false; d.Append("{\"slot\":").Append(Json(kv.Key)).Append(",\"name\":").Append(Json(n)).Append('}');
+                }
+                d.Append("],\"left\":").Append(Json(left)).Append(",\"right\":").Append(Json(right));
+                sb.Append(d.Append('}'));
+            } catch (Exception e) { Logger.LogDebug("Remote details: " + e.Message); }
+        }
+
+        // Dungeon-Ansicht: Räume, Truhen, Aufsammelbares und Abbaubares im Dungeon, in dem die eigene Figur gerade ist (liegt ~5000 m über der Welt)
+        volatile string dungeonJson = "{\"inside\":false}"; float nextDungeon;
+        string CollectDungeon()
+        {
+            var me = Player.m_localPlayer; if (me == null || me.transform.position.y < 3000f) return "{\"inside\":false}";
+            Vector3 c = me.transform.position; const float R = 260f;
+            Func<Vector3, bool> near = (v) => v.y > 3000f && Mathf.Abs(v.x - c.x) < R && Mathf.Abs(v.z - c.z) < R;
+            var sb = new StringBuilder("{\"inside\":true,\"x\":").Append(F(c.x)).Append(",\"y\":").Append(F(c.y)).Append(",\"z\":").Append(F(c.z)).Append(",\"r\":").Append(F(me.transform.eulerAngles.y));
+            sb.Append(",\"rooms\":["); bool first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(Room)))
+            {
+                var rm = o as Room; if (rm == null) continue; var t = rm.transform; if (!near(t.position)) continue;
+                string nm = rm.gameObject.name; int k = nm.IndexOf('('); if (k > 0) nm = nm.Substring(0, k).Trim();
+                if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(t.position.x)).Append(',').Append(F(t.position.y)).Append(',').Append(F(t.position.z)).Append(',').Append(F(t.eulerAngles.y)).Append(',')
+                  .Append(rm.m_size.x).Append(',').Append(rm.m_size.y).Append(',').Append(rm.m_size.z).Append(',').Append(Json(nm)).Append(',').Append(rm.m_entrance ? 1 : 0).Append(']');
+            }
+            sb.Append("],\"chests\":["); first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(Container)))
+            {
+                var ct = o as Container; if (ct == null || !near(ct.transform.position)) continue; var inv = ct.GetInventory(); var p = ct.transform.position;
+                if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(p.x)).Append(',').Append(F(p.y)).Append(',').Append(F(p.z)).Append(',').Append(Json(WeltSuche.L(ct.m_name))).Append(",[");
+                bool f2 = true; if (inv != null) foreach (var it in inv.GetAllItems()) { if (!f2) sb.Append(','); f2 = false; sb.Append('[').Append(Json(WeltSuche.L(it.m_shared.m_name))).Append(',').Append(it.m_stack).Append(']'); }
+                sb.Append("]]");
+            }
+            sb.Append("],\"picks\":["); first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(Pickable)))
+            {
+                var pk = o as Pickable; if (pk == null || !near(pk.transform.position)) continue; bool picked = false; try { picked = pk.GetPicked(); } catch { }
+                if (picked) continue; string nm = ""; try { var idp = pk.m_itemPrefab != null ? pk.m_itemPrefab.GetComponent(typeof(ItemDrop)) as ItemDrop : null; nm = idp != null ? WeltSuche.L(idp.m_itemData.m_shared.m_name) : pk.gameObject.name; } catch { }
+                var p = pk.transform.position; if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(p.x)).Append(',').Append(F(p.y)).Append(',').Append(F(p.z)).Append(',').Append(Json(nm)).Append(']');
+            }
+            sb.Append("],\"rocks\":["); first = true;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(typeof(MineRock5)))
+            {
+                var mr = o as MineRock5; if (mr == null || !near(mr.transform.position)) continue; var p = mr.transform.position;
+                if (!first) sb.Append(','); first = false;
+                sb.Append('[').Append(F(p.x)).Append(',').Append(F(p.y)).Append(',').Append(F(p.z)).Append(',').Append(Json(WeltSuche.L(mr.m_name))).Append(']');
+            }
+            return sb.Append("]}").ToString();
+        }
+
+        // Gegner und Tiere im geladenen Gebiet (auch in Dungeons)
+        volatile string creaturesJson = "[]";
+        string CollectCreatures()
+        {
+            var sb = new StringBuilder("["); bool first = true; int n = 0;
+            foreach (var c in Character.GetAllCharacters())
+            {
+                if (c == null || c is Player || n >= 400) continue;
+                try
+                {
+                    var pos = c.transform.position; string pf = c.gameObject.name; int k = pf.IndexOf('('); if (k > 0) pf = pf.Substring(0, k).Trim();
+                    if (!first) sb.Append(','); first = false; n++;
+                    sb.Append("{\"p\":").Append(Json(pf)).Append(",\"n\":").Append(Json(WeltSuche.L(c.m_name)))
+                      .Append(",\"x\":").Append(F(pos.x)).Append(",\"y\":").Append(F(pos.y)).Append(",\"z\":").Append(F(pos.z))
+                      .Append(",\"hp\":").Append(F(c.GetHealth())).Append(",\"mhp\":").Append(F(c.GetMaxHealth())).Append(",\"lv\":").Append(c.GetLevel())
+                      .Append(",\"f\":").Append(Json(c.m_faction.ToString()));
+                    if (c.IsTamed()) sb.Append(",\"tame\":1"); if (c.IsBoss()) sb.Append(",\"boss\":1");
+                    sb.Append('}');
+                }
+                catch { }
+            }
+            return sb.Append(']').ToString();
         }
 
         // ---------------- Welt-Dump (VWD1) ----------------
@@ -422,6 +527,8 @@ namespace ValheimWeltLive
                 string p = ctx.Request.Url.AbsolutePath;
                 if (p == "/api/info") { Send(res, infoJson, "application/json"); return; }
                 if (p == "/api/players") { Send(res, playersJson, "application/json"); return; }
+                if (p == "/api/creatures") { Send(res, creaturesJson, "application/json"); return; }
+                if (p == "/api/dungeon") { Send(res, dungeonJson, "application/json"); return; }
                 if (p == "/api/find") { var q = ctx.Request.QueryString["q"]; if (!string.IsNullOrEmpty(q)) WeltSuche.PendingQuery = q; Send(res, "{\"ok\":true}", "application/json"); return; }
                 if (p == "/api/world.vwdump")
                 {

@@ -91,14 +91,18 @@ class Exporter:
 
     def components(self, go):
         return {p.component.type.name: p.component.read() for p in go.m_Component
-                if p.component and p.component.type.name in ('Transform', 'MeshFilter', 'MeshRenderer', 'SkinnedMeshRenderer', 'LODGroup')}
+                if p.component and p.component.type.name in ('Transform', 'MeshFilter', 'MeshRenderer', 'SkinnedMeshRenderer', 'LODGroup', 'BoxCollider')}
 
     def prefab(self, ptr):
         root = ptr.read()
         nodes = []
         excluded = set()
+        door = None
+        colliders = []
+        animated = bool(re.search(r"door|gate|grate", root.m_Name, re.I)) and not re.search(r"cloth|portal|drawbridge", root.m_Name, re.I)
 
-        def walk(go, parent, is_root=False):
+        def walk(go, parent, is_root=False, moving=False):
+            nonlocal door
             if not is_root and not go.m_IsActive:
                 return
             c = self.components(go)
@@ -107,6 +111,19 @@ class Exporter:
                 return
             local = matrix(t, root=is_root)
             world = parent @ local
+            if animated and not is_root and go.m_Name.lower() == 'door':
+                moving = True
+                pivot = world[:3, 3].copy()
+                pivot[2] *= -1
+                door = {'pivot': rounded(pivot), 'vertices': [], 'colliders': []}
+            collider = c.get('BoxCollider')
+            if animated and collider and collider.m_Enabled and not collider.m_IsTrigger:
+                center, size = collider.m_Center, collider.m_Size
+                cm = world.copy()
+                cm[:3, 3] = (world @ np.array([center.x, center.y, center.z, 1]))[:3]
+                mirror = np.diag([1, 1, -1, 1])
+                cm = mirror @ cm @ mirror
+                colliders.append({'moving': moving, 'matrix': rounded(cm.T), 'size': [size.x, size.y, size.z]})
             lod = c.get('LODGroup')
             if lod:
                 first = {p.renderer.path_id for p in lod.m_LODs[0].renderers if p.renderer} if lod.m_LODs else set()
@@ -116,14 +133,14 @@ class Exporter:
             mesh_ptr = getattr(renderer, 'm_Mesh', None) or (mf.m_Mesh if mf else None)
             if renderer and mesh_ptr and renderer.m_Enabled:
                 # Worn/destroyed variants are usually inactive; exclude snap points regardless.
-                nodes.append((renderer, mesh_ptr, world))
+                nodes.append((renderer, mesh_ptr, world, moving))
             for child in t.m_Children:
                 ct = child.read()
-                walk(ct.m_GameObject.read(), world)
+                walk(ct.m_GameObject.read(), world, moving=moving)
 
         walk(root, np.eye(4), True)
         positions, normals, uvs, indices, groups, materials = [], [], [], [], [], []
-        for renderer, mesh_ptr, world in nodes:
+        for renderer, mesh_ptr, world, moving in nodes:
             if renderer.object_reader.path_id in excluded:
                 continue
             key = (mesh_ptr.assetsfile.name, mesh_ptr.path_id)
@@ -144,6 +161,7 @@ class Exporter:
             else:
                 n = np.zeros_like(p)
             base = len(positions) // 3
+            if moving and door is not None: door['vertices'].append([base, len(p)])
             positions.extend(rounded(p))
             normals.extend(rounded(n))
             uvs.extend(rounded(np.asarray(h.m_UV0)[:, :2]) if h.m_UV0 else [0, 0] * len(p))
@@ -162,8 +180,12 @@ class Exporter:
                 groups.append([start, len(indices)-start, materials.index(mat)])
         if not indices:
             raise ValueError('No active static meshes')
-        return {'version': 1, 'positions': positions, 'normals': normals, 'uvs': uvs,
-                'indices': indices, 'groups': groups, 'materials': materials}
+        result = {'version': 1, 'positions': positions, 'normals': normals, 'uvs': uvs,
+                  'indices': indices, 'groups': groups, 'materials': materials}
+        if door and door['vertices']:
+            door['colliders'] = colliders
+            result['door'] = door
+        return result
 
 
 def main():
@@ -200,8 +222,10 @@ def main():
         env.load_file(str(soft / 'Bundles' / bundle))
     exporter = Exporter(args.out)
     models, errors = {}, {}
+    model_order = []
     if args.only and (args.out / 'index.json').exists():
         models = json.loads((args.out / 'index.json').read_text(encoding='utf-8'))['models']
+        model_order = list(models)
         report_file = args.out / 'export-report.json'
         if report_file.exists():
             errors = json.loads(report_file.read_text(encoding='utf-8')).get('errors', {})
@@ -227,6 +251,7 @@ def main():
         except Exception as exc:
             errors[name] = str(exc)
             print('Skipped', name, str(exc), flush=True)
+    models = {name: models[name] for name in dict.fromkeys(model_order + list(models)) if name in models}
     index = {'version': 1, 'source': 'Valheim local installation', 'models': models}
     (args.out / 'index.json').write_text(json.dumps(index, indent=2), encoding='utf-8')
     report = {'exported': len(models), 'missing': sorted(all_wanted-set(models)), 'errors': errors,
