@@ -65,6 +65,7 @@
 .vw-card .lab{font-weight:600;overflow-wrap:anywhere}.vw-card .lab.none{color:var(--mut);font-style:italic;font-weight:500}.vw-card .meta{color:var(--mut);font-size:11.5px;margin:2px 0 6px}
 .vw-card .more{background:none;border:0;padding:0;color:var(--acc);font-size:12px;margin-top:4px}
 .vw-player-card{position:absolute;right:16px;top:110px;z-index:30;width:min(320px,calc(100% - 32px));max-height:calc(100% - 140px);overflow:auto;padding:16px;box-sizing:border-box;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 8px 30px #0005}.vw-player-card>button{float:right}.vw-player-card h2{margin-top:0}.vw-player-card h3{margin:12px 0 5px}.vw-player-card .row{margin-top:12px;flex-wrap:wrap}
+.sbPanel{position:absolute;right:12px;top:12px;z-index:12;width:340px;max-width:calc(100% - 24px);max-height:calc(100% - 24px);overflow:auto;padding:14px;border:1px solid #e58c45;border-radius:12px;background:var(--panel);box-shadow:0 8px 30px #0007}.sbPanel .row{flex-wrap:wrap;align-items:center;gap:6px}.sbPanel .sbHide{margin-left:auto}.sbPanel p{margin:8px 0}.sbPanel input{width:100%}.sbHint,.sbStatus{font-size:12px}.sb-active .tl,.sb-active .selMode,.sb-active .selAll,.sb-active .selClr,.sb-active .selBp{pointer-events:none;opacity:.4}@media(max-width:760px){.sbPanel{top:auto;bottom:10px;max-height:55%;width:300px}.sbPanel button{padding:8px}}
 .vw-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .vw-maplist .b{display:flex;justify-content:space-between;gap:8px;padding:6px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:6px}.vw-maplist .b:hover{background:var(--chip)}
 .vw-legend{position:absolute;right:12px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;z-index:3}
@@ -110,12 +111,13 @@
       <div class="heatCtl" hidden><div class="row" style="margin-top:6px"><select class="hPl" style="flex:1;min-width:0"></select><select class="hDays"><option value="0">Alle Tage</option><option value="1">Heute</option><option value="7">7 Tage</option><option value="30">30 Tage</option></select></div></div>
       <div class="sub mlInfo" style="margin-top:6px"></div>
       <button class="gameLink" style="width:100%;margin-top:8px" title="Braucht den Mod „Valheim Welt Live“ auf diesem PC (http://localhost:8686). Deine Position wird live auf der Karte gezeigt und an andere Besucher der Karte geschickt.">🎮 Mein Spiel live zeigen (Mod)</button>
-      <h2>Legende</h2><div class="sub">● Basis (anklicken = 3D) · ◆ Portal · ▲ Boss/Ort (grau = noch nicht erkundet)<br>Ziehen = verschieben · Mausrad/Pinch = Zoom</div><div class="sub biolg" style="margin-top:6px"></div></div>
+      <button class="sbLaunch" style="width:100%;margin-top:8px">💥 Karte zerlegen</button><h2>Legende</h2><div class="sub">● Basis (anklicken = 3D) · ◆ Portal · ▲ Boss/Ort (grau = noch nicht erkundet)<br>Ziehen = verschieben · Mausrad/Pinch = Zoom</div><div class="sub biolg" style="margin-top:6px"></div></div>
   </div>
   <div class="vw-pane" data-p="3d" hidden><canvas class="gl"></canvas><div class="vw-labels"></div>
+    <section class="sbPanel" hidden aria-label="Zerstörungsmenü"><div class="row"><b>💥 Abriss-Spielplatz</b><button class="sbHide" aria-label="Waffenmenü verbergen">✕</button></div><p class="sub">Nur diese Kartenansicht. Reset baut alles wieder auf.</p><div class="row"><button data-weapon="pulse">⚡ Impulsgewehr</button><button data-weapon="bomb">💣 Bombe</button><button data-weapon="rocket" class="on">🚀 Rakete</button></div><label>Sprengkraft <input class="sbPower" type="range" min="0.5" max="2" step="0.25" value="1"></label><p class="sbHint">Auf Bauteile oder Boden klicken / tippen zum Feuern. Ziehen dreht die Kamera.</p><div class="row"><button class="sbChaos">🔥 Alles sprengen</button><button class="sbPause">⏸ Physik anhalten</button><button class="sbReset">↶ Reset</button><button class="sbEnd">Modus beenden</button></div><p class="sbStatus" role="status"></p></section>
     <div class="vw-side s3"><button class="vw-mob" data-min>Menü</button>
       <h2>Gebiet</h2><select class="reg" style="width:100%"></select>
-      <h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button><button class="walkBtn">🚶 Laufen (G)</button></div><div class="row" style="margin-top:6px"><input class="walkName" type="text" maxlength="24" placeholder="Dein Name für Mitspieler" title="So sehen dich andere, die gerade auch auf dieser Karte laufen" style="flex:1;font:inherit;font-size:13px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"></div>
+      <button class="sbLaunch" style="width:100%;margin-top:8px">💥 Zerstörungsmodus</button><h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button><button class="walkBtn">🚶 Laufen (G)</button></div><div class="row" style="margin-top:6px"><input class="walkName" type="text" maxlength="24" placeholder="Dein Name für Mitspieler" title="So sehen dich andere, die gerade auch auf dieser Karte laufen" style="flex:1;font:inherit;font-size:13px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"></div>
       <div class="tl" hidden><h2>Zeitraffer</h2><div class="row" style="flex-wrap:nowrap;align-items:center"><button class="tlPlay" aria-label="Abspielen">▶</button><input type="range" class="tlR" min="0" max="0" value="0" style="flex:1;min-width:0"></div><div class="sub tlInfo" style="margin-top:4px"></div><div class="tlList" style="max-height:170px;overflow:auto;margin-top:6px"></div></div>
       <h2>Tageszeit</h2><div class="row dnRow"><button class="dnPause" title="Uhr anhalten / weiterlaufen lassen">⏸</button><input class="dnSlider" type="range" min="0" max="1440" step="5" style="flex:1;min-width:0"><b class="dnClock" style="min-width:44px;text-align:right;font-variant-numeric:tabular-nums">12:00</b></div>
       <div class="row" style="margin-top:6px"><select class="dnMode" style="flex:1;min-width:0"><option value="server">Wie auf dem Server</option><option value="normal">Eigener Ablauf (1 Tag = 30 Min., wie im Spiel)</option><option value="fast">Schnell (1 Tag = 3 Min.)</option></select></div>
@@ -705,6 +707,7 @@
         if (/roof_top/.test(name)) return 'ridge';
         return 'box';
       }
+      let destruction = null;
       let curMode = 'natur', bigArea = false, reg = null, CX = 0, CZ = 0, content = null, meshes = {}, pickList = [], natG = null, terrain = null, labels = [], showLbl = true, colorMode = 'mat';
       const areaG = new THREE.Group(), changeG = new THREE.Group(); scene.add(areaG, changeG);
       let roomDefs = [], roomLab = [], changeDef = null, changeMode = 'off', areaPick = null, areaFirst = null;
@@ -740,7 +743,7 @@
         }
         invalidate();
       }
-      function beginArea(fn) { if (areaPick) areaPick(null); areaPick = fn; areaFirst = null; cv.style.cursor = fn ? 'crosshair' : ''; if (fn) { if (walk) toggleWalk(false); if (fly) toggleFly(false); } }
+      function beginArea(fn) { if (fn && destruction && destruction.active) endDestruction(); if (areaPick) areaPick(null); areaPick = fn; areaFirst = null; cv.style.cursor = fn ? 'crosshair' : ''; if (fn) { if (walk) toggleWalk(false); if (fly) toggleFly(false); } }
       addEventListener('keydown', (e) => { if (e.code === 'Escape' && areaPick) beginArea(null); });
       const W = (x, y, z) => new THREE.Vector3(x - CX, y - WL, -(z - CZ));
       const LB = $('.vw-labels');
@@ -763,6 +766,7 @@
         const nn = Math.min(40, Math.max(0.5, dist / 400)); if (Math.abs(cam.near - nn) > 0.05) { cam.near = nn; cam.updateProjectionMatrix(); } // Nahgrenze mit dem Zoom: genaue Tiefe, kein Flackern von Wasser/Strand
       }
       function clear() {
+        if (destruction) destruction.reset();
         if (content) { scene.remove(content); content.traverse((o) => { if (o.userData.original) return; if (o.geometry && !Object.values(geos).includes(o.geometry) && o.geometry !== box && !Object.values(SHAPES).includes(o.geometry)) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material)) o.material.dispose(); }); }
         if (typeof OBB !== 'undefined') { OBB = []; GRID = new Map(); DOORS = []; }
         labels.forEach((l) => l.d.remove()); labels = []; meshes = {}; pickList = []; clearMarkers(); $('.vw-chest').hidden = true;
@@ -1090,11 +1094,12 @@
         grab.hist.push([now, x, gy + 2.2, z]); while (grab.hist.length > 2 && now - grab.hist[0][0] > 150) grab.hist.shift(); holdAt(grab, x, gy + 2.2, z, gy); }
       function grabRelease(G) { const a = G.hist[0], b = G.hist[G.hist.length - 1]; if (!a) return; const t = Math.max(0.03, (b[0] - a[0]) / 1000), vx = (b[1] - a[1]) / t, vz = (b[3] - a[3]) / t; throwIt(G, vx, 3 + Math.hypot(vx, vz) * 0.35, vz); }
       cv.addEventListener('contextmenu', (e) => e.preventDefault());
-      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!walk && !fly && !areaPick && !SEL.active && e.button === 0 && ptrs.size === 1) { const H = opAt(e); if (H) grab = Object.assign(H, { x0: e.clientX, y0: e.clientY, moved: false, hist: [], sent: 0 }); } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
+      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!(destruction && destruction.active) && !walk && !fly && !areaPick && !SEL.active && e.button === 0 && ptrs.size === 1) { const H = opAt(e); if (H) grab = Object.assign(H, { x0: e.clientX, y0: e.clientY, moved: false, hist: [], sent: 0 }); } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
       const pUp = (e) => {
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
         if (grab) { const G = grab; grab = null; cv.style.cursor = 'grab'; if (G.moved) { grabRelease(G); return; } }
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
+          if (destruction && destruction.active && e.button === 0) { shootDestruction(e); return; }
           if (areaPick) { const hit = rayHit(e, true); if (hit) { const p = { x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }; if (!areaFirst) { areaFirst = p; areaPick(p, null); } else { const fn = areaPick, first = areaFirst; areaPick = null; areaFirst = null; cv.style.cursor = ''; fn(first, p); } } return; }
           const rect = cv.getBoundingClientRect(); mv.set((e.clientX-rect.left)/rect.width*2-1, -(e.clientY-rect.top)/rect.height*2+1); ray.setFromCamera(mv,cam);
           const heroes = [...OP.entries()].map(([name,O]) => ({p:livePlayers().find(p => p.name === name), h:O.h.g})).concat([...MP.peers.entries()].map(([id,P]) => ({p:peerList().find(p => p.id === id), h:P.h.g}))).filter(o => o.p && o.h.visible);
@@ -1107,7 +1112,7 @@
       cv.addEventListener('pointerup', pUp); cv.addEventListener('pointercancel', pUp);
       function pan(dx, dy) { const s = dist * 0.0016; const fw = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), rt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)); tgt.addScaledVector(rt, -dx * s).addScaledVector(fw, -dy * s); }
       cv.addEventListener('pointermove', (e) => {
-        const p = ptrs.get(e.pointerId); if (!p) { if (walk) { TIP.hidden = true; return; } if (!areaPick) cv.style.cursor = opAt(e) ? 'grab' : ''; hover(e); return; }
+        const p = ptrs.get(e.pointerId); if (!p) { if (walk) { TIP.hidden = true; return; } if (destruction && destruction.active) { cv.style.cursor = 'crosshair'; TIP.hidden = true; return; } if (!areaPick) cv.style.cursor = opAt(e) ? 'grab' : ''; hover(e); return; }
         if (grab) { if (!grab.moved && Math.hypot(e.clientX - grab.x0, e.clientY - grab.y0) < 5) return; grab.moved = true; grabMove(e); TIP.hidden = true; return; }
         const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
         if (walk) { lookWalk(dx, dy); return; }
@@ -1119,7 +1124,7 @@
       const ray = new THREE.Raycaster(), mv = new THREE.Vector2();
       function rayHit(e, withTerrain) { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const objs = pickList.filter((m) => m.visible); if (withTerrain) objs.push(terrain); return ray.intersectObjects(objs)[0]; }
       const arrAt = (h) => { const a = h.object.userData.arr, o = h.instanceId * 6; return [a[o], a[o + 1], a[o + 2], a[o + 3], a[o + 4], a[o + 5]]; };
-      cv.addEventListener('dblclick', (e) => { if (fly || walk) return; const h = rayHit(e, true); if (h) { tgt.copy(h.point); dist = Math.max(30, dist * 0.45); } });
+      cv.addEventListener('dblclick', (e) => { if (fly || walk || destruction && destruction.active) return; const h = rayHit(e, true); if (h) { tgt.copy(h.point); dist = Math.max(30, dist * 0.45); } });
       const TIP = $('.vw-tip'); let lastHover = 0;
       function hover(e) {
         const now = performance.now(); if (now - lastHover < 60) return; lastHover = now;
@@ -1137,13 +1142,14 @@
       const fdir = () => new THREE.Vector3(Math.cos(fpt) * Math.sin(fyw), Math.sin(fpt), Math.cos(fpt) * Math.cos(fyw));
       const JOY = $('.vw-joy'), JK = $('.k', JOY), UD = $('.vw-ud'), HUD = $('.vw-hud'), CROSS = $('.vw-cross'), FB = $('.flyBtn');
       function toggleFly(on) {
+        if (destruction && destruction.active && on !== false) return;
         if (on === undefined) on = !fly; if (on === fly) return; fly = on; FB.classList.toggle('on', fly); JOY.hidden = UD.hidden = HUD.hidden = CROSS.hidden = !fly;
         cam.near = fly ? 0.1 : 0.5; cam.updateProjectionMatrix(); setShadows(!fly && Q.shadows === '1');
         if (fly) { fp.copy(cam.position); const d = tgt.clone().sub(cam.position).normalize(); fyw = Math.atan2(d.x, d.z); fpt = Math.asin(d.y); if (fp.distanceTo(tgt) > 120) { fp.copy(tgt).addScaledVector(d, -60); fp.y = Math.max(fp.y, tgt.y + 25); } if (innerWidth <= 760) $('.s3').classList.add('min'); $$('[data-v]').forEach((b) => b.classList.remove('on')); }
         else { const f = fdir(); tgt.copy(fp).addScaledVector(f, 40); dist = 40; yaw = Math.atan2(-f.x, -f.z); pit = Math.max(0.08, Math.asin(-f.y)); }
       }
       FB.onclick = () => toggleFly();
-      const kd = (e) => { if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.code === 'KeyF' && !walk) { toggleFly(); return; } if (e.code === 'KeyG') { toggleWalk(); return; } if (walk && e.code === 'KeyE') { e.preventDefault(); if (!e.repeat) interact(); return; } if (e.code === 'Escape' && walk && document.pointerLockElement !== cv) { toggleWalk(false); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if ((fly || walk) && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
+      const kd = (e) => { if (e.code === 'Escape' && destruction && destruction.active && tab === '3d') { endDestruction(); return; } if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.code === 'KeyF' && !walk) { toggleFly(); return; } if (e.code === 'KeyG') { toggleWalk(); return; } if (walk && e.code === 'KeyE') { e.preventDefault(); if (!e.repeat) interact(); return; } if (e.code === 'Escape' && walk && document.pointerLockElement !== cv) { toggleWalk(false); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if ((fly || walk) && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
       const ku = (e) => { keys[e.code] = false; };
       addEventListener('keydown', kd); addEventListener('keyup', ku); addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
       let jid = null;
@@ -1489,6 +1495,7 @@
       }
       if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
       function toggleWalk(on) {
+        if (destruction && destruction.active && on !== false) return;
         if (on === undefined) on = !walk; if (on === walk) return;
         if (!on && carry) { throwIt(carry, 0, 0, 0); carry = null; }
         if (on && !reg) return;
@@ -1614,7 +1621,8 @@
       function frame() {
         if (!running || destroyed) return;
         const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
-        doorTick();
+        if (!(destruction && destruction.active)) doorTick();
+        if (destruction) destruction.tick(dt);
         if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit();
         mpTick(dt); opTick(dt);
         if (bigArea) { scene.fog.far = Math.max(14000 * ({ near: 0.5, mid: 1, far: 2 }[Q.range] || 1), (fly ? 0 : dist) * 2.2); scene.fog.near = scene.fog.far * 0.2; }
@@ -1774,6 +1782,30 @@
         };
         return { init, onLoad: () => { if (ready && cur !== entries.length - 1) apply(); } };
       })();
+      let destructionWeapon = 'rocket';
+      const sbPanel = $('.sbPanel');
+      function destructionReport(s) { $('.sbStatus').textContent = s.destroyed + ' Objekte zerlegt · ' + s.debris + ' Trümmer sichtbar' + (s.projectiles ? ' · ' + s.projectiles + ' Geschosse unterwegs' : '') + (s.queued ? ' · Abriss läuft …' : '') + (s.paused ? ' · PAUSE' : ''); $('.sbPause').textContent = s.paused ? '▶ Physik fortsetzen' : '⏸ Physik anhalten'; }
+      if (g.VWDestruction && g.CANNON) destruction = g.VWDestruction.create({THREE, CANNON:g.CANNON, scene,
+        targets: () => pickList.concat(natG ? natG.children.filter(o => o.isInstancedMesh) : []), ground: terrainY, invalidate, status: destructionReport});
+      function endDestruction() {
+        if (destruction) destruction.setEnabled(false); sbPanel.hidden = true; pane.classList.remove('sb-active'); cv.style.cursor = ''; $('.walkBtn').disabled = $('.flyBtn').disabled = false; setShadows(Q.shadows === '1');
+      }
+      function openDestruction() {
+        if (destruction && destruction.active) { sbPanel.hidden = false; return; }
+        if (!destruction) { sbPanel.hidden = false; $('.sbStatus').textContent = 'Physik konnte nicht geladen werden. Bitte die Karte neu laden.'; return; }
+        if (walk) toggleWalk(false); if (fly) toggleFly(false); beginArea(null); if (SEL.active) $('.selMode').click();
+        destruction.setEnabled(true); sbPanel.hidden = false; pane.classList.add('sb-active'); cv.style.cursor = 'crosshair'; $('.walkBtn').disabled = $('.flyBtn').disabled = true; setShadows(false); invalidate();
+      }
+      function shootDestruction(e) {
+        const hit = rayHit(e, true); const origin = cam.position.clone(), target = hit ? hit.point.clone() : origin.clone().addScaledVector(ray.ray.direction,160);
+        const spawn = origin.clone().addScaledVector(ray.ray.direction,1); destruction.fire(spawn,target,destructionWeapon,+$('.sbPower').value);
+      }
+      $$('[data-weapon]').forEach(b => b.onclick = () => { destructionWeapon = b.dataset.weapon; $$('[data-weapon]').forEach(v=>v.classList.toggle('on',v===b)); });
+      $('.sbHide').onclick = () => { sbPanel.hidden = true; };
+      $('.sbEnd').onclick = endDestruction;
+      $('.sbReset').onclick = () => { if (destruction) destruction.reset(); shadowFresh=false;invalidate(); };
+      $('.sbPause').onclick = () => { if (destruction) destruction.setPaused(!destruction.paused); };
+      $('.sbChaos').onclick = () => { if (destruction) destruction.armageddon(); };
       if (opts.history) TL.init(opts.history);
 
       function start() { if (destroyed) return; mpStart(); if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); animationId = requestAnimationFrame(frame); } }
@@ -1801,12 +1833,13 @@
       }
       function capture() { if (!reg) return null; return { region: reg.id, camera: { x: tgt.x + CX, y: tgt.y + WL, z: CZ - tgt.z, dist, yaw, pit } }; }
       function dispose() {
-        running = false; originalRevision++; if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
+        running = false; originalRevision++; if (destruction) destruction.dispose(); if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
         const resources = new Set(); scene.traverse((o) => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) { resources.add(m); for (const v of Object.values(m)) if (v && v.isTexture) resources.add(v); } }); resources.forEach((r) => r.dispose()); ren.dispose(); ren.forceContextLoss();
       }
-      return { focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, setCreatures, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
+      return { openDestruction, focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, setCreatures, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
     })();
 
+    $$('.sbLaunch').forEach(b => b.onclick = () => { if (tab !== '3d') open3d(0); else setTab('3d'); three.openDestruction(); });
     $('.w3d').onclick = () => { setTab('3d'); three.selectRegion(0); };
     function open3d(i) { setTab('3d'); three.selectRegion(i + (S.world3d ? 1 : 0)); }
 

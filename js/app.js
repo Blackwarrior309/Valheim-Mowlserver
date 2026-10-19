@@ -115,7 +115,7 @@
     try {
       viewer && viewer.setStatus('Erzeuge Teilen-Datei …');
       const get = (p) => fetch(p).then((r) => { if (!r.ok) throw new Error(p + ' nicht ladbar'); return r.text(); });
-      const [three, ff, data, view, i18n, rec, wgen, tools, ws, peers, cards, doors] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => ''), get('js/worldgen.js').catch(() => ''), get('js/map-tools.js'), get('js/viewer-workspace.js'), get('js/peer-protocol.js'), get('js/player-card.js'), get('js/doors.js')]);
+      const [three, ff, data, view, i18n, rec, wgen, tools, ws, peers, cards, doors, physics, destruction] = await Promise.all([get('lib/three.min.js'), get('lib/fflate.min.js'), get('js/data.js'), get('js/viewer.js'), get('js/i18n.js'), get('js/recipes.js').catch(() => ''), get('js/worldgen.js').catch(() => ''), get('js/map-tools.js'), get('js/viewer-workspace.js'), get('js/peer-protocol.js'), get('js/player-card.js'), get('js/doors.js'), get('lib/cannon.min.js'), get('js/destruction.js')]);
       const js = (s) => s.replace(/<\/script/gi, '<\\/script');
       const title = (current.world.name || 'Valheim-Welt') + ' – Valheim-Welt';
       const html = `<!doctype html>
@@ -127,6 +127,8 @@
 <script>window.onerror=function(m,s,l){var e=document.getElementById('booterr');if(e)e.textContent='Fehler: '+m+' (Zeile '+l+')';};</script>
 <script>${js(i18n)}</script>
 <script>${js(three)}</script>
+<script>${js(physics)}</script>
+<script>${js(destruction)}</script>
 <script>${js(ff)}</script>
 <script>${js(data)}</script>
 <script>${js(rec)}</script>
