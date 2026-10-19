@@ -1,6 +1,6 @@
 # Waffen und Fahrzeuge im Browser
 
-In der 3D-Ansicht öffnet **Waffen / Fahrzeuge (B)** das Menü und startet bei Bedarf den Laufmodus. Es gibt AK (Dauerfeuer), Sniper (rechte Maustaste zum Zielen), Raketenwerfer sowie einen Panzer mit Kanone und einen Jet. Mausrad wechselt zwischen erster und dritter Person. Linke Maustaste halten feuert; B gibt die Maus für das Menü frei.
+In der 3D-Ansicht öffnet **Waffen / Fahrzeuge (B)** das Menü und startet bei Bedarf den Laufmodus. Es gibt AK (Dauerfeuer), Sniper (rechte Maustaste zum Zielen), Raketenwerfer sowie einen Panzer mit Kanone und einen Jet. Mausrad wechselt zwischen erster und dritter Person. Die Waffenwahl schließt das Menü. Linke Maustaste halten, X halten oder den sichtbaren Feuerknopf halten feuert; B gibt die Maus für das Menü frei. Mündungsblitz, Einschlag und Schusszähler zeigen die ausgelösten Schüsse. Maus-Eingaben werden auch bei Pointer Lock als Mausereignisse verarbeitet; Touch/Stift nutzen Pointer-Ereignisse. Loslassen, Fokusverlust, verborgener Tab und verlorene Mausbindung beenden Dauerfeuer.
 
 - Panzer: W/S vorwärts/rückwärts, A/D lenken, Maus zielen, E aussteigen.
 - Jet: W/S Schub, A/D Kurve, Pfeil hoch/runter Höhenruder, Q/R rollen, E aussteigen. Der Jet wird auf freier Fläche in der Luft gestartet; bei geringer Geschwindigkeit sinkt er.
