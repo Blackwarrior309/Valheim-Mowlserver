@@ -65,6 +65,11 @@
 .vw-card .lab{font-weight:600;overflow-wrap:anywhere}.vw-card .lab.none{color:var(--mut);font-style:italic;font-weight:500}.vw-card .meta{color:var(--mut);font-size:11.5px;margin:2px 0 6px}
 .vw-card .more{background:none;border:0;padding:0;color:var(--acc);font-size:12px;margin-top:4px}
 .vw-player-card{position:absolute;right:16px;top:110px;z-index:30;width:min(320px,calc(100% - 32px));max-height:calc(100% - 140px);overflow:auto;padding:16px;box-sizing:border-box;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 8px 30px #0005}.vw-player-card>button{float:right}.vw-player-card h2{margin-top:0}.vw-player-card h3{margin:12px 0 5px}.vw-player-card .row{margin-top:12px;flex-wrap:wrap}
+
+.vw-party{--bg:#101720;--card:#192634;--fg:#f3f7fc;--mut:#b4c2d1;--line:#3b4b5d;--chip:#243446;height:100%;overflow:auto;padding:20px;background:var(--bg);color:var(--fg);color-scheme:dark}
+.vw-party h1{font-size:26px;margin:0 0 5px}.vw-party p{margin:0}.party-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.party-top .row{flex-wrap:wrap}.party-summary{font-size:16px;color:#c7d6e6;font-variant-numeric:tabular-nums}.party-controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:18px 0 10px}.party-connection,.party-help{color:var(--mut);font-size:13px}.vw-party .party-help{margin-bottom:18px;max-width:1000px}.party-window{padding:6px 10px;border:1px solid var(--line);border-radius:8px;color:var(--fg);text-decoration:none;font-size:13px;background:var(--chip)}
+.party-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}.party-member{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:16px;min-width:0}.party-heading{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:14px}.party-heading h2{color:var(--fg);font-size:21px;line-height:1.25;margin:0;text-transform:none;overflow-wrap:anywhere;letter-spacing:normal}.party-badge{font-size:12px;white-space:nowrap;color:#c1e9d3}.party-vital{margin-bottom:12px}.party-vital-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px}.party-vital-label b{font-size:20px;font-variant-numeric:tabular-nums}.party-meter{height:15px;border-radius:5px;overflow:hidden;background:#070c12;border:1px solid #4a5c70}.party-fill{height:100%;background:#e76876;transition:width .18s linear}.vital-1 .party-fill{background:#efc957}.vital-2 .party-fill{background:#b398fa}.party-meter.unknown{background:repeating-linear-gradient(135deg,#17212d 0 5px,#253344 5px 10px)}.party-hands{font-size:12px;color:var(--mut);margin:8px 0;min-height:32px;overflow-wrap:anywhere}.party-member.critical{border-color:#ff8b99;background:#361e2b}.party-member.critical .party-badge{color:#ffb9c1;font-weight:700}.party-member[data-state=stale]{border-style:dashed}.party-member[data-state=stale] .party-badge{color:#ffdd86}.party-member[data-state=stale] .party-vitals{opacity:.55}.party-member[data-state=offline]{opacity:.65}.party-member[data-state=offline] .party-badge{color:#c1cbd5}.party-empty{padding:24px;border:1px dashed var(--line);border-radius:12px}.vw-party.compact .party-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:10px}.compact .party-member{padding:12px}.compact .party-heading{margin-bottom:8px}.compact .party-heading h2{font-size:17px}.compact .party-vital{margin-bottom:7px}.compact .party-vital-label b{font-size:16px}.compact .party-meter{height:10px}.compact .party-hands{display:none}.vw-party:fullscreen{width:100vw;height:100vh}.vw-party button:focus-visible,.vw-party a:focus-visible{outline:3px solid #f2d486;outline-offset:3px}@media(max-width:600px){.vw-party{padding:12px}.party-controls{gap:10px}.party-badge{white-space:normal}.party-top .row{gap:6px}.party-top button,.party-window{padding:8px!important}}@media(prefers-reduced-motion:reduce){.party-fill{transition:none}}
+
 .vw-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .vw-maplist .b{display:flex;justify-content:space-between;gap:8px;padding:6px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:6px}.vw-maplist .b:hover{background:var(--chip)}
 .vw-legend{position:absolute;right:12px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;z-index:3}
@@ -101,7 +106,7 @@
     const R = document.createElement('div'); R.className = 'vw'; root.appendChild(R);
     R.innerHTML = `
 <div class="vw-top"><span class="vw-title"></span>
-  <div class="vw-tabs"><button data-t="map" class="on">Karte</button><button data-t="3d">3D</button><button data-t="chests">Kisten</button><button data-t="info">Welt & Spieler</button><button data-t="dungeon" hidden title="Nur mit dem Mod auf diesem PC: Grundriss des Dungeons, in dem du gerade bist">⤓ Dungeon</button></div>
+  <div class="vw-tabs"><button data-t="map" class="on">Karte</button><button data-t="3d">3D</button><button data-t="chests">Kisten</button><button data-t="players">Live-Spieler</button><button data-t="info">Welt & Spieler</button><button data-t="dungeon" hidden title="Nur mit dem Mod auf diesem PC: Grundriss des Dungeons, in dem du gerade bist">⤓ Dungeon</button></div>
   <div class="vw-act"><span class="vw-status"></span></div></div>
 <div class="vw-main">
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
@@ -158,6 +163,7 @@
     <details class="vw-panel"><summary>Routen-Einstellungen</summary><div class="row"><select class="rtPlayer" aria-label="Routenstart"><option value="view">Aktuelle 3D-Position</option><option value="station">Werkstation</option></select><label><input class="rtBoat" type="checkbox"> Bootswege erlauben</label><label><input class="rtMetal" type="checkbox"> Welt erlaubt Metall durch Portale</label></div><div class="sub">Wege berücksichtigen das verfügbare Höhenraster; unbekannte Gebiete können nicht zuverlässig bewertet werden.</div></details><div class="vw-stats kstats"></div><div class="kcraft"></div><div class="kroute"></div>
     <div class="vw-grid"><div class="vw-panel"><h2 style="margin-top:0">Summe</h2><table class="ktot"></table><div class="sub" style="margin-top:8px">Klick auf ein Item filtert die Kisten. „★2“ = Ausrüstungsstufe.</div></div><div class="klist"></div></div>
   </div></div></div>
+  <div class="vw-pane" data-p="players" hidden><div class="vw-party"></div></div>
   <div class="vw-pane" data-p="dungeon" hidden></div>
   <div class="vw-pane" data-p="info" hidden><div class="vw-scroll"><div class="vw-wrap info"></div></div></div>
 </div>`;
@@ -166,7 +172,7 @@
     (opts.actions || []).forEach((a) => { const b = document.createElement('button'); b.textContent = a.label; if (a.primary) b.className = 'pri'; if (a.title) b.title = a.title; b.onclick = a.onClick; act.appendChild(b); });
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
-    let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
+    let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null, liveReceivedAt = -Infinity, party = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
     const bedList = () => { const seen = new Set(), out = []; [S.world3d].concat(S.regions || []).forEach((r) => ((r && r.labels) || []).forEach((l) => { const k = l[0] === 'bed' && l[1] + '|' + Math.round(l[2]) + '|' + Math.round(l[4]); if (k && !seen.has(k)) { seen.add(k); out.push(l); } })); return out; };
     const SEEDW = { seed: '', meta: null, data: null, reg: null, regS: null };
@@ -249,6 +255,7 @@
       $$('.vw-pane').forEach((p) => (p.hidden = p.dataset.p !== t));
       if (t === 'map') map.draw(); if (t === '3d') three.start(); else three.stop();
       if (t === 'chests') kisten.render(); if (t === 'info') info(); if (t === 'dungeon' && DG) setTimeout(() => DG.draw(), 0);
+      if (t === 'players') three.mpStart(); if (party) party.setActive(t === 'players');
     }
     $$('.vw-tabs button').forEach((b) => (b.onclick = () => setTab(b.dataset.t)));
 
@@ -1430,7 +1437,7 @@
           MP.mine.set(id, Object.assign({}, d, { t: now })); MP.cli.publish(mpRoom() + '/p/' + id, JSON.stringify(d), { qos: 0 });
         });
       }
-      const peerList = () => [...MP.peers.entries()].map(([id, P]) => ({ id, details: P.details, name: P.n, x: P.tx, y: P.ty, z: P.tz, web: !P.g }));
+      const peerList = () => [...MP.peers.entries()].map(([id, P]) => ({ id, receivedAt: P.seen, details: P.details, name: P.n, x: P.tx, y: P.ty, z: P.tz, web: !P.g }));
       function disposeHero(h) {
         const resources = new Set(); h.g.traverse(o => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) resources.add(m); });
         resources.forEach(r => { const i = HERO_MATS.indexOf(r); if (i >= 0) HERO_MATS.splice(i, 1); r.dispose(); });
@@ -1462,7 +1469,7 @@
           const inside = reg && P.x >= reg.bounds[0] - 50 && P.x <= reg.bounds[1] + 50 && P.z >= reg.bounds[2] - 50 && P.z <= reg.bounds[3] + 50;
           P.h.g.visible = !!inside; P.h.g.position.set(P.x - CX, P.y - WL, CZ - P.z);
           if (P.run) { P.anim += dt * 9; moved = true; } else P.anim *= 0.85;
-          const sw = Math.sin(P.anim) * (P.run ? 0.7 : 0); if (!thrown) P.h.legL.rotation.x = sw, P.h.legR.rotation.x = -sw, P.h.armL.rotation.x = -sw * 0.8, P.h.armR.rotation.x = sw * 0.8; 
+          const sw = Math.sin(P.anim) * (P.run ? 0.7 : 0); if (!thrown) P.h.legL.rotation.x = sw, P.h.legR.rotation.x = -sw, P.h.armL.rotation.x = -sw * 0.8, P.h.armR.rotation.x = sw * 0.8;
           if (Math.abs(P.tx - P.x) + Math.abs(P.tz - P.z) > 0.01) moved = true;
           pv2.set(P.x - CX, P.y - WL + 2.2, CZ - P.z).project(cam); const vis = inside && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05;
           P.lab.style.display = vis ? 'block' : 'none'; if (vis) { P.lab.style.left = ((pv2.x + 1) / 2 * pr.width) + 'px'; P.lab.style.top = ((1 - pv2.y) / 2 * pr.height) + 'px'; }
@@ -1804,7 +1811,7 @@
         running = false; originalRevision++; if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
         const resources = new Set(); scene.traverse((o) => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) { resources.add(m); for (const v of Object.values(m)) if (v && v.isTexture) resources.add(v); } }); resources.forEach((r) => r.dispose()); ren.dispose(); ren.forceContextLoss();
       }
-      return { focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, setCreatures, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
+      return { connectionText: () => MP_STATUS.textContent, reconnect: () => MP_RETRY.onclick(), focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, setCreatures, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
     })();
 
     $('.w3d').onclick = () => { setTab('3d'); three.selectRegion(0); };
@@ -2087,7 +2094,7 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     if (snap.plans && snap.plans.length) three.setPlans(snap.plans);
     requestAnimationFrame(() => { map.build(); map.draw(); });
     function playerRoster() {
-      const live = livePlayers().map(p => ({ ...p, online: LIVE !== null || !!p.peer }));
+      const live = livePlayers().map(p => ({ ...p, online: LIVE !== null || !!p.peer, receivedAt: p.peer ? p.receivedAt : liveReceivedAt }));
       const names = new Set(live.filter(p => !p.web).map(p => p.name));
       for (const p of S.players || []) if (!names.has(p.name)) live.push({ ...p, online: false });
       return live;
@@ -2101,27 +2108,46 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     function openPlayer(p) { if (p) playerCard.open(p); }
     function stopFollowing() { playerCard.stop(); }
     let playerPeerSignature = '';
-    setInterval(() => { playerCard.tick(); const signature = JSON.stringify(three.peerList()); if (signature !== playerPeerSignature) { playerPeerSignature = signature; three.drawPlayers(); if (tab === 'map') map.draw(); } }, 1000);
-    function updateLive(players) { LIVE = players; playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }
+    setInterval(() => { playerCard.tick(); if (party) party.render(); const signature = JSON.stringify(three.peerList()); if (signature !== playerPeerSignature) { playerPeerSignature = signature; three.drawPlayers(); if (tab === 'map') map.draw(); } }, 1000);
+    function updateLive(players) { if (destroyed) return; LIVE = players; liveReceivedAt = performance.now(); if (party) party.render(); playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }
     // ---- Eigenes Spiel live (Mod „Valheim Welt Live“ auf diesem PC): Position auf der Online-Karte zeigen und an andere Besucher schicken
-    let GL = { on: false, timer: 0, fails: 0, url: 'http://localhost:8686' };
+    let GL = { on: false, timer: 0, fails: 0, url: 'http://localhost:8686', generation: 0, controller: null, status: 'getrennt' };
     async function gamePoll() {
-      try { const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500); const l = await (await fetch(GL.url + '/api/players', { cache: 'no-store', signal: ctl.signal })).json(); clearTimeout(to);
-        GL.fails = 0; updateLive(l); three.pubGame(l);
-        try { const cr = await (await fetch(GL.url + '/api/creatures', { cache: 'no-store' })).json(); CREA = Array.isArray(cr) ? cr.slice(0, 400) : []; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); } } catch (e) { CREA = []; }
-        try { const dj = await (await fetch(GL.url + '/api/dungeon', { cache: 'no-store' })).json(); if (dj && typeof dj.inside === "boolean" && g.VWDungeon) { const tb = $('.vw-tabs [data-t="dungeon"]'); { tb.hidden = false; /* sichtbar, sobald der Mod verbunden ist (ab 0.6.1); ● = gerade im Dungeon */ if (!DG && g.VWDungeon) DG = g.VWDungeon.mount($('.vw-pane[data-p="dungeon"]'), { T }); if (DG) DG.update(dj, CREA, l); tb.textContent = dj.inside ? '⤓ Dungeon ●' : '⤓ Dungeon'; } } } catch (e) { } $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
-      } catch (e) { GL.fails++; $('.gameLink').textContent = '🎮 ' + T('Spiel nicht erreichbar – läuft Valheim mit dem Mod?'); if (GL.fails > 3) LIVE = null; }
+      if (GL.controller || !GL.on || destroyed) return;
+      const generation = GL.generation, ctl = new AbortController(); GL.controller = ctl;
+      const to = setTimeout(() => ctl.abort(), 2500);
+      try {
+        const response = await fetch(GL.url + '/api/players', { cache: 'no-store', signal: ctl.signal });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const l = await response.json(); if (!Array.isArray(l)) throw new Error('Ungültige Spielerliste');
+        if (destroyed || !GL.on || generation !== GL.generation) return;
+        GL.fails = 0; GL.status = 'verbunden'; updateLive(l); three.pubGame(l);
+        try { const cr = await (await fetch(GL.url + '/api/creatures', { cache: 'no-store', signal: ctl.signal })).json(); if (destroyed || !GL.on || generation !== GL.generation) return; CREA = Array.isArray(cr) ? cr.slice(0, 400) : []; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); } } catch (e) { CREA = []; }
+        try { const dj = await (await fetch(GL.url + '/api/dungeon', { cache: 'no-store', signal: ctl.signal })).json(); if (destroyed || !GL.on || generation !== GL.generation) return; if (dj && typeof dj.inside === "boolean" && g.VWDungeon) { const tb = $('.vw-tabs [data-t="dungeon"]'); { tb.hidden = false; /* sichtbar, sobald der Mod verbunden ist (ab 0.6.1); ● = gerade im Dungeon */ if (!DG && g.VWDungeon) DG = g.VWDungeon.mount($('.vw-pane[data-p="dungeon"]'), { T }); if (DG) DG.update(dj, CREA, l); tb.textContent = dj.inside ? '⤓ Dungeon ●' : '⤓ Dungeon'; } } } catch (e) { }
+        $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
+      } catch (e) {
+        if (destroyed || !GL.on || generation !== GL.generation) return;
+        GL.fails++; GL.status = 'nicht erreichbar'; $('.gameLink').textContent = '🎮 ' + T('Spiel nicht erreichbar – läuft Valheim mit dem Mod?'); if (GL.fails > 3) LIVE = null;
+      } finally { clearTimeout(to); if (GL.controller === ctl) GL.controller = null; if (!destroyed && party) party.render(); }
     }
     function gameLink(on) {
-      GL.on = on; clearInterval(GL.timer); try { localStorage.setItem('vw-gamelink', on ? '1' : ''); } catch (e) { }
+      GL.generation++; if (GL.controller) GL.controller.abort(); GL.controller = null; GL.on = on; GL.status = on ? 'verbinde …' : 'getrennt'; clearInterval(GL.timer); try { localStorage.setItem('vw-gamelink', on ? '1' : ''); } catch (e) { }
       $('.gameLink').classList.toggle('on', on);
       if (on) { const u = new URLSearchParams(location.search).get('mod'); if (u) GL.url = u.replace(/\/+$/, ''); three.mpStart(); gamePoll(); GL.timer = setInterval(gamePoll, 1500); }
       else { $('.gameLink').textContent = '🎮 ' + T('Mein Spiel live zeigen (Mod)'); LIVE = null; map.draw(); }
     }
+    const partyRoot = $('.vw-party'), partyUrl = new URL(location.href); partyUrl.searchParams.set('view', 'players');
+    party = g.VWLiveParty.create(partyRoot, { players: playerRoster, open: openPlayer,
+      connect: () => gameLink(!GL.on), reconnect: () => three.reconnect(),
+      connection: () => ({text: three.connectionText() + ' · Eigenes Spiel: ' + GL.status, local: GL.on}), newTab: partyUrl.href,
+      fullscreen: async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await R.requestFullscreen(); } catch (e) { party.message('Vollbild ist hier nicht verfügbar.'); } }
+    });
+    listen(document, 'fullscreenchange', () => party.setFullscreen(document.fullscreenElement === R));
     $('.gameLink').onclick = () => gameLink(!GL.on);
     if (location.protocol === 'file:') $('.gameLink').hidden = true; else { let a = ''; try { a = localStorage.getItem('vw-gamelink'); } catch (e) { } if (a) gameLink(true); }
     setInterval(() => { try { if (tab === 'map' && three.peerList().some((p) => !p.web)) map.draw(); } catch (e) { } }, 2000); // Mitspieler aus dem Spiel bewegen sich
-    function destroy() { if (destroyed) return; destroyed = true; if (workspace) workspace.destroy(); playerCard.destroy(); timers.forEach((id) => g.clearInterval(id)); timeouts.forEach((id) => g.clearTimeout(id)); frames.forEach((id) => g.cancelAnimationFrame(id)); cleanup.forEach((f) => f()); three.dispose(); R.remove(); }
+    function destroy() { if (destroyed) return; destroyed = true; if (workspace) workspace.destroy(); if (GL.controller) GL.controller.abort(); party.destroy(); playerCard.destroy(); timers.forEach((id) => g.clearInterval(id)); timeouts.forEach((id) => g.clearTimeout(id)); frames.forEach((id) => g.cancelAnimationFrame(id)); cleanup.forEach((f) => f()); three.dispose(); R.remove(); }
+    if (new URLSearchParams(location.search).get('view') === 'players') setTab('players');
     return { update: (s) => { if (!destroyed) { LIVE = null; apply(s, true); } }, destroy, setStatus, setTab, open3d, getPlans: () => three.getPlans(), getWorkspace: () => workspace && workspace.exportData(), updateLive };
   }
   g.VWViewer = { mount };
