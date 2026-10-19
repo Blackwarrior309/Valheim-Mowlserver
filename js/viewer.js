@@ -1821,11 +1821,7 @@
         send:d=>{if(!MP.cli || !MP.cli.connected)return;const bytes=JSON.stringify({...d,from:MP.me});for(const [id,P] of MP.peers)if(!P.g)MP.cli.publish(mpRoom()+'/t/'+id,bytes,{qos:0});},
         blast:(a,b,w)=>{if(destruction){if(!destruction.active)destruction.setEnabled(true);destruction.fire(a,b,w,1);}}
       });
-      listen(cv,'pointerdown',e=>{if(playground && playground.pointer(e,true)){e.preventDefault();}});
-      listen(g,'pointerup',e=>{if(playground)playground.pointer(e,false);});
-      listen(g,'blur',()=>{if(playground)playground.pointer({button:0},false);});
-      listen(document,'pointerlockchange',()=>{if(playground && document.pointerLockElement!==cv)playground.pointer({button:0},false);});
-      listen(cv,'contextmenu',e=>{if(playground && playground.active)e.preventDefault();});
+      if (playground) g.VWPlayground.bindInput({listen,canvas:cv,target:g,document,playground});
       if (opts.history) TL.init(opts.history);
 
       function start() { if (destroyed) return; mpStart(); if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); animationId = requestAnimationFrame(frame); } }

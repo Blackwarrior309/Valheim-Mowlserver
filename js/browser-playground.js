@@ -14,21 +14,37 @@ function shot(d){
  if(distance<.01||distance>weapons[d.weapon].range+1)return null;
  return d;
 }
+// Pointer lock delivers mouse events reliably; touch/pen retain pointer events.
+function bindInput({listen,canvas,target,document,playground}){
+ listen(document,'mousedown',e=>{if(e.target===canvas||document.pointerLockElement===canvas){if(playground.pointer(e,true))e.preventDefault();}});
+ listen(target,'mouseup',e=>playground.pointer(e,false));
+ listen(canvas,'pointerdown',e=>{if(e.pointerType!=='mouse'&&playground.pointer(e,true))e.preventDefault();});
+ listen(target,'pointerup',e=>{if(e.pointerType!=='mouse')playground.pointer(e,false);});
+ listen(target,'pointercancel',()=>playground.release());
+ listen(target,'blur',()=>playground.release());
+ listen(document,'pointerlockchange',()=>{if(document.pointerLockElement!==canvas)playground.release();});
+ listen(document,'visibilitychange',()=>{if(document.hidden)playground.release();});
+ listen(target,'keyup',e=>{if(e.code==='KeyX')playground.release();});
+ listen(canvas,'contextmenu',e=>{if(playground.active)e.preventDefault();});
+}
 function create(o){
  const {THREE:T,scene,pane,canvas}=o; let enabled=false,pvp=true,hp=100,weapon='ak',last=-Infinity,seq=0,dead=0,held=false,vehicle=null,speed=0,disposed=false;
  const baseFov=o.camera.fov;const effects=[],pending=[],remote=new Map(),seen=new Map(); const aim=new T.Raycaster();
  const gun=new T.Group(),gunMaterial=new T.MeshStandardMaterial({color:0x303239,roughness:.65});
  for(const [x,y,z,w,h,d]of [[0,0,0,.14,.18,.55],[0,0,.5,.06,.06,.6],[0,-.16,-.04,.09,.25,.12],[0,-.15,.12,.08,.28,.15]]){const m=new T.Mesh(new T.BoxGeometry(w,h,d),gunMaterial);m.position.set(x,y,z);gun.add(m);}gun.visible=false;scene.add(gun);
  const menu=document.createElement('section');menu.className='sbPanel';menu.hidden=true;menu.setAttribute('aria-label','Waffen und Fahrzeuge');
- menu.innerHTML='<b>⚔ Waffen & Fahrzeuge</b><button data-close style="float:right">✕</button><p>Browser-Spielplatz · B öffnet dieses Menü</p><div class="row"><button data-gun="ak">AK</button><button data-gun="sniper">Sniper</button><button data-gun="rocket">Raketenwerfer</button></div><p><label><input data-pvp type="checkbox" style="width:auto" checked> Bei Browser-Gefechten mitmachen</label></p><div class="row"><button data-spawn="tank">Panzer fahren</button><button data-spawn="jet">Jet fliegen</button><button data-exit>Aussteigen (E)</button></div><p>WASD: steuern · Jet: W/S Schub, A/D Kurve, ↑/↓ steigen/sinken, Q/R rollen · Panzer: W/S vor/zurück, A/D lenken · Linksklick halten: feuern · Sniper: rechte Maustaste zielen</p><button data-off>Waffen weglegen</button>';
+ menu.innerHTML='<b>⚔ Waffen & Fahrzeuge</b><button data-close style="float:right">✕</button><p>Browser-Spielplatz · B öffnet dieses Menü</p><div class="row"><button data-gun="ak">AK</button><button data-gun="sniper">Sniper</button><button data-gun="rocket">Raketenwerfer</button></div><p><label><input data-pvp type="checkbox" style="width:auto" checked> Bei Browser-Gefechten mitmachen</label></p><div class="row"><button data-spawn="tank">Panzer fahren</button><button data-spawn="jet">Jet fliegen</button><button data-exit>Aussteigen (E)</button></div><p>WASD: steuern · Jet: W/S Schub, A/D Kurve, ↑/↓ steigen/sinken, Q/R rollen · Panzer: W/S vor/zurück, A/D lenken · Linksklick halten / X / Feuerknopf: feuern · Sniper: rechte Maustaste zielen</p><button data-off>Waffen weglegen</button>';
  pane.appendChild(menu);
  const button=document.createElement('button');button.textContent='⚔ Waffen / Fahrzeuge (B)';button.style.cssText='position:absolute;right:12px;bottom:70px;z-index:10';pane.appendChild(button);
+ const trigger=document.createElement('button');trigger.textContent='🔥 Feuern (X)';trigger.setAttribute('aria-label','Feuern');trigger.style.cssText='position:absolute;right:12px;bottom:150px;z-index:10;touch-action:none';trigger.hidden=true;pane.appendChild(trigger);
+ const stopTrigger=()=>release();
+ trigger.onpointerdown=e=>{e.preventDefault();if(trigger.setPointerCapture)trigger.setPointerCapture(e.pointerId);pointer({button:0},true);};trigger.onpointerup=stopTrigger;trigger.onpointercancel=stopTrigger;trigger.onlostpointercapture=stopTrigger;
  const health=document.createElement('div');health.style.cssText='position:absolute;right:12px;bottom:110px;z-index:10;padding:6px 10px;background:#172027dd;color:white;border-radius:8px;pointer-events:none';health.hidden=true;pane.appendChild(health);
- function report(){health.hidden=!enabled;health.textContent=hp<=0?'💀 Wieder da in '+Math.max(1,Math.ceil((dead-performance.now())/1000))+' s':'♥ '+hp+' / 100 · '+weapons[vehicle?.kind==='tank'?'cannon':weapon].label+(vehicle?' · '+(vehicle.kind==='jet'?'Jet':'Panzer')+' '+Math.round(Math.abs(speed)*3.6)+' km/h':'')+(pvp?' · PvP':' · friedlich');}
+ function report(){trigger.hidden=!enabled||!menu.hidden||!o.walking()||hp<=0;health.hidden=!enabled;health.textContent=hp<=0?'💀 Wieder da in '+Math.max(1,Math.ceil((dead-performance.now())/1000))+' s':'♥ '+hp+' / 100 · '+weapons[vehicle?.kind==='tank'?'cannon':weapon].label+(vehicle?' · '+(vehicle.kind==='jet'?'Jet':'Panzer')+' '+Math.round(Math.abs(speed)*3.6)+' km/h':'')+(pvp?' · PvP':' · friedlich')+(seq?' · Schüsse '+seq:'');}
  function open(){if(!o.walking())o.walk();enabled=true;o.camera.fov=baseFov;o.camera.updateProjectionMatrix();if(o.equip)o.equip();menu.hidden=!menu.hidden;if(document.pointerLockElement===canvas)document.exitPointerLock();held=false;report();}
- button.onclick=open;menu.querySelector('[data-close]').onclick=()=>menu.hidden=true;
+ button.onclick=open;menu.querySelector('[data-close]').onclick=()=>{menu.hidden=true;report();};
  menu.querySelector('[data-pvp]').onchange=e=>{pvp=e.target.checked;report();};
- menu.querySelectorAll('[data-gun]').forEach(b=>b.onclick=()=>{weapon=b.dataset.gun;enabled=true;menu.querySelectorAll('[data-gun]').forEach(x=>x.classList.toggle('on',x===b));report();});
+ menu.querySelectorAll('[data-gun]').forEach(b=>b.onclick=()=>{weapon=b.dataset.gun;enabled=true;menu.querySelectorAll('[data-gun]').forEach(x=>x.classList.toggle('on',x===b));menu.hidden=true;held=false;report();});
  menu.querySelectorAll('[data-spawn]').forEach(b=>b.onclick=()=>spawn(b.dataset.spawn));
  menu.querySelector('[data-exit]').onclick=exit;
  menu.querySelector('[data-off]').onclick=()=>{exit();enabled=false;held=false;menu.hidden=true;report();};
@@ -45,21 +61,27 @@ function create(o){
  vehicle.position.y+=kind==='jet'?12:0;speed=kind==='jet'?28:0;scene.add(vehicle);menu.hidden=true;o.say(kind==='jet'?'Jet: W/S Schub · ↑/↓ Höhenruder · E aussteigen':'Panzer: WASD fahren · Klick Kanone · E aussteigen');report();}
  function exit(){if(!vehicle)return;o.pos.copy(vehicle.position);o.pos.x+=3;o.pos.y=Math.max(o.ground(o.pos.x,o.pos.z),o.pos.y);free(vehicle);vehicle=null;speed=0;o.invalidate();}
  function trace(a,b,color){const line=new T.Line(new T.BufferGeometry().setFromPoints([a,b]),new T.LineBasicMaterial({color,transparent:true,opacity:.9}));scene.add(line);effects.push({mesh:line,t:.16});if(effects.length>80)free(effects.shift().mesh);}
+ function flash(point,color,size,time){const mesh=new T.Mesh(new T.SphereGeometry(size,8,6),new T.MeshBasicMaterial({color,transparent:true,opacity:.85,depthWrite:false}));mesh.position.copy(point);scene.add(mesh);effects.push({mesh,t:time});while(effects.length>80)free(effects.shift().mesh);}
  function world(v){return {x:v.x+o.cx(),y:v.y+30,z:o.cz()-v.z};}
  function local(v){return new T.Vector3(v.x-o.cx(),v.y-30,o.cz()-v.z);}
  function fire(now){
  if(!enabled||!o.walking()||hp<=0||!menu.hidden)return;
  const w=vehicle?.kind==='tank'?'cannon':weapon,W=weapons[w];if(now-last<W.delay)return;last=now;
- const a=o.pos.clone().add(new T.Vector3(0,vehicle?2:1.55,0));
+ let a=o.pos.clone().add(new T.Vector3(0,vehicle?2:1.55,0));
  let direction=new T.Vector3(Math.sin(o.heading())*Math.cos(o.pitch()),-Math.sin(o.pitch()),Math.cos(o.heading())*Math.cos(o.pitch()));
  if(vehicle?.kind==='jet')direction=new T.Vector3(0,0,1).applyQuaternion(vehicle.quaternion);
- aim.set(a,direction);aim.far=W.range;let hit=aim.intersectObjects(o.targets(),false)[0];
+ let obstruction=null;
+ if(vehicle){aim.set(a,direction);aim.far=vehicle.kind==='tank'?4.7:6.5;obstruction=aim.intersectObjects(o.targets(),false)[0];if(!obstruction)a.addScaledVector(direction,aim.far);}
+ aim.set(a,direction);aim.far=W.range;let hit=obstruction||aim.intersectObjects(o.targets(),false)[0];
  const b=hit?hit.point:a.clone().addScaledVector(direction,W.range);
  // The closest avatar stops a bullet; geometry stops it first.
  if(!W.radius){let nearest=a.distanceTo(b);for(const P of o.peers().values()){if(P.g||!P.play||!P.play.pvp||P.play.hp<=0)continue;const center=new T.Vector3(P.tx-o.cx(),P.ty-30+1,o.cz()-P.tz);const t=center.clone().sub(a).dot(direction);if(t>0&&t<nearest&&aim.ray.distanceToPoint(center)<(P.play.vehicle?2.7:.85)){nearest=t;b.copy(a).addScaledVector(direction,t);}}}
  const packet={s:'shot',seq:++seq,weapon:w,a:world(a),b:world(b)};trace(a,b,W.color);if(pvp)o.send(packet);
  if(W.radius)o.blast(a,b,w==='cannon'?'rocket':w);
- o.invalidate();
+ // Visible feedback even when firing down the view axis or without another player.
+ flash(a.clone().addScaledVector(direction,.7),W.color,.22,.09);
+ if(hit)flash(b,W.color,.3,.35);
+ report();o.invalidate();
  }
  function receive(bytes){
  if(!bytes||bytes.length>768)return false;let d;try{d=JSON.parse(new TextDecoder().decode(bytes));}catch(_){return false;}if(d?.s!=='shot')return false;
@@ -81,6 +103,7 @@ function create(o){
  }
  function tick(dt,keys,now){
  if(disposed)return false;if(effects.length)o.invalidate();
+ trigger.hidden=!enabled||!menu.hidden||!o.walking()||hp<=0;
  gun.visible=enabled&&o.walking()&&hp>0&&!vehicle;
  if(gun.visible){gun.rotation.set(o.pitch(),o.heading(),0,'YXZ');gun.position.copy(o.pos).add(new T.Vector3(-Math.cos(o.heading())*.3,1.25,Math.sin(o.heading())*.3)).add(new T.Vector3(Math.sin(o.heading())*.5,0,Math.cos(o.heading())*.5));gun.scale.set(1,1,weapon==='sniper'?1.6:weapon==='rocket'?1.3:1);o.invalidate();}
  for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.t-=dt;if(e.t<=0){free(e.mesh);effects.splice(i,1);}}
@@ -110,11 +133,12 @@ function create(o){
  o.pos.copy(vehicle.position);o.hero.visible=false;
  const back=new T.Vector3(-Math.sin(o.heading())*14,7,-Math.cos(o.heading())*14);const focus=o.pos.clone().add(new T.Vector3(0,3,0));aim.set(focus,back.clone().normalize());aim.far=back.length();const obstacle=aim.intersectObjects(o.targets(),false)[0];if(obstacle)back.setLength(Math.max(2,obstacle.distance-.4));o.camera.position.copy(focus).add(back);o.camera.position.y=Math.max(o.camera.position.y,o.ground(o.camera.position.x,o.camera.position.z)+.6);o.camera.lookAt(o.pos.clone().add(new T.Vector3(0,2,0)));o.publish(now,true);o.invalidate();report();return true;
  }
- function key(e){if(e.code==='Escape'){held=false;o.camera.fov=baseFov;o.camera.updateProjectionMatrix();}if(e.code==='KeyB'&&!e.repeat){open();return true;}if(e.code==='KeyE'&&vehicle){if(!e.repeat)exit();return true;}return false;}
+ function release(){held=false;o.camera.fov=baseFov;o.camera.updateProjectionMatrix();o.invalidate();}
+ function key(e){if(e.code==='KeyX'&&enabled&&o.walking()){if(!e.repeat)pointer({button:0},true);return true;}if(e.code==='Escape'){held=false;o.camera.fov=baseFov;o.camera.updateProjectionMatrix();}if(e.code==='KeyB'&&!e.repeat){open();return true;}if(e.code==='KeyE'&&vehicle){if(!e.repeat)exit();return true;}return false;}
  function pointer(e,down){if(!down&&e.button===2){o.camera.fov=baseFov;o.camera.updateProjectionMatrix();o.invalidate();}if(!enabled||!o.walking()||!menu.hidden){if(!down)held=false;return false;}if(e.button===2&&weapon==='sniper'){o.camera.fov=down?18:baseFov;o.camera.updateProjectionMatrix();o.invalidate();return true;}if(e.button!==0)return false;held=down;if(down)fire(performance.now());return true;}
  function reset(){held=false;exit();pending.length=0;effects.splice(0).forEach(e=>free(e.mesh));remote.forEach(free);remote.clear();o.camera.fov=baseFov;o.camera.updateProjectionMatrix();}
- function dispose(){disposed=true;exit();free(gun);effects.forEach(e=>free(e.mesh));remote.forEach(free);menu.remove();button.remove();health.remove();}
- return {open,key,pointer,receive,tick,dispose,reset,get active(){return enabled&&o.walking();},get dead(){return hp<=0;},state:()=>enabled?{hp,pvp,weapon,vehicle:vehicle?{kind:vehicle.kind,yaw:vehicle.rotation.y,pitch:vehicle.rotation.x,roll:Math.atan2(Math.sin(vehicle.rotation.z),Math.cos(vehicle.rotation.z))}:null}:null};
+ function dispose(){disposed=true;exit();free(gun);effects.forEach(e=>free(e.mesh));remote.forEach(free);menu.remove();button.remove();trigger.remove();health.remove();}
+ return {open,key,pointer,release,receive,tick,dispose,reset,get active(){return enabled&&o.walking();},get dead(){return hp<=0;},state:()=>enabled?{hp,pvp,weapon,vehicle:vehicle?{kind:vehicle.kind,yaw:vehicle.rotation.y,pitch:vehicle.rotation.x,roll:Math.atan2(Math.sin(vehicle.rotation.z),Math.cos(vehicle.rotation.z))}:null}:null};
 }
-const api={weapons,state,shot,create};if(typeof module!=='undefined'&&module.exports)module.exports=api;else g.VWPlayground=api;
+const api={weapons,state,shot,create,bindInput};if(typeof module!=='undefined'&&module.exports)module.exports=api;else g.VWPlayground=api;
 })(typeof window!=='undefined'?window:globalThis);
