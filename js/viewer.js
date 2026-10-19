@@ -707,7 +707,7 @@
         if (/roof_top/.test(name)) return 'ridge';
         return 'box';
       }
-      let destruction = null;
+      let destruction = null, playground = null;
       let curMode = 'natur', bigArea = false, reg = null, CX = 0, CZ = 0, content = null, meshes = {}, pickList = [], natG = null, terrain = null, labels = [], showLbl = true, colorMode = 'mat';
       const areaG = new THREE.Group(), changeG = new THREE.Group(); scene.add(areaG, changeG);
       let roomDefs = [], roomLab = [], changeDef = null, changeMode = 'off', areaPick = null, areaFirst = null;
@@ -766,7 +766,7 @@
         const nn = Math.min(40, Math.max(0.5, dist / 400)); if (Math.abs(cam.near - nn) > 0.05) { cam.near = nn; cam.updateProjectionMatrix(); } // Nahgrenze mit dem Zoom: genaue Tiefe, kein Flackern von Wasser/Strand
       }
       function clear() {
-        if (destruction) destruction.reset();
+        if (playground) playground.reset(); if (destruction) destruction.reset();
         if (content) { scene.remove(content); content.traverse((o) => { if (o.userData.original) return; if (o.geometry && !Object.values(geos).includes(o.geometry) && o.geometry !== box && !Object.values(SHAPES).includes(o.geometry)) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material)) o.material.dispose(); }); }
         if (typeof OBB !== 'undefined') { OBB = []; GRID = new Map(); DOORS = []; }
         labels.forEach((l) => l.d.remove()); labels = []; meshes = {}; pickList = []; clearMarkers(); $('.vw-chest').hidden = true;
@@ -1099,6 +1099,7 @@
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
         if (grab) { const G = grab; grab = null; cv.style.cursor = 'grab'; if (G.moved) { grabRelease(G); return; } }
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
+          if (playground && playground.active) return;
           if (destruction && destruction.active && e.button === 0) { shootDestruction(e); return; }
           if (areaPick) { const hit = rayHit(e, true); if (hit) { const p = { x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }; if (!areaFirst) { areaFirst = p; areaPick(p, null); } else { const fn = areaPick, first = areaFirst; areaPick = null; areaFirst = null; cv.style.cursor = ''; fn(first, p); } } return; }
           const rect = cv.getBoundingClientRect(); mv.set((e.clientX-rect.left)/rect.width*2-1, -(e.clientY-rect.top)/rect.height*2+1); ray.setFromCamera(mv,cam);
@@ -1149,7 +1150,7 @@
         else { const f = fdir(); tgt.copy(fp).addScaledVector(f, 40); dist = 40; yaw = Math.atan2(-f.x, -f.z); pit = Math.max(0.08, Math.asin(-f.y)); }
       }
       FB.onclick = () => toggleFly();
-      const kd = (e) => { if (e.code === 'Escape' && destruction && destruction.active && tab === '3d') { endDestruction(); return; } if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.code === 'KeyF' && !walk) { toggleFly(); return; } if (e.code === 'KeyG') { toggleWalk(); return; } if (walk && e.code === 'KeyE') { e.preventDefault(); if (!e.repeat) interact(); return; } if (e.code === 'Escape' && walk && document.pointerLockElement !== cv) { toggleWalk(false); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if ((fly || walk) && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
+      const kd = (e) => { if (e.code === 'Escape' && destruction && destruction.active && tab === '3d') { endDestruction(); return; } if (tab !== '3d' || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (playground && playground.key(e)) { e.preventDefault(); return; } if (e.code === 'KeyF' && !walk) { toggleFly(); return; } if (e.code === 'KeyG') { toggleWalk(); return; } if (walk && e.code === 'KeyE') { e.preventDefault(); if (!e.repeat) interact(); return; } if (e.code === 'Escape' && walk && document.pointerLockElement !== cv) { toggleWalk(false); return; } if (e.code === 'Escape' && fly) { toggleFly(false); return; } keys[e.code] = true; if ((fly || walk) && /^(Arrow|Space)/.test(e.code)) e.preventDefault(); };
       const ku = (e) => { keys[e.code] = false; };
       addEventListener('keydown', kd); addEventListener('keyup', ku); addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
       let jid = null;
@@ -1396,7 +1397,7 @@
       const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
       function onPeer(topic, msg) {
         if (destroyed) return;
-        if (topic === mpRoom() + '/t/' + MP.me) { onGrabbed(msg); return; }
+        if (topic === mpRoom() + '/t/' + MP.me) { if (playground && playground.receive(msg)) return; onGrabbed(msg); return; }
         const packet = g.VWPeerProtocol.decode(mpRoom(), topic, msg); if (!packet) return;
         const { id, data: d } = packet; if (id === MP.me || MP.mine.has(id)) return;
         let P = MP.peers.get(id);
@@ -1405,7 +1406,7 @@
         const now = performance.now(); if (P && now - P.seen < 60) return;
         if (!P) { const h = makeHero(COLS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length]); scene.add(h.g); const lab = document.createElement('div'); lab.className = 'vw-lbl pl'; LB.appendChild(lab); lab.onclick = () => openPlayer(peerList().find(p => p.id === id)); lab.setAttribute('role', 'button'); lab.tabIndex = 0; lab.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); lab.click(); } }; P = { h, lab, x: d.x, y: d.y, z: d.z, r: d.r, anim: 0 }; MP.peers.set(id, P); }
         if (Math.hypot(d.x - P.x, d.y - P.y, d.z - P.z) > 50) { P.x = d.x; P.y = d.y; P.z = d.z; }
-        Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, run: d.m, g: !!d.g, details: g.VWPlayerCard.details(d.details), seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n; invalidate();
+        Object.assign(P, { tx: d.x, ty: d.y, tz: d.z, tr: d.r, play: g.VWPlayground ? g.VWPlayground.state(d.play) : null, run: d.m, g: !!d.g, details: g.VWPlayerCard.details(d.details), seen: performance.now(), n: String(d.n || '?').slice(0, 24) }); P.lab.textContent = (P.g ? '🎮 ' : '🧍 ') + P.n + (P.play ? ' ♥ '+P.play.hp+(P.play.pvp?' ⚔':'') : ''); invalidate();
       }
       /* Ich werde von jemandem gepackt oder geworfen (nur im Laufmodus) */
       let grabbedBy = null, flingV = null;
@@ -1421,7 +1422,7 @@
       }
       function mpPublish(now, moving) {
         if (!MP.cli || !MP.cli.connected || document.hidden) return;
-        const d = { n: myName, x: +(pos.x + CX).toFixed(2), y: +(pos.y + WL).toFixed(2), z: +(CZ - pos.z).toFixed(2), r: +HERO.rotation.y.toFixed(2), m: moving ? 1 : 0 };
+        const d = { n: myName, x: +(pos.x + CX).toFixed(2), y: +(pos.y + WL).toFixed(2), z: +(CZ - pos.z).toFixed(2), r: +HERO.rotation.y.toFixed(2), m: moving ? 1 : 0, play: playground ? playground.state() : null };
         if (!g.VWPeerProtocol.decode(mpRoom(), mpRoom() + '/p/' + MP.me, new TextEncoder().encode(JSON.stringify(d)))) return;
         const j = JSON.stringify(d); if (j === MP.lastMsg && now - MP.lastPub < 3000) return; if (now - MP.lastPub < 120) return;
         MP.cli.publish(mpRoom() + '/p/' + MP.me, j, { qos: 0 }); MP.lastMsg = j; MP.lastPub = now;
@@ -1466,7 +1467,7 @@
           if (thrown) moved = true; else { P.h.g.rotation.z = P.h.g.rotation.x = 0; if (!(P.hold > now)) { P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; P.z += (P.tz - P.z) * k; } }
           let dr = P.tr - P.h.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); if (!thrown) P.h.g.rotation.y += dr * k;
           const inside = reg && P.x >= reg.bounds[0] - 50 && P.x <= reg.bounds[1] + 50 && P.z >= reg.bounds[2] - 50 && P.z <= reg.bounds[3] + 50;
-          P.h.g.visible = !!inside; P.h.g.position.set(P.x - CX, P.y - WL, CZ - P.z);
+          P.h.g.visible = !!inside && !(P.play && (P.play.hp<=0 || P.play.vehicle)); P.h.g.position.set(P.x - CX, P.y - WL, CZ - P.z);
           if (P.run) { P.anim += dt * 9; moved = true; } else P.anim *= 0.85;
           const sw = Math.sin(P.anim) * (P.run ? 0.7 : 0); if (!thrown) P.h.legL.rotation.x = sw, P.h.legR.rotation.x = -sw, P.h.armL.rotation.x = -sw * 0.8, P.h.armR.rotation.x = sw * 0.8; 
           if (Math.abs(P.tx - P.x) + Math.abs(P.tz - P.z) > 0.01) moved = true;
@@ -1495,7 +1496,6 @@
       }
       if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
       function toggleWalk(on) {
-        if (destruction && destruction.active && on !== false) return;
         if (on === undefined) on = !walk; if (on === walk) return;
         if (!on && carry) { throwIt(carry, 0, 0, 0); carry = null; }
         if (on && !reg) return;
@@ -1535,7 +1535,7 @@
         if (!best) return false; carry = Object.assign(best, { sent: 0 }); say('🤚 ' + ((best.P && best.P.n) || [...OP].find(([, O]) => O === best.O)?.[0] || 'Wikinger') + ' gepackt – E oder Klick = werfen'); return true; }
       function interact() {
         if (carry) { carryThrow(); return; }
-        if (carryStart()) return;
+        if (!(playground && playground.active) && carryStart()) return;
         const best = target();
         if (!best) { say('Hier ist keine Tür, Kiste oder Portal.'); return; }
         if (best.chest) { const a = best.im.userData.arr, o = best.k * 6, k = chestAt([a[o], a[o + 1], a[o + 2]]); if (k >= 0) { if (document.pointerLockElement === cv) document.exitPointerLock(); openChest(k, false); } else say('Kiste ist leer'); return; }
@@ -1623,7 +1623,7 @@
         const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
         if (!(destruction && destruction.active)) doorTick();
         if (destruction) destruction.tick(dt);
-        if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit();
+        if (!(playground && playground.tick(dt, keys, now))) { if (walk) walkStep(dt); else if (fly) flyStep(dt); else orbit(); }
         mpTick(dt); opTick(dt);
         if (bigArea) { scene.fog.far = Math.max(14000 * ({ near: 0.5, mid: 1, far: 2 }[Q.range] || 1), (fly ? 0 : dist) * 2.2); scene.fog.near = scene.fog.far * 0.2; }
         cam.updateMatrixWorld();
@@ -1793,8 +1793,8 @@
       function openDestruction() {
         if (destruction && destruction.active) { sbPanel.hidden = false; return; }
         if (!destruction) { sbPanel.hidden = false; $('.sbStatus').textContent = 'Physik konnte nicht geladen werden. Bitte die Karte neu laden.'; return; }
-        if (walk) toggleWalk(false); if (fly) toggleFly(false); beginArea(null); if (SEL.active) $('.selMode').click();
-        destruction.setEnabled(true); sbPanel.hidden = false; pane.classList.add('sb-active'); cv.style.cursor = 'crosshair'; $('.walkBtn').disabled = $('.flyBtn').disabled = true; setShadows(false); invalidate();
+        if (fly) toggleFly(false); beginArea(null); if (SEL.active) $('.selMode').click();
+        destruction.setEnabled(true); sbPanel.hidden = false; pane.classList.add('sb-active'); cv.style.cursor = 'crosshair'; $('.walkBtn').disabled = false; $('.flyBtn').disabled = true; setShadows(false); invalidate();
       }
       function shootDestruction(e) {
         const hit = rayHit(e, true); const origin = cam.position.clone(), target = hit ? hit.point.clone() : origin.clone().addScaledVector(ray.ray.direction,160);
@@ -1806,6 +1806,19 @@
       $('.sbReset').onclick = () => { if (destruction) destruction.reset(); shadowFresh=false;invalidate(); };
       $('.sbPause').onclick = () => { if (destruction) destruction.setPaused(!destruction.paused); };
       $('.sbChaos').onclick = () => { if (destruction) destruction.armageddon(); };
+      if (g.VWPlayground) playground = g.VWPlayground.create({THREE,scene,pane,canvas:cv,camera:cam,hero:HERO,pos,
+        walking:()=>walk,walk:()=>toggleWalk(true),equip:()=>{wdist=.35;},hud:kind=>{HUD.textContent=kind==='jet'?'Jet · W/S Schub · A/D Kurve · ↑/↓ steigen/sinken · Q/R rollen · Klick feuern · E aussteigen · B Menü':'Panzer · WASD fahren · Maus zielen · Klick Kanone · E aussteigen · B Menü';PROMPT.hidden=true;},heading:()=>wyaw,pitch:()=>wpit,cx:()=>CX,cz:()=>CZ,
+        inside:P=>!!reg && P.x>=reg.bounds[0]-50 && P.x<=reg.bounds[1]+50 && P.z>=reg.bounds[2]-50 && P.z<=reg.bounds[3]+50,
+        ground:(x,z)=>Math.max(-1.3,terrainY(x,z)),peers:()=>MP.peers,targets:()=>pickList.filter(im=>layerState[0] && (!['roof','droof'].includes(im.userData.cat)||layerState[1])).flatMap(im=>im.userData.frame?[im,im.userData.frame]:[im]).concat(terrain?[terrain]:[]),
+        publish:mpPublish,respawn:()=>{spawn();vy=0;},say,invalidate,
+        send:d=>{if(!MP.cli || !MP.cli.connected)return;const bytes=JSON.stringify({...d,from:MP.me});for(const [id,P] of MP.peers)if(!P.g)MP.cli.publish(mpRoom()+'/t/'+id,bytes,{qos:0});},
+        blast:(a,b,w)=>{if(destruction){if(!destruction.active)destruction.setEnabled(true);destruction.fire(a,b,w,1);}}
+      });
+      listen(cv,'pointerdown',e=>{if(playground && playground.pointer(e,true)){e.preventDefault();}});
+      listen(g,'pointerup',e=>{if(playground)playground.pointer(e,false);});
+      listen(g,'blur',()=>{if(playground)playground.pointer({button:0},false);});
+      listen(document,'pointerlockchange',()=>{if(playground && document.pointerLockElement!==cv)playground.pointer({button:0},false);});
+      listen(cv,'contextmenu',e=>{if(playground && playground.active)e.preventDefault();});
       if (opts.history) TL.init(opts.history);
 
       function start() { if (destroyed) return; mpStart(); if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); animationId = requestAnimationFrame(frame); } }
@@ -1833,7 +1846,7 @@
       }
       function capture() { if (!reg) return null; return { region: reg.id, camera: { x: tgt.x + CX, y: tgt.y + WL, z: CZ - tgt.z, dist, yaw, pit } }; }
       function dispose() {
-        running = false; originalRevision++; if (destruction) destruction.dispose(); if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
+        running = false; originalRevision++; if (playground) playground.dispose(); if (destruction) destruction.dispose(); if (MP.cli) { mpLeave(); for (const id of MP.mine.keys()) if (MP.cli.connected) MP.cli.publish(mpRoom() + '/p/' + id, '', { qos: 0 }); MP.cli.removeAllListeners(); MP.cli.end(true); } if (originals) originals.dispose();
         const resources = new Set(); scene.traverse((o) => { if (o.geometry) resources.add(o.geometry); for (const m of [].concat(o.material || [])) { resources.add(m); for (const v of Object.values(m)) if (v && v.isTexture) resources.add(v); } }); resources.forEach((r) => r.dispose()); ren.dispose(); ren.forceContextLoss();
       }
       return { openDestruction, focusPlayer, followPlayer, drawAreas, drawChanges, beginArea, focusAt, capture, dispose, searchRooms: chestSearch, selectedMaterials: () => SEL.selectedMaterials(), start, stop, selectRegion, fillSelect, pubGame, peerList, mpStart, setRoute: setRoute3, setCreatures, showRoute: showRoute3, walkPos: () => (walk ? { x: pos.x + CX, y: pos.y + WL, z: CZ - pos.z } : null), addPlan, getPlans, setPlans, drawPlayers, get regionId() { return reg ? reg.id : null; }, get state() { return { tgt: tgt.clone(), dist, yaw, pit }; }, set state(s) { tgt.copy(s.tgt); dist = s.dist; yaw = s.yaw; pit = s.pit; } };
