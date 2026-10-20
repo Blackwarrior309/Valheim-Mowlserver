@@ -85,6 +85,7 @@
   const T = (s) => (g.VW_I18N ? g.VW_I18N.t(s) : s);
   const LOC = () => (g.VW_I18N ? g.VW_I18N.locale() : 'de-DE');
   const fmt = (n) => Number(n).toLocaleString(LOC());
+  const fmtM = (m) => (m >= 1000 ? (m / 1000).toLocaleString(LOC(), { maximumFractionDigits: 2 }) + ' km' : m.toLocaleString(LOC(), { maximumFractionDigits: m < 20 ? 1 : 0 }) + ' m');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const hex = (c) => '#' + c.toString(16).padStart(6, '0');
   const b64u8 = (s) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
@@ -113,6 +114,7 @@
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
     <div class="vw-side"><button class="vw-mob" data-min>Menü</button><button class="pri w3d" style="width:100%;margin-top:4px">🌍 Ganze Welt in 3D ansehen</button><h2>Basen</h2><div class="vw-maplist"></div>
       <h2 data-en="Map layers">Karten-Ebenen</h2><div class="vw-filter"></div>
+      <h2>📏 Messen</h2><div class="row"><button class="ms2On">Punkte setzen</button><button class="ms2Undo" title="Letzten Punkt entfernen">↶</button><button class="ms2Clr">Löschen</button></div><div class="sub ms2Info" style="margin-top:4px">„Punkte setzen“ an, dann in die Karte klicken – Länge jeder Strecke und Summe erscheinen.</div>
       <div class="heatCtl" hidden><div class="row" style="margin-top:6px"><select class="hPl" style="flex:1;min-width:0"></select><select class="hDays"><option value="0">Alle Tage</option><option value="1">Heute</option><option value="7">7 Tage</option><option value="30">30 Tage</option></select></div></div>
       <div class="sub mlInfo" style="margin-top:6px"></div>
       <button class="gameLink" style="width:100%;margin-top:8px" title="Braucht den Mod „Valheim Welt Live“ auf diesem PC (http://localhost:8686). Deine Position wird live auf der Karte gezeigt und an andere Besucher der Karte geschickt.">🎮 Mein Spiel live zeigen (Mod)</button>
@@ -145,6 +147,13 @@
       </details>
       <h2 data-en="Layers">Ebenen</h2><div class="row layers"></div>
       <div class="plOnline" hidden><h2>Spieler online</h2><div class="vw-cres plList"></div></div>
+      <h2>📏 Messen</h2><div class="row"><button class="msOn">Punkte setzen</button><button class="msUndo" title="Letzten Punkt entfernen">↶</button><button class="msClr">Löschen</button></div><div class="sub msInfo" style="margin-top:4px">„Punkte setzen“ an, dann auf Boden oder Gebäude klicken – an jeder Strecke steht die Länge.</div>
+      <h2>🧱 Probe-Bauteil</h2><div class="row"><input class="pbQ" list="vwPbList" placeholder="Bauteil suchen, z. B. Holzwand …" autocomplete="off" style="flex:1;min-width:0"><datalist id="vwPbList"></datalist><button class="pbSet">Setzen</button></div>
+      <div class="sub pbHint" style="margin-top:4px">Bauteil wählen, „Setzen“, dann in die Welt klicken. Nur zum Ausprobieren – nur in deinem Browser, nicht im Spiel.</div>
+      <div class="pbCtl" hidden><div class="row" style="margin-top:6px"><select class="pbSel" style="flex:1;min-width:0"></select></div>
+        <div class="row" style="margin-top:6px"><button data-bm="0,0.5">N</button><button data-bm="0,-0.5">S</button><button data-bm="-0.5,0">W</button><button data-bm="0.5,0">O</button><button data-by="0.25">▲</button><button data-by="-0.25">▼</button></div>
+        <div class="row" style="margin-top:6px"><button data-br="-15">⟲ 15°</button><button data-br="15">⟳ 15°</button><button data-br="90">90°</button><button class="pbAgain">Noch eins</button><button class="pbDel">✕</button><button class="pbAll">Alle weg</button></div>
+        <div class="sub pbInfo"></div></div>
       <h2>Bauplan einblenden</h2><div class="row"><select class="plSel" style="flex:1"><option value="">Plan wählen …</option></select><label class="plFile" style="cursor:pointer"><span class="vw-btnlike">Datei …</span><input type="file" accept=".vwplan,.json" hidden></label></div>
       <div class="plCtl" hidden><div class="row" style="margin-top:6px"><button data-pm="0,4">N</button><button data-pm="0,-4">S</button><button data-pm="-4,0">W</button><button data-pm="4,0">O</button><button data-pr="90">⟲ 90°</button><button data-pr="-5">↻ 5°</button><button data-pr="5">↺ 5°</button><button data-py="0.5">Höher</button><button data-py="-0.5">Tiefer</button><button class="plGo">Hinfliegen</button><button class="plDel">Entfernen</button></div><div class="sub plPos" style="margin-top:6px"></div></div>
       <h2>Kisten durchsuchen</h2><input type="search" class="cq" placeholder="Item suchen, z. B. Eisen, Münzen …" autocomplete="off" style="width:100%">
@@ -402,18 +411,32 @@
         if (ML.portals) S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
         if (ML.players) livePlayers().forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d9ffe3'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(p.name, x, y + 18); ctx.font = '12px system-ui,sans-serif'; });
         if (ML.bases) S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const rr = Math.max(5, Math.min(14, 3 + Math.sqrt(b.pieces) / 8)); ctx.fillStyle = hover === i ? '#ffd27a' : '#e0a854'; ctx.strokeStyle = '#1b1408'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(T(b.name), x, y - rr - 4); ctx.font = '12px system-ui,sans-serif'; });
+        if (MS2.pts.length) { ctx.save(); ctx.strokeStyle = '#ffd23f'; ctx.fillStyle = '#ffd23f'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 5]); ctx.beginPath(); MS2.pts.forEach(([x, z], i) => { const [sx, sy] = toS(x, z); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.stroke(); ctx.setLineDash([]);
+          ctx.font = 'bold 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          MS2.pts.forEach(([x, z], i) => { const [sx, sy] = toS(x, z); ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, Math.PI * 2); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+            if (i) { const [px, pz] = MS2.pts[i - 1], [ax, ay] = toS(px, pz), t = fmtM(Math.hypot(x - px, z - pz)); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(t, (ax + sx) / 2, (ay + sy) / 2 - 10); ctx.fillStyle = '#ffe98a'; ctx.fillText(t, (ax + sx) / 2, (ay + sy) / 2 - 10); } });
+          ctx.restore(); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
       }
       const ptr = new Map(); let pd = 0, moved = 0;
+      /* Messen auf der 2D-Karte: Punkte in Weltkoordinaten (x, z) */
+      const MS2 = { on: false, pts: [] };
+      function ms2Info() { let t = 0; for (let i = 1; i < MS2.pts.length; i++) t += Math.hypot(MS2.pts[i][0] - MS2.pts[i - 1][0], MS2.pts[i][1] - MS2.pts[i - 1][1]);
+        const a = MS2.pts[0], b = MS2.pts[MS2.pts.length - 1];
+        $('.ms2Info').textContent = MS2.pts.length < 2 ? (MS2.on ? 'In die Karte klicken, um Punkte zu setzen.' : '„Punkte setzen“ an, dann in die Karte klicken – Länge jeder Strecke und Summe erscheinen.') : `${MS2.pts.length} Punkte · Gesamt ${fmtM(t)}` + (MS2.pts.length > 2 ? ` · Luftlinie Start–Ende ${fmtM(Math.hypot(b[0] - a[0], b[1] - a[1]))}` : '');
+        $('.ms2On').classList.toggle('on', MS2.on); $('.ms2On').textContent = MS2.on ? 'Messen beenden' : 'Punkte setzen'; }
+      $('.ms2On').onclick = () => { MS2.on = !MS2.on; cv.style.cursor = MS2.on ? 'crosshair' : ''; ms2Info(); };
+      $('.ms2Undo').onclick = () => { MS2.pts.pop(); ms2Info(); draw(); };
+      $('.ms2Clr').onclick = () => { MS2.pts = []; ms2Info(); draw(); };
       cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; });
       cv.addEventListener('pointermove', (e) => {
         const p = ptr.get(e.pointerId); const r = cv.getBoundingClientRect();
-        if (!p) { const hit = pick(e.clientX - r.left, e.clientY - r.top); if (hit !== hover) { hover = hit; cv.style.cursor = hit != null ? 'pointer' : ''; draw(); } return; }
+        if (!p) { if (MS2.on) return; const hit = pick(e.clientX - r.left, e.clientY - r.top); if (hit !== hover) { hover = hit; cv.style.cursor = hit != null ? 'pointer' : ''; draw(); } return; }
         const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
         if (ptr.size === 2) { const a = [...ptr.values()]; const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); if (pd) view.s *= d / pd; pd = d; }
         else { view.cx -= dx / view.s; view.cz += dy / view.s; }
         draw();
       });
-      const up = (e) => { ptr.delete(e.pointerId); pd = 0; if (moved < 5 && e.type === 'pointerup') { const r = cv.getBoundingClientRect(); const px = e.clientX - r.left, py = e.clientY - r.top; const player = ML.players && livePlayers().find(p => { const [x,y] = toS(p.x,p.z); return Math.hypot(x-px,y-py) < 14; }); if (player) { openPlayer(player); return; } const hit = pick(px, py); if (hit != null) open3d(hit); } };
+      const up = (e) => { ptr.delete(e.pointerId); pd = 0; if (moved < 5 && e.type === 'pointerup') { const r = cv.getBoundingClientRect(); const px = e.clientX - r.left, py = e.clientY - r.top; if (MS2.on) { MS2.pts.push(toW(px, py)); ms2Info(); draw(); return; } const player = ML.players && livePlayers().find(p => { const [x,y] = toS(p.x,p.z); return Math.hypot(x-px,y-py) < 14; }); if (player) { openPlayer(player); return; } const hit = pick(px, py); if (hit != null) open3d(hit); } };
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
@@ -1021,6 +1044,7 @@
         const i = Math.max(0, Math.min(reg.nx - 1, Math.round((x - X0) / reg.res))), j = Math.max(0, Math.min(reg.nz - 1, Math.round((z - Z0) / reg.res))); return H[j * reg.nx + i] / 10;
       }
       function placePlans() {
+        try { msRebuild(); } catch (e) { console.warn(e); }
         plans.forEach((p, i) => {
           if (p.group.userData.mode !== curMode) { planG.remove(p.group); p.group = planMesh(p.data); planG.add(p.group); }
           const inside = reg && p.region === reg.id; p.group.visible = !!inside;
@@ -1044,6 +1068,62 @@
       $$('[data-py]').forEach((b) => (b.onclick = () => { const p = plans[plActive]; if (!p) return; p.y = Math.round((p.y + Number(b.dataset.py)) * 10) / 10; placePlans(); }));
       $('.plDel').onclick = () => { const p = plans[plActive]; if (!p) return; planG.remove(p.group); plans.splice(plActive, 1); plActive = plans.length - 1; placePlans(); };
       $('.plGo').onclick = () => { const p = plans[plActive]; if (!p) return; if (fly) toggleFly(false); tgt.copy(W(p.x, p.y, p.z)); dist = Math.max(60, p.data.size[0] * 1.5); pit = 0.55; };
+      // ---- Messen & Probe-Bauteile (nur in diesem Browser)
+      const MSG = new THREE.Group(), PRG = new THREE.Group(); scene.add(MSG, PRG);
+      const msLine = new THREE.LineBasicMaterial({ color: 0xffd23f, depthTest: false, transparent: true }), msDotG = new THREE.SphereGeometry(0.3, 12, 8), msDotM = new THREE.MeshBasicMaterial({ color: 0xffd23f, depthTest: false, transparent: true });
+      const MS = { on: false, pts: [] }; let msLab = [];
+      const PRB = { list: [], act: -1, pick: null, loaded: false };
+      const PCS = () => (g.VW_DATA && g.VW_DATA.pieces) || {};
+      const pcName = (k) => PN()[k] || k;
+      function prbSave() { try { localStorage.setItem('vw-probe', JSON.stringify(PRB.list.map(({ name, x, y, z, r, region }) => ({ name, x, y, z, r, region })))); } catch (e) { } }
+      function probeMesh(name) {
+        const sp = PCS()[name], G = new THREE.Group(); G.userData.mode = curMode + Q.detail; if (!sp) return G;
+        const ty = [name, sp[1], sp[2], sp[3], sp[4] || 0, sp[5]], orig = Q.detail === 'valheim' && originals && originals.get(name); let m;
+        if (orig) { m = new THREE.Mesh(orig.door ? orig.door.leaf : orig.geometry, orig.materials); if (orig.door && orig.door.frame.index.count) G.add(new THREE.Mesh(orig.door.frame, orig.materials)); }
+        else { m = new THREE.Mesh(SHAPES[curMode !== 'simple' ? shapeOf(name) : 'box'] || SHAPES.box, pieceMat(sp[0], curMode)); m.scale.set(ty[1], ty[2], ty[3]); m.position.y = YO(ty); const tilt = ty[4] * Math.PI / 180; if (tilt) { if (ty[1] >= ty[3] * 1.5) m.rotation.z = tilt; else m.rotation.x = -tilt; } }
+        m.castShadow = m.receiveShadow = true; G.add(m); return G;
+      }
+      function msRebuild() {
+        MSG.clear(); msLab.forEach((l) => l.d.remove()); msLab = [];
+        if (!PRB.loaded) { PRB.loaded = true; try { PRB.list = (JSON.parse(localStorage.getItem('vw-probe') || '[]') || []).filter((p) => p && PCS()[p.name]).slice(0, 300); } catch (e) { } }
+        if (reg) {
+          MS.pts.forEach((p, i) => { const m = new THREE.Mesh(msDotG, msDotM); m.renderOrder = 12; m.position.copy(W(p.x, p.y, p.z)); MSG.add(m);
+            if (!i) return; const q = MS.pts[i - 1], a = W(q.x, q.y, q.z), b = W(p.x, p.y, p.z); const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), msLine); ln.renderOrder = 12; MSG.add(ln);
+            const d = Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z), dy = p.y - q.y, dv = document.createElement('div'); dv.className = 'vw-lbl'; dv.style.cssText = 'background:#ffd23f;color:#1b1b1b;font-weight:700;border-color:#000';
+            dv.textContent = fmtM(d) + (Math.abs(dy) >= 0.5 ? ` (${dy > 0 ? '↑' : '↓'} ${Math.abs(dy).toFixed(1)} m)` : ''); LB.appendChild(dv); msLab.push({ d: dv, v: a.clone().add(b).multiplyScalar(0.5) }); });
+        }
+        let t = 0, h = 0; for (let i = 1; i < MS.pts.length; i++) { const a = MS.pts[i - 1], b = MS.pts[i]; t += Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z); h += Math.hypot(b.x - a.x, b.z - a.z); }
+        $('.msInfo').textContent = MS.pts.length < 2 ? (MS.on ? 'Auf Boden oder Gebäude klicken, um Punkte zu setzen.' : '„Punkte setzen“ an, dann auf Boden oder Gebäude klicken – an jeder Strecke steht die Länge.') : `${MS.pts.length} Punkte · Gesamt ${fmtM(t)} · waagerecht ${fmtM(h)} · Höhenunterschied Start–Ende ${(MS.pts[MS.pts.length - 1].y - MS.pts[0].y).toFixed(1)} m`;
+        $('.msOn').classList.toggle('on', MS.on); $('.msOn').textContent = MS.on ? 'Messen beenden' : 'Punkte setzen';
+        // Probe-Bauteile
+        PRB.list.forEach((p) => { if (!p.g || p.g.userData.mode !== curMode + Q.detail) { if (p.g) PRG.remove(p.g); p.g = probeMesh(p.name); PRG.add(p.g); }
+          const inside = reg && p.region === reg.id; p.g.visible = !!inside; if (inside) { p.g.position.copy(W(p.x, p.y, p.z)); p.g.rotation.y = -p.r * Math.PI / 180; } });
+        const here = PRB.list.filter((p) => reg && p.region === reg.id); if (!here.includes(PRB.list[PRB.act])) PRB.act = here.length ? PRB.list.indexOf(here[here.length - 1]) : -1;
+        $('.pbCtl').hidden = !here.length; const sel = $('.pbSel'); const opts = here.map((p) => `<option value="${PRB.list.indexOf(p)}">${esc(pcName(p.name))} · x ${Math.round(p.x)} / z ${Math.round(p.z)}</option>`).join(''); if (sel.innerHTML !== opts) sel.innerHTML = opts; if (PRB.act >= 0) sel.value = PRB.act;
+        const a = PRB.list[PRB.act]; if (a) { const sp = PCS()[a.name] || []; $('.pbInfo').textContent = `${pcName(a.name)} · ${a.r}° · Höhe ${(a.y - WL).toFixed(2)} m ü. M. · ca. ${sp[1]} × ${sp[3]} m, ${sp[2]} m hoch · ${here.length} gesetzt`; }
+        $('.pbSet').classList.toggle('on', !!PRB.pick); invalidate();
+      }
+      function probeAt(hit) { const name = PRB.pick; if (!name || !reg) return; const x = Math.round((hit.point.x + CX) * 10) / 10, z = Math.round((CZ - hit.point.z) * 10) / 10, y = Math.round((hit.point.y + WL) * 100) / 100;
+        const prev = PRB.list[PRB.act]; PRB.list.push({ name, x, y, z, r: prev && prev.name === name ? prev.r : 0, region: reg.id }); PRB.act = PRB.list.length - 1; prbSave();
+        if (Q.detail === 'valheim' && originals && !originals.get(name)) originals.prepare([name]).then(() => { PRB.list.forEach((p) => { if (p.name === name && p.g) { PRG.remove(p.g); p.g = null; } }); msRebuild(); }).catch(() => { });
+        msRebuild(); }
+      function pbPickName() { const v = ($('.pbQ').value || '').trim(); if (!v) return null; const P = PCS(); if (P[v]) return v; const m = /\(([^()]+)\)$/.exec(v); if (m && P[m[1]]) return m[1];
+        const lo = v.toLowerCase(); return Object.keys(P).find((k) => pcName(k).toLowerCase() === lo) || Object.keys(P).find((k) => pcName(k).toLowerCase().includes(lo) || k.toLowerCase().includes(lo)) || null; }
+      $('#vwPbList').innerHTML = Object.keys(PCS()).map((k) => [pcName(k), k]).sort((a, b) => a[0].localeCompare(b[0])).map(([n, k]) => `<option value="${esc(n)} (${esc(k)})"></option>`).join('');
+      $('.msOn').onclick = () => { MS.on = !MS.on; if (MS.on) { PRB.pick = null; if (walk) toggleWalk(false); if (fly) toggleFly(false); } cv.style.cursor = MS.on ? 'crosshair' : ''; msRebuild(); };
+      $('.msUndo').onclick = () => { MS.pts.pop(); msRebuild(); };
+      $('.msClr').onclick = () => { MS.pts = []; msRebuild(); };
+      $('.pbSet').onclick = () => { if (PRB.pick) { PRB.pick = null; cv.style.cursor = ''; msRebuild(); return; } const n = pbPickName(); if (!n) { $('.pbHint').textContent = 'Bauteil nicht gefunden – im Suchfeld tippen und aus der Liste wählen.'; return; }
+        $('.pbQ').value = `${pcName(n)} (${n})`; PRB.pick = n; MS.on = false; if (walk) toggleWalk(false); if (fly) toggleFly(false); cv.style.cursor = 'crosshair'; $('.pbHint').textContent = `Klick in die Welt setzt „${pcName(n)}“. Nochmal „Setzen“ = aufhören.`; msRebuild(); };
+      $('.pbQ').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); PRB.pick = null; $('.pbSet').onclick(); } };
+      $('.pbSel').onchange = () => { PRB.act = +$('.pbSel').value; msRebuild(); };
+      const pbAct = (fn) => { const p = PRB.list[PRB.act]; if (!p) return; fn(p); prbSave(); msRebuild(); };
+      $$('[data-bm]').forEach((b) => (b.onclick = () => pbAct((p) => { const [dx, dz] = b.dataset.bm.split(',').map(Number); p.x = Math.round((p.x + dx) * 10) / 10; p.z = Math.round((p.z + dz) * 10) / 10; })));
+      $$('[data-by]').forEach((b) => (b.onclick = () => pbAct((p) => { p.y = Math.round((p.y + Number(b.dataset.by)) * 100) / 100; })));
+      $$('[data-br]').forEach((b) => (b.onclick = () => pbAct((p) => { p.r = ((p.r + Number(b.dataset.br)) % 360 + 360) % 360; })));
+      $('.pbAgain').onclick = () => { const p = PRB.list[PRB.act]; if (!p) return; $('.pbQ').value = `${pcName(p.name)} (${p.name})`; PRB.pick = null; $('.pbSet').onclick(); };
+      $('.pbDel').onclick = () => { const p = PRB.list[PRB.act]; if (!p) return; if (p.g) PRG.remove(p.g); PRB.list.splice(PRB.act, 1); PRB.act = -1; prbSave(); msRebuild(); };
+      $('.pbAll').onclick = () => { PRB.list.filter((p) => reg && p.region === reg.id).forEach((p) => p.g && PRG.remove(p.g)); PRB.list = PRB.list.filter((p) => !(reg && p.region === reg.id)); PRB.act = -1; prbSave(); msRebuild(); };
       async function loadPlanFromBytes(u8) { const txt = (u8[0] === 0x1f && u8[1] === 0x8b) ? fflate.strFromU8(fflate.gunzipSync(u8)) : fflate.strFromU8(u8); return addPlan(JSON.parse(txt)); }
       $('.plFile input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { await loadPlanFromBytes(new Uint8Array(await f.arrayBuffer())); } catch (er) { $('.plPos').textContent = er.message; $('.plCtl').hidden = false; } e.target.value = ''; };
       const plSel = $('.plSel');
@@ -1113,13 +1193,14 @@
         grab.hist.push([now, x, gy + 2.2, z]); while (grab.hist.length > 2 && now - grab.hist[0][0] > 150) grab.hist.shift(); holdAt(grab, x, gy + 2.2, z, gy); }
       function grabRelease(G) { const a = G.hist[0], b = G.hist[G.hist.length - 1]; if (!a) return; const t = Math.max(0.03, (b[0] - a[0]) / 1000), vx = (b[1] - a[1]) / t, vz = (b[3] - a[3]) / t; throwIt(G, vx, 3 + Math.hypot(vx, vz) * 0.35, vz); }
       cv.addEventListener('contextmenu', (e) => e.preventDefault());
-      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!(destruction && destruction.active) && !walk && !fly && !areaPick && !SEL.active && e.button === 0 && ptrs.size === 1) { const H = opAt(e); if (H) grab = Object.assign(H, { x0: e.clientX, y0: e.clientY, moved: false, hist: [], sent: 0 }); } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
+      cv.addEventListener('pointerdown', (e) => { stopFollowing(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!(destruction && destruction.active) && !walk && !fly && !areaPick && !MS.on && !PRB.pick && !SEL.active && e.button === 0 && ptrs.size === 1) { const H = opAt(e); if (H) grab = Object.assign(H, { x0: e.clientX, y0: e.clientY, moved: false, hist: [], sent: 0 }); } drag = { b: e.button, shift: e.shiftKey }; downAt = { x: e.clientX, y: e.clientY, shift: e.shiftKey }; });
       const pUp = (e) => {
         ptrs.delete(e.pointerId); if (!ptrs.size) drag = null; pd = 0;
         if (grab) { const G = grab; grab = null; cv.style.cursor = 'grab'; if (G.moved) { grabRelease(G); return; } }
         if (e.type === 'pointerup' && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
           if (playground && playground.active) return;
           if (destruction && destruction.active && e.button === 0) { shootDestruction(e); return; }
+          if (MS.on || PRB.pick) { const hit = rayHit(e, true); if (hit) { if (MS.on) { MS.pts.push({ x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }); msRebuild(); } else probeAt(hit); } return; }
           if (areaPick) { const hit = rayHit(e, true); if (hit) { const p = { x: hit.point.x + CX, y: hit.point.y + WL, z: CZ - hit.point.z }; if (!areaFirst) { areaFirst = p; areaPick(p, null); } else { const fn = areaPick, first = areaFirst; areaPick = null; areaFirst = null; cv.style.cursor = ''; fn(first, p); } } return; }
           const rect = cv.getBoundingClientRect(); mv.set((e.clientX-rect.left)/rect.width*2-1, -(e.clientY-rect.top)/rect.height*2+1); ray.setFromCamera(mv,cam);
           const heroes = [...OP.entries()].map(([name,O]) => ({p:livePlayers().find(p => p.name === name), h:O.h.g})).concat([...MP.peers.entries()].map(([id,P]) => ({p:peerList().find(p => p.id === id), h:P.h.g}))).filter(o => o.p && o.h.visible);
@@ -1132,7 +1213,7 @@
       cv.addEventListener('pointerup', pUp); cv.addEventListener('pointercancel', pUp);
       function pan(dx, dy) { const s = dist * 0.0016; const fw = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), rt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)); tgt.addScaledVector(rt, -dx * s).addScaledVector(fw, -dy * s); }
       cv.addEventListener('pointermove', (e) => {
-        const p = ptrs.get(e.pointerId); if (!p) { if (walk) { TIP.hidden = true; return; } if (destruction && destruction.active) { cv.style.cursor = 'crosshair'; TIP.hidden = true; return; } if (!areaPick) cv.style.cursor = opAt(e) ? 'grab' : ''; hover(e); return; }
+        const p = ptrs.get(e.pointerId); if (!p) { if (walk) { TIP.hidden = true; return; } if (destruction && destruction.active) { cv.style.cursor = 'crosshair'; TIP.hidden = true; return; } if (!areaPick && !MS.on && !PRB.pick) cv.style.cursor = opAt(e) ? 'grab' : ''; hover(e); return; }
         if (grab) { if (!grab.moved && Math.hypot(e.clientX - grab.x0, e.clientY - grab.y0) < 5) return; grab.moved = true; grabMove(e); TIP.hidden = true; return; }
         const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
         if (walk) { lookWalk(dx, dy); return; }
@@ -1660,6 +1741,7 @@
           roomLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           rtLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           crLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && dist < 400); });
+          msLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           plLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, !l.out && pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05); });
           chLab.forEach((l) => { pv2.copy(l.v).project(cam); place(l, pv2.z < 1 && Math.abs(pv2.x) < 1.05 && Math.abs(pv2.y) < 1.05 && (fly ? l.v.distanceTo(cam.position) < 120 : dist < 260)); });
         }

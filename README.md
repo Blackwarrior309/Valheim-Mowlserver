@@ -18,6 +18,10 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 ## Changelog
 
+**20.10.2026**
+- 📏 Messen: in der 2D-Karte und in 3D Punkte setzen – Länge jeder Strecke, Summe und (in 3D) Höhenunterschied.
+- 🧱 Probe-Bauteil (3D): jedes Bauteil aus dem Spiel zum Ausprobieren in die Welt stellen, verschieben, drehen, löschen. Bleibt nur in deinem Browser.
+
 **19.10.2026**
 - Zahme Tiere: Zähler (2D-Karte unten + 3D-Menü) aufgeteilt nach Art, eigene Kartenebene 🐾 mit Namen beim Reinzoomen; mit Mod zusätzlich, wie viele gerade in deiner Nähe sind.
 - Lokaler Abriss-Spielplatz: Impulsgewehr, Bomben, Raketen, Explosionen und Physik-Trümmer mit Reset. [Bedienung und Grenzen](docs/DESTRUCTION.md).
