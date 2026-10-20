@@ -20,7 +20,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 **21.10.2026**
 - Server-Mod 0.7.0: Live-Kanal vom Server – alle Online-Spieler sekündlich mit Position, Leben, Ausdauer, Ausrüstung; Tiere mit Namen; ohne Client-Mod.
-- Karte: Anzeige „● N online“ oben mit Sitzungs- und Gesamt-Spielzeit je Spieler.
+- Karte: Anzeige „● N online“ oben mit Sitzungs- und Gesamt-Spielzeit je Spieler; Bestenliste „⏱ Spielzeit“ unter „Welt & Spieler“.
 - Zahme Tiere kommen jetzt auch aus dem Server-Abzug (mit Namen und Stufe).
 
 **20.10.2026**

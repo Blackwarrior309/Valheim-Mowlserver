@@ -30,7 +30,7 @@ namespace ValheimWeltLive
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
         ConfigEntry<int> cfgMaxObjects; ConfigEntry<float> cfgMaxMs;
         ConfigEntry<bool> cfgLive; ConfigEntry<string> cfgLiveHost; ConfigEntry<int> cfgLivePort; ConfigEntry<float> cfgLivePlayerSec, cfgLiveCreatureSec;
-        LiveFeed feed; string liveTopic; float nextLivePlayers, nextLiveCreatures, nextLiveStat;
+        LiveFeed feed; string liveTopic; float nextLivePlayers, nextLiveCreatures, nextLiveStat, nextLivePlaytime;
         ConfigEntry<int> cfgPort, cfgWorldSeconds, cfgTrackSeconds, cfgTrackDays;
         ConfigEntry<float> cfgPlayerSeconds;
         ConfigEntry<string> cfgFilePath;
@@ -382,6 +382,13 @@ namespace ValheimWeltLive
                 nextLiveCreatures = t + Mathf.Max(1f, cfgLiveCreatureSec.Value);
                 string cr = "[]"; try { cr = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); }
                 feed.Publish(liveTopic + "/creatures", "{\"t\":" + now + ",\"creatures\":" + cr + "}", true);
+            }
+            if (t >= nextLivePlaytime)   // Bestenliste Spielzeit: alle je gesehenen Spieler (auch offline), gespeichert auf dem Broker
+            {
+                nextLivePlaytime = t + 60f; if (playTotal == null) LoadPlaytime();
+                var sb = new StringBuilder("{\"t\":" + now + ",\"players\":{"); bool f = true;
+                foreach (var kv in playTotal) { if (!f) sb.Append(','); f = false; sb.Append(Json(kv.Key)).Append(':').Append(Math.Round(kv.Value)); }
+                feed.Publish(liveTopic + "/playtime", sb.Append("}}").ToString(), true);
             }
             if (t >= nextLiveStat) { nextLiveStat = t + 600f; if (cfgPerfLog.Value) Logger.LogInfo($"Live feed: {(feed.Connected ? "verbunden" : "getrennt" + (feed.LastError != "" ? " (" + feed.LastError + ")" : ""))}, {feed.Sent} Nachrichten gesendet, Thema {liveTopic}/…"); }
         }

@@ -187,6 +187,7 @@
     (opts.actions || []).forEach((a) => { const b = document.createElement('button'); b.textContent = a.label; if (a.primary) b.className = 'pri'; if (a.title) b.title = a.title; b.onclick = a.onClick; act.appendChild(b); });
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
+    const SRV = { at: 0, players: [], creatures: [], timer: 0, playtime: null };   // Server-Mod live (MQTT)
     let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null, liveReceivedAt = -Infinity, party = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
     /* Zahme Tiere aus dem Spielstand: [Art, x, z, Name, Stufe] */
@@ -2194,15 +2195,20 @@ ${board()}
 
     // Bestenliste: Tode (Grabsteine), gebaute Teile, Spielzeit und Strecke (Laufwege, nur mit Server-Mod)
     let boardDays = null;
+    /* Spielzeit vom Server-Mod: gespeicherte Summen + laufende Sitzungen der Online-Spieler */
+    const srvPlaytime = () => { const out = Object.assign({}, SRV.playtime || {}); (SRV.players || []).forEach((p) => { if (p.total > (out[p.name] || 0)) out[p.name] = p.total; }); return out; };
     function board() {
-      const P = {}; const get = (n) => P[n] || (P[n] = { n, deaths: 0, pieces: 0, secs: 0, dist: 0, made: 0, pins: 0, boss: 0 });
+      const P = {}; const get = (n) => P[n] || (P[n] = { n, deaths: 0, pieces: 0, secs: 0, dist: 0, made: 0, pins: 0, boss: 0, play: 0 });
+      const PT = srvPlaytime(); Object.entries(PT).forEach(([n, sec]) => (get(n).play = sec));
       const PN = S.pins || []; PN.forEach((p) => { if (p.by) { const q = get(p.by); q.pins++; if (p.t === 9) q.boss++; } });
       const CR = S.crafted || []; CR.forEach(([n, k]) => (get(n).made += k));
       (S.characters || []).forEach((c) => { if (c.name) get(c.name).pieces += c.pieces || 0; });
       const D = allDeaths(); D.forEach((d) => { if (d.n) get(d.n).deaths++; });
       if (EX.days.length && !boardDays) { heatDays(0).then((ds) => { boardDays = ds; if (tab === 'info') info(); }); }
       (boardDays || []).forEach((d) => Object.entries(d.players || {}).forEach(([n, p]) => { const q = get(n); q.secs += (p.n || 0) * (d.iv || 10); q.dist += p.dist || 0; }));
-      const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs || p.made || p.pins).sort((a, b) => b.pieces - a.pieces);
+      const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs || p.made || p.pins || p.play).sort((a, b) => b.pieces - a.pieces);
+      const hasP = Object.keys(PT).length > 0, onl = new Set((SRV.players || []).map((p) => p.name));
+      const playRank = rows.filter((r) => r.play > 0).sort((a, b) => b.play - a.play);
       if (!rows.length) return '';
       const hasT = !!(boardDays && boardDays.length);
       const hm = (s) => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; };
@@ -2210,8 +2216,9 @@ ${board()}
       const cell = (r, k, v) => `<td class="n" style="white-space:nowrap">${r[k] && r[k] === top(k) ? '👑 ' : ''}${v}</td>`;
       const last = D.filter((d) => d.t || d.seen).sort((a, b) => (b.t || b.seen) - (a.t || a.seen)).slice(0, 8);
       return `<div class="vw-panel" style="margin-top:18px"><h2 style="margin-top:0">Bestenliste</h2>
-<table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${CR.length ? '<td class="n sub">Hergestellt</td>' : ''}${PN.length ? '<td class="n sub" title="Pins auf dem Kartentisch (☠ = Bosse gefunden)" style="white-space:nowrap">📍 Pins</td>' : ''}${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
-${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${CR.length ? cell(r, 'made', fmt(r.made)) : ''}${PN.length ? cell(r, 'pins', fmt(r.pins) + (r.boss ? ' · ☠ ' + r.boss : '')) : ''}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
+${hasP ? `<h2 style="font-size:13px">⏱ Spielzeit</h2><table>${playRank.map((r, i) => `<tr><td style="width:2em" class="sub">${i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.'}</td><td>${esc(r.n)}${onl.has(r.n) ? ' <span style="color:#4cc36b" title="gerade online">●</span>' : ''}</td><td class="n" style="white-space:nowrap">${hm(r.play)}</td></tr>`).join('')}</table><div class="sub" style="margin:4px 0 12px">Vom Server-Mod gezählt (seit seiner Installation), live aktualisiert.</div>` : ''}
+<table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${CR.length ? '<td class="n sub">Hergestellt</td>' : ''}${PN.length ? '<td class="n sub" title="Pins auf dem Kartentisch (☠ = Bosse gefunden)" style="white-space:nowrap">📍 Pins</td>' : ''}${hasP ? '<td class="n sub">⏱ Spielzeit</td>' : ''}${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
+${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${CR.length ? cell(r, 'made', fmt(r.made)) : ''}${PN.length ? cell(r, 'pins', fmt(r.pins) + (r.boss ? ' · ☠ ' + r.boss : '')) : ''}${hasP ? cell(r, 'play', r.play ? hm(r.play) : '–') : ''}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
 ${CR.length ? `<h2>Hergestellte Gegenstände</h2>${CR.map(([n, k, it]) => `<details><summary>${esc(n)} <span class="sub">· ${fmt(k)}</span></summary><table>${it.slice(0, 40).map(([nm, c]) => `<tr><td>${esc(T(nm))}</td><td class="n">${fmt(c)}</td></tr>`).join('')}</table>${it.length > 40 ? `<div class="sub">… und ${fmt(it.length - 40)} weitere</div>` : ''}</details>`).join('')}<div class="sub" style="margin-top:6px">Nur Gegenstände, die noch in Kisten, Ständern oder am Boden liegen – was Spieler gerade bei sich tragen, steht nicht in der Welt-Datei.</div>` : ''}
 ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc(d.n)}</td><td class="sub">${new Date(d.t || d.seen).toLocaleString(LOC(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}${d.t ? '' : ' (gefunden)'}</td><td class="n sub">x ${Math.round(d.x)} / z ${Math.round(d.z)}</td></tr>`).join('')}</table>` : ''}
 <div class="sub" style="margin-top:8px">Tode werden über Grabsteine erfasst, die beim Speichern des Servers noch liegen.</div></div>`;
@@ -2254,7 +2261,6 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     let playerPeerSignature = '';
     setInterval(() => { playerCard.tick(); if (party) party.render(); const signature = JSON.stringify(three.peerList()); if (signature !== playerPeerSignature) { playerPeerSignature = signature; three.drawPlayers(); if (tab === 'map') map.draw(); } }, 1000);
     /* ---- Server-Mod live (MQTT): alle Online-Spieler mit Werten + Spielzeit, Tiere/Gegner mit Namen – ohne Client-Mod */
-    const SRV = { at: 0, players: [], creatures: [], timer: 0 };
     const hm2 = (sec) => { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60; return h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`; };
     function renderOnline() {
       const B = $('.vwOnline'), box = $('.vwOnlineBox'); const fresh = Date.now() - SRV.at < 20000;
@@ -2271,6 +2277,9 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
         SRV.at = Date.now(); SRV.players = data.players.filter((p) => p && typeof p.name === 'string' && Number.isFinite(p.x) && Number.isFinite(p.z)).slice(0, 64).map((p) => ({ name: p.name.slice(0, 24), x: p.x, y: p.y, z: p.z, since: +p.since || 0, total: +p.total || 0, details: p.details && g.VWPlayerCard ? g.VWPlayerCard.details(p.details) : null }));
         if (!GL.on) updateLive(SRV.players.map((p) => ({ name: p.name, x: p.x, y: p.y, z: p.z, details: p.details, server: true })));
         renderOnline();
+      } else if (kind === 'playtime' && data.players && typeof data.players === 'object') {
+        SRV.playtime = {}; Object.entries(data.players).slice(0, 500).forEach(([n, v]) => { if (Number.isFinite(+v)) SRV.playtime[String(n).slice(0, 24)] = +v; });
+        if (tab === 'info') info();
       } else if (kind === 'creatures' && Array.isArray(data.creatures)) {
         SRV.creatures = data.creatures.slice(0, 400);
         if (!GL.on) { CREA = SRV.creatures; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); map.draw(); } }
