@@ -11,18 +11,21 @@ if (!out) { console.error('Zielordner fehlt'); process.exit(1); }
 const red = (x) => [E.VS_FTP_HOST, E.VS_FTP_USER, E.VS_FTP_PASSWORD].filter(Boolean).reduce((t, v) => t.split(v).join('***'), String(x)).replace(/\d{15,20}/g, '[ID]');
 const GAME = /^(valheim_server_Data|MonoBleedingEdge|linux64|steamapps|steamcmd|D3D12|doorstop_libs|\.steam|Steam|steamclient)$/i;
 (async () => {
-  const ftp = new FTP({ host: E.VS_FTP_HOST, port: +E.VS_FTP_PORT || 21, user: E.VS_FTP_USER, password: E.VS_FTP_PASSWORD || '', secure: /^(1|true|ja|yes)$/i.test(E.VS_FTP_SECURE || '') });
-  const S = { files: 0, bytes: 0, skipped: [], failed: [], worlds: [], dirs: new Map() };
+  const CFG = { host: E.VS_FTP_HOST, port: +E.VS_FTP_PORT || 21, user: E.VS_FTP_USER, password: E.VS_FTP_PASSWORD || '', secure: /^(1|true|ja|yes)$/i.test(E.VS_FTP_SECURE || '') };
+  let ftp = new FTP(CFG);
+  // Nach einem Fehler ist die FTP-Sitzung oft hinüber: neu verbinden und bis zu 4× versuchen
+  const retry = async (fn) => { let last; for (let a = 0; a < 4; a++) { try { return await fn(); } catch (e) { last = e; S.retries++; S.errs.push(red(e.message).slice(0, 160)); try { ftp.close(); } catch (x) { } try { ftp.sock && ftp.sock.destroy(); } catch (x) { } await new Promise((r) => setTimeout(r, 1500 * (a + 1))); try { ftp = new FTP(CFG); await ftp.connect(); } catch (x) { last = x; } } } throw last; };
+  const S = { errs: [], retries: 0, files: 0, bytes: 0, skipped: [], failed: [], worlds: [], dirs: new Map() };
   await ftp.connect();
   async function walk(d) {
-    let items; try { items = await ftp.list(d); } catch (e) { S.failed.push(d + ' (Ordner)'); return; }
+    let items; try { items = await retry(() => ftp.list(d)); } catch (e) { S.failed.push(d + ' (Ordner)'); return; }
     for (const it of items) {
       if (it.name === '.' || it.name === '..') continue;
       const p = path.posix.join(d, it.name);
       if (it.dir) { if (!ALL && GAME.test(it.name)) { S.skipped.push(p); continue; } await walk(p); continue; }
       if (!ALL && d === '/' && /\.(exe|dll|so|pdb)$/i.test(it.name)) continue;
       try {
-        const buf = await ftp.get(p); const local = path.join(out, ...p.split('/').filter(Boolean));
+        const buf = it.size === 0 ? Buffer.alloc(0) : await retry(() => ftp.get(p));   // leere Dateien (z. B. .ok) nicht abrufen const local = path.join(out, ...p.split('/').filter(Boolean));
         fs.mkdirSync(path.dirname(local), { recursive: true }); fs.writeFileSync(local, buf);
         S.files++; S.bytes += buf.length; S.dirs.set(d, (S.dirs.get(d) || 0) + buf.length);
         if (/\.(db2?|fwl2?)$/i.test(it.name)) S.worlds.push(p + ' (' + (buf.length / 1e6).toFixed(1) + ' MB)');
@@ -31,9 +34,10 @@ const GAME = /^(valheim_server_Data|MonoBleedingEdge|linux64|steamapps|steamcmd|
   }
   await walk('/');
   try { await ftp.quit?.(); } catch (e) { }
-  const L = [`Backup: ${S.files} Dateien, ${(S.bytes / 1e6).toFixed(1)} MB`, 'Weltdateien: ' + (S.worlds.join(', ') || 'KEINE'), 'Ordner (MB): ' + [...S.dirs].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => `${k} ${(v / 1e6).toFixed(1)}`).join(' · ')];
+  const L = [`${S.files} Dateien, ${(S.bytes / 1e6).toFixed(1)} MB, ${S.retries} Wiederholungen`, 'Weltdateien: ' + (S.worlds.join(', ') || 'KEINE'), 'Ordner (MB): ' + [...S.dirs].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => `${k} ${(v / 1e6).toFixed(1)}`).join(' · ')];
   if (S.skipped.length) L.push('Übersprungen (Spieldateien): ' + S.skipped.join(', '));
   if (S.failed.length) L.push('Nicht geladen: ' + S.failed.slice(0, 30).join(', '));
+  if (S.errs.length) L.push('Fehlermeldungen: ' + [...new Set(S.errs)].slice(0, 8).join(' | '));
   const txt = red(L.join('\n')); console.log(txt);
   console.log('::notice title=Backup::' + txt.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A'));
   if (!S.worlds.length) process.exit(2);
