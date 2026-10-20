@@ -335,7 +335,7 @@ async function runOnce(cfg) {
       let dump = null;
       if (ftpc.dumpPath && ftpc.dumpPath !== 'auto') { const d = path.posix.dirname(ftpc.dumpPath), n = path.posix.basename(ftpc.dumpPath); const it = (await ftp.list(d)).find((i) => i.name === n); if (it) dump = { path: ftpc.dumpPath, size: it.size, mod: it.mod }; }
       else if (state.dumpPath) { const d = path.posix.dirname(state.dumpPath), n = path.posix.basename(state.dumpPath); try { const it = (await ftp.list(d)).find((i) => i.name === n); if (it) dump = { path: state.dumpPath, size: it.size, mod: it.mod }; } catch (e) { } }
-      if (!dump && !(state.noDumpAt && Date.now() - state.noDumpAt < 6 * 3600e3)) { log('Suche Live-Dump des Mods …'); dump = await findDump(ftp); if (!dump) { state.noDumpAt = Date.now(); log('Kein Mod-Dump gefunden – nutze den Spielstand.'); } else delete state.noDumpAt; }
+      if (!dump && !(state.noDumpAt && Date.now() - state.noDumpAt < 20 * 60e3)) { log('Suche Live-Dump des Mods …'); dump = await findDump(ftp); if (!dump) { state.noDumpAt = Date.now(); log('Kein Mod-Dump gefunden – nutze den Spielstand.'); } else delete state.noDumpAt; }
       if (dump) {
         state.dumpPath = dump.path; const sig = dump.size + '|' + dump.mod;
         if (state.dumpSig !== sig) state.dumpSeenAt = Date.now();
