@@ -12,7 +12,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: server-backup
+  group: live-karte   # gleiche Gruppe wie die Live-Karte: nie zwei FTP-Sitzungen gleichzeitig
   cancel-in-progress: false
 jobs:
   backup:
