@@ -14,7 +14,7 @@ const GAME = /^(valheim_server_Data|MonoBleedingEdge|linux64|steamapps|steamcmd|
   const CFG = { host: E.VS_FTP_HOST, port: +E.VS_FTP_PORT || 21, user: E.VS_FTP_USER, password: E.VS_FTP_PASSWORD || '', secure: /^(1|true|ja|yes)$/i.test(E.VS_FTP_SECURE || '') };
   let ftp = new FTP(CFG);
   // Nach einem Fehler ist die FTP-Sitzung oft hinüber: neu verbinden und bis zu 4× versuchen
-  const retry = async (fn) => { let last; for (let a = 0; a < 4; a++) { try { return await fn(); } catch (e) { last = e; S.retries++; S.errs.push(red(e.message).slice(0, 160)); try { ftp.close(); } catch (x) { } try { ftp.sock && ftp.sock.destroy(); } catch (x) { } await new Promise((r) => setTimeout(r, 15000 * (a + 1)));   // Nitrado erlaubt nur wenige gleichzeitige FTP-Sitzungen try { ftp = new FTP(CFG); await ftp.connect(); } catch (x) { last = x; S.errs.push('Neu verbinden: ' + red(x.message).slice(0, 120)); } } } throw last; };
+  const retry = async (fn) => { let last; for (let a = 0; a < 4; a++) { try { return await fn(); } catch (e) { last = e; S.retries++; S.errs.push(red(e.message).slice(0, 160)); try { ftp.close(); } catch (x) { } try { ftp.sock && ftp.sock.destroy(); } catch (x) { } await new Promise((r) => setTimeout(r, 15000 * (a + 1))); /* Nitrado erlaubt nur wenige gleichzeitige FTP-Sitzungen */ try { ftp = new FTP(CFG); await ftp.connect(); } catch (x) { last = x; S.errs.push('Neu verbinden: ' + red(x.message).slice(0, 120)); } } } throw last; };
   const S = { errs: [], retries: 0, files: 0, bytes: 0, skipped: [], failed: [], worlds: [], dirs: new Map() };
   await ftp.connect();
   async function walk(d) {
