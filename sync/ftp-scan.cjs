@@ -5,7 +5,7 @@
 const path = require('path');
 process.env.VS_SCAN_ONLY = '1';
 const { FTP } = require('./sync.cjs');
-const E = process.env, red = (x) => [E.VS_FTP_HOST, E.VS_FTP_USER, E.VS_FTP_PASSWORD].filter(Boolean).reduce((t, v) => t.split(v).join('***'), String(x)).replace(/\d{15,20}/g, '[ID]'); // keine Steam-IDs o. ä. ausgeben
+const E = process.env, red = (x) => [E.VS_FTP_HOST, E.VS_FTP_USER, E.VS_FTP_PASSWORD].filter(Boolean).reduce((t, v) => t.split(v).join('***'), String(x)).replace(/\d{15,20}/g, '[ID]').replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, '[IP]').replace(/join code \d+/gi, 'join code [..]'); // keine Steam-IDs o. ä. ausgeben
 const esc = (x) => x.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
 (async () => {
   const ftp = new FTP({ host: E.VS_FTP_HOST, port: +E.VS_FTP_PORT || 21, user: E.VS_FTP_USER, password: E.VS_FTP_PASSWORD || '', secure: /^(1|true|ja|yes)$/i.test(E.VS_FTP_SECURE || '') });
@@ -26,7 +26,7 @@ const esc = (x) => x.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '
     // Von gefundenen Logs die letzten Zeilen zeigen (größte/neueste zuerst), um das Format zu sehen
     logs.sort((a, b) => b.s - a.s);
     for (const l of logs.slice(0, 2)) {
-      try { const buf = await ftp.get(l.p); const txt = buf.toString('utf8').split(/\r?\n/).filter(Boolean); lines.push('', '=== ' + l.p + ' (' + txt.length + ' Zeilen) – letzte 40 ==='); txt.slice(-40).forEach((t) => lines.push(t.slice(0, 220))); } catch (e) { lines.push('(' + l.p + ' nicht lesbar: ' + e.message + ')'); }
+      try { const buf = await ftp.get(l.p); let txt = buf.toString('utf8').split(/\r?\n/).filter(Boolean); const n = txt.length; if (/LogOutput/i.test(l.p)) txt = txt.filter((t) => /Welt Live|Dump|BepInEx|Chainloader|isModded|Exception/i.test(t)); /* BepInEx-Log: nur Mod-relevante Zeilen */ lines.push('', '=== ' + l.p + ' (' + n + ' Zeilen) – letzte 40 relevante ==='); txt.slice(-40).forEach((t) => lines.push(t.slice(0, 220))); } catch (e) { lines.push('(' + l.p + ' nicht lesbar: ' + e.message + ')'); }
     }
   } catch (e) { lines.push('FEHLER: ' + e.message); }
   finally { try { ftp.close(); } catch (e) { } }
