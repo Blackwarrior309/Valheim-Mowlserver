@@ -252,11 +252,12 @@
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
       ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['tamed', '🐾', '#4cc36b', 'Zahme Tiere'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
-      ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
+      ['L_x', '⚔', '#ff8a3d', 'Dyrnwyn-Quest (Aschelande)'], ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
       ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager'], ['_h', '', '', 'Rohstoffe']].concat(RES_K.map(([k, c, de]) => ['R_' + k, '◆', c, de]));
-    const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
+    const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], x: ['#ff8a3d', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
     const LOCK = {}; Object.values((g.VW_DATA && g.VW_DATA.locations) || {}).forEach((l) => { if (l[2]) LOCK[l[0]] = l[2]; });
-    const locCat = (l) => LOCK[l.k] || l.c || 'b';
+    const DYRN = { PlaceofMystery1: 'Spitze', PlaceofMystery2: 'Klinge', PlaceofMystery3: 'Griff (Lord Reto)' };
+    const locCat = (l) => DYRN[l.k] ? 'x' : LOCK[l.k] || l.c || 'b';
     const PIN_IC = { 0: '🔥', 1: '🏠', 2: '🔨', 3: '●', 4: '✦', 9: '☠' };
     const PIN_N = { '$enemy_eikthyr': 'Eikthyr', '$enemy_gdking': 'Der Älteste', '$enemy_bonemass': 'Knochenmasse', '$enemy_dragon': 'Moder', '$enemy_goblinking': 'Yagluth', '$enemy_seekerqueen': 'Die Königin', '$enemy_fader': 'Fader' };
     const pinName = (p) => { const n = p.n || ''; if (PIN_N[n]) return T(PIN_N[n]); if (/^\$hud_pin_hildir/.test(n)) return 'Hildir'; return n.replace(/^\$\w+_/, ''); };
@@ -440,7 +441,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_x: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -490,6 +491,7 @@
         if (ML.portals) { const N = portalNet(); info.push(`Portal-Netz: ${fmt(N.pairs.length)} Verbindungen` + (N.single.length ? ` · ohne Partner: ${N.single.map(esc).join(', ')}` : '') + (N.multi.length ? ` · mehr als 2 gleiche Namen: ${N.multi.map(esc).join(', ')}` : '') + (N.untagged ? ` · ${N.untagged} ohne Namen` : '')); }
         if (SRc && RES_K.some(([k]) => ML['R_' + k] && SRc[k])) info.push(T('Rohstoffe: ausgefüllt = im Spielstand, hohl = laut Seed in unerkundeten Orten (Anzahl daneben)'));
         if (ML.seed && seedSrc) info.push(T('Ganze Welt mit Höhen, Flüssen und Wäldern') + ' · ' + T('Quelle') + ': ' + esc(seedSrc));
+        if (ML.L_x) { const Dy = (S.locations || []).filter((l) => DYRN[l.k]).sort((a, b) => a.k.localeCompare(b.k)); if (Dy.length) info.push('⚔ Dyrnwyn: ' + Dy.map((l) => `${DYRN[l.k]} x ${l.x} / z ${l.z}${l.v ? '' : ' (noch unentdeckt)'}`).join(' → ') + ' · danach Schwert an der Schwarzen Schmiede (mit Blutstein aus einer Festung)'); }
         if (ML.tamed && S.tamed) { const near = CREA.filter((c) => c.tame).length; info.push(`🐾 Zahme Tiere: ${fmt(S.tamed.length)}` + (S.tamed.length ? ' – ' + tameText() : '') + (near ? ` · gerade in deiner Nähe (Mod): ${near}` : '')); }
         if (ML.deaths) { const D = allDeaths(); info.push(`Tode: ${fmt(D.length)} erfasst` + (D.some((d) => d.open) ? ` · rot = Grabstein liegt noch` : '')); }
         baseInfo = info.join('<br>'); $('.mlInfo').innerHTML = baseInfo;
