@@ -1,0 +1,52 @@
+# Komplett-Backup des Valheim-Servers per FTP (nur lesen). Zugangsdaten aus den Secrets.
+# Das Backup wird verschlüsselt (öffentlicher Schlüssel tools/backup/backup-public.pem, AES-256 + RSA)
+# und als ENTWURF-Release angehängt – Entwürfe sehen nur Leute mit Schreibrecht am Repo.
+name: Server-Backup
+on:
+  workflow_dispatch:
+    inputs:
+      alles:
+        description: 'Auch die Spieldateien des Servers sichern (groß)'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: server-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository != 'Blackwarrior309/Valheim-welt' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Server per FTP herunterladen
+        env:
+          VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
+          VS_FTP_PORT: ${{ secrets.VS_FTP_PORT }}
+          VS_FTP_USER: ${{ secrets.VS_FTP_USER }}
+          VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
+          VS_FTP_SECURE: ${{ secrets.VS_FTP_SECURE }}
+        run: node sync/ftp-backup.cjs "$RUNNER_TEMP/backup" ${{ inputs.alles && '--alles' || '' }}
+      - name: Packen und verschlüsseln
+        run: |
+          set -e
+          cd "$RUNNER_TEMP"
+          NAME="valheim-backup-$(date -u +%Y-%m-%d_%H-%M)"
+          tar -czf "$NAME.tar.gz" -C backup .
+          rm -rf backup
+          openssl rand -hex 32 > key.txt
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass file:key.txt -in "$NAME.tar.gz" -out "$NAME.tar.gz.enc"
+          openssl pkeyutl -encrypt -pubin -inkey "$GITHUB_WORKSPACE/tools/backup/backup-public.pem" -pkeyopt rsa_padding_mode:oaep -in key.txt -out "$NAME.key.enc"
+          rm -f key.txt "$NAME.tar.gz"
+          ls -la "$NAME".*
+          echo "NAME=$NAME" >> "$GITHUB_ENV"
+      - name: Als Entwurf-Release ablegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$RUNNER_TEMP"
+          gh release create "backup-${{ github.run_id }}" "$NAME.tar.gz.enc" "$NAME.key.enc" --draft --title "$NAME (verschlüsselt)" --notes "Server-Backup, verschlüsselt. Entwurf – nicht öffentlich." -R "${{ github.repository }}"
