@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.6.3";
+        public const string Version = "0.6.4";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
@@ -51,16 +51,16 @@ namespace ValheimWeltLive
 
         void Awake()
         {
-            cfgHttp = Config.Bind("Web", "Enabled", true, "Start the built-in web page/API.");
+            cfgHttp = Config.Bind("Web", "Enabled", !Application.isBatchMode, "Start the built-in web page/API.");
             cfgPort = Config.Bind("Web", "Port", 8686, "Port of the web page (http://localhost:PORT/).");
             cfgBindAll = Config.Bind("Web", "BindAll", false, "true = reachable from the network too (server/LAN). On Windows this may need admin rights or a URL reservation.");
-            cfgWorldSeconds = Config.Bind("Daten", "WorldIntervalSeconds", 30, "How often the whole world is read again (seconds, min. 10). Servers: 300.");
-            cfgPlayerSeconds = Config.Bind("Daten", "PlayerIntervalSeconds", 1f, "How often player positions are updated (seconds).");
+            cfgWorldSeconds = Config.Bind("Daten", "WorldIntervalSeconds", Application.isBatchMode ? 300 : 30, "How often the whole world is read again (seconds, min. 10). Servers: 300.");
+            cfgPlayerSeconds = Config.Bind("Daten", "PlayerIntervalSeconds", Application.isBatchMode ? 5f : 1f, "How often player positions are updated (seconds).");
             cfgMaxObjects = Config.Bind("Leistung", "MaxObjectsPerFrame", 2048, "World dump: at most this many objects per frame (64–65536). Smaller = smoother, dump takes longer.");
             cfgMaxMs = Config.Bind("Leistung", "MaxMillisecondsPerFrame", 2f, "World dump: time budget per frame in milliseconds. Whichever limit is reached first ends the frame's portion.");
             cfgFastGzip = Config.Bind("Leistung", "FastCompression", true, "true = gzip 'Fastest' (less CPU, slightly bigger file), false = 'Optimal'.");
             cfgPerfLog = Config.Bind("Leistung", "LogPerformance", true, "Log one line per world dump: objects, scan time, max ms per frame, compression time, sizes, extra memory, skipped dumps.");
-            cfgWriteFile = Config.Bind("Datei", "WriteDumpFile", false, "Also write the world dump to a file (for FTP sync, e.g. Nitrado). Set to true on servers.");
+            cfgWriteFile = Config.Bind("Datei", "WriteDumpFile", Application.isBatchMode, "Also write the world dump to a file (for FTP sync, e.g. Nitrado). Set to true on servers.");
             cfgFilePath = Config.Bind("Datei", "DumpPath", "", "Empty = BepInEx/config/ValheimWeltLive/welt.vwdump");
             cfgStrip = Config.Bind("Datenschutz", "StripSteamIds", true, "Do not output Steam IDs (authors of signs/portals).");
             cfgTracks = Config.Bind("Spuren", "RecordPositions", false, "Server: record player positions for the walking heatmap (spuren-YYYYMMDD.csv next to the dump file). Only with the consent of your players.");
@@ -397,63 +397,72 @@ namespace ValheimWeltLive
             byte[] bio = biomeGrid;
             string world = "", seed = ""; List<string> keys = new List<string>(); string players = playersJson;
             var locs = new List<KeyValuePair<string, Vector3>>(); var locPlaced = new List<bool>();
-            var dict = GetZdoDict();
-            if (dict == null) { Logger.LogWarning("ZDOs not found (game version changed?)"); building = false; yield break; }
-            ZDOID[] ids = null; ZDO[] all = null;
-            swFrame.Start();
-            try
-            {
-                if (dict is Dictionary<ZDOID, ZDO> gd) { all = new ZDO[gd.Count]; ids = new ZDOID[gd.Count]; gd.Values.CopyTo(all, 0); gd.Keys.CopyTo(ids, 0); }
-                else { all = new ZDO[dict.Count]; dict.Values.CopyTo(all, 0); var o = new object[all.Length]; dict.Keys.CopyTo(o, 0); ids = new ZDOID[o.Length]; for (int i = 0; i < o.Length; i++) ids[i] = o[i] is ZDOID d ? d : ZDOID.None; }
-            }
-            catch (Exception e) { Logger.LogWarning("ZDO list: " + e.Message); all = null; }
-            if (all == null) { building = false; yield break; }
+            // ZDOs Gebiet für Gebiet lesen (ZDOMan.m_objectsBySector): pro Frame wird nur ein Stück einer Gebietsliste kopiert –
+            // kein Kopieren der kompletten Objektliste in einem Frame (das kostete bei ~1 Mio. Objekten 30–170 ms auf einmal).
+            var sectors = F_SECTORS?.GetValue(ZDOMan.instance) as List<ZDO>[];
+            IDictionary dict = null; if (sectors == null) dict = GetZdoDict();
+            if (sectors == null && dict == null) { Logger.LogWarning("ZDOs not found (game version changed?)"); building = false; yield break; }
             int perFrame = Mathf.Clamp(cfgMaxObjects.Value, 64, 65536); double budgetMs = Math.Max(0.25, cfgMaxMs.Value);
             bool strip = cfgStrip.Value;
-            // Datensätze direkt binär schreiben (Größe grob vorab reservieren, damit der Puffer selten wächst)
-            var recBuf = new MemoryStream(Math.Min(int.MaxValue / 2, Math.Max(1 << 20, all.Length * 34)));
+            int expected = 0; try { var d0 = GetZdoDict(); if (d0 != null) expected = d0.Count; } catch { }
+            var recBuf = new MemoryStream(Math.Min(int.MaxValue / 2, Math.Max(1 << 20, expected * 26)));   // ~25 Byte je Objekt
             var bw = new BinaryWriter(recBuf, UTF8NoBom, true);
             var strs = new List<KeyValuePair<int, string>>(8);
             int recCount = 0, stale = 0, inFrame = 0;
-            for (int zi = 0; zi < all.Length; zi++)
+            var tmpZ = new List<ZDO>(4096); var tmpId = new List<ZDOID>(4096);
+            swFrame.Start();
+            int total = sectors != null ? sectors.Length : 1;
+            for (int si = 0; si < total; si++)
             {
-                ZDO z = all[zi]; all[zi] = null;
-                // ZDOs werden vom Spiel wiederverwendet: nur übernehmen, wenn das Objekt noch dieselbe ID hat wie beim Kopieren
-                if (z != null && z.m_uid == ids[zi])
+                tmpZ.Clear(); tmpId.Clear();
+                if (sectors != null) { var lst = sectors[si]; if (lst != null) for (int k = 0; k < lst.Count; k++) { var z = lst[k]; if (z != null) { tmpZ.Add(z); tmpId.Add(z.m_uid); } } }
+                else { foreach (DictionaryEntry e in dict) { tmpZ.Add((ZDO)e.Value); tmpId.Add((ZDOID)e.Key); } }   // Rückfall (alte Spielversion): wie früher alles auf einmal
+                for (int k = 0; k < tmpZ.Count; k++)
                 {
-                    try
+                    ZDO z = tmpZ[k];
+                    // ZDOs werden vom Spiel wiederverwendet: nur übernehmen, wenn das Objekt noch dieselbe ID hat wie beim Kopieren
+                    if (z.m_uid == tmpId[k])
                     {
-                        Vector3 pos = z.GetPosition(); float yaw = z.GetRotation().eulerAngles.y, scale = 1f;
-                        Vector3 sc = z.GetVec3(H_SCALE, Vector3.zero); if (sc != Vector3.zero) scale = sc.x;
-                        long creator = z.GetLong(H_CREATOR, 0L), owner = z.GetLong(H_OWNER, 0L);
-                        strs.Clear();
-                        foreach (int k in STRING_KEYS)
+                        try
                         {
-                            if (strip && (k == H_AUTHOR || k == H_TAGAUTHOR)) continue;
-                            string v = z.GetString(k, ""); if (!string.IsNullOrEmpty(v)) strs.Add(new KeyValuePair<int, string>(k, v));
+                            Vector3 pos = z.GetPosition(); float yaw = z.GetRotation().eulerAngles.y, scale = 1f;
+                            Vector3 sc = z.GetVec3(H_SCALE, Vector3.zero); if (sc != Vector3.zero) scale = sc.x;
+                            long creator = z.GetLong(H_CREATOR, 0L), owner = z.GetLong(H_OWNER, 0L);
+                            strs.Clear();
+                            foreach (int key in STRING_KEYS)
+                            {
+                                if (strip && (key == H_AUTHOR || key == H_TAGAUTHOR)) continue;
+                                string v = z.GetString(key, ""); if (!string.IsNullOrEmpty(v)) strs.Add(new KeyValuePair<int, string>(key, v));
+                            }
+                            byte[] it = z.GetByteArray(H_ITEMS, null); if (it != null && it.Length == 0) it = null;
+                            byte m = 0; if (creator != 0) m |= 1; if (owner != 0) m |= 2; if (strs.Count > 0) m |= 4; if (it != null) m |= 8;
+                            bw.Write(z.GetPrefab()); bw.Write(pos.x); bw.Write(pos.y); bw.Write(pos.z); bw.Write(yaw); bw.Write(scale); bw.Write(m);
+                            if ((m & 1) != 0) bw.Write(creator);
+                            if ((m & 2) != 0) bw.Write(owner);
+                            if ((m & 4) != 0) { int n = Math.Min(255, strs.Count); bw.Write((byte)n); for (int i = 0; i < n; i++) { bw.Write(strs[i].Key); bw.Write(strs[i].Value); } }
+                            if ((m & 8) != 0) { bw.Write(it.Length); bw.Write(it); }
+                            recCount++;
                         }
-                        byte[] it = z.GetByteArray(H_ITEMS, null); if (it != null && it.Length == 0) it = null;
-                        byte m = 0; if (creator != 0) m |= 1; if (owner != 0) m |= 2; if (strs.Count > 0) m |= 4; if (it != null) m |= 8;
-                        bw.Write(z.GetPrefab()); bw.Write(pos.x); bw.Write(pos.y); bw.Write(pos.z); bw.Write(yaw); bw.Write(scale); bw.Write(m);
-                        if ((m & 1) != 0) bw.Write(creator);
-                        if ((m & 2) != 0) bw.Write(owner);
-                        if ((m & 4) != 0) { int n = Math.Min(255, strs.Count); bw.Write((byte)n); for (int i = 0; i < n; i++) { bw.Write(strs[i].Key); bw.Write(strs[i].Value); } }
-                        if ((m & 8) != 0) { bw.Write(it.Length); bw.Write(it); }
-                        recCount++;
+                        catch { }
                     }
-                    catch { }
+                    else stale++;
+                    if (++inFrame >= perFrame || ((inFrame & 63) == 0 && swFrame.Elapsed.TotalMilliseconds >= budgetMs))
+                    {
+                        double ms = swFrame.Elapsed.TotalMilliseconds; if (ms > maxFrameMs) maxFrameMs = ms; frames++;
+                        inFrame = 0; yield return null; swFrame.Reset(); swFrame.Start();
+                        if (ZNet.instance == null) { bw.Dispose(); recBuf.Dispose(); building = false; yield break; }   // Welt verlassen
+                    }
                 }
-                else if (z != null) stale++;
-                // Portionsende: max. Objektzahl oder Zeitbudget erreicht (Uhr nur alle 64 Objekte abfragen)
-                if (++inFrame >= perFrame || ((inFrame & 63) == 0 && swFrame.Elapsed.TotalMilliseconds >= budgetMs))
+                // leere Gebiete: Zeitbudget auch beim bloßen Durchlaufen der Gebietsliste beachten
+                if ((si & 1023) == 1023 && swFrame.Elapsed.TotalMilliseconds >= budgetMs)
                 {
                     double ms = swFrame.Elapsed.TotalMilliseconds; if (ms > maxFrameMs) maxFrameMs = ms; frames++;
                     inFrame = 0; yield return null; swFrame.Reset(); swFrame.Start();
-                    if (ZNet.instance == null) { bw.Dispose(); recBuf.Dispose(); building = false; yield break; }   // Welt verlassen
+                    if (ZNet.instance == null) { bw.Dispose(); recBuf.Dispose(); building = false; yield break; }
                 }
             }
             { double ms = swFrame.Elapsed.TotalMilliseconds; if (ms > maxFrameMs) maxFrameMs = ms; frames++; }
-            all = null; ids = null; bw.Flush();
+            tmpZ = null; tmpId = null; bw.Flush();
             double scanMs = swTotal.Elapsed.TotalMilliseconds; long memScan = GC.GetTotalMemory(false) - memStart;
             bool dedicated = false;
             try
@@ -525,7 +534,7 @@ namespace ValheimWeltLive
             if (!ok) Logger.LogError("Writing dump: " + err);
             else if (toFile && !loggedFile) { loggedFile = true; Logger.LogInfo($"World dump written: {recCount} objects, {gzBytes / 1024} KB -> {path}"); }
             if (cfgPerfLog.Value)
-                Logger.LogInfo($"Dump {(ok ? "ok" : "FEHLER")}: {recCount} ZDOs ({stale} übersprungen) · Scan {scanMs / 1000:0.0} s in {frames} Frames, max {maxFrameMs:0.00} ms/Frame (Budget {budgetMs:0.##} ms, {perFrame}/Frame) · " +
+                Logger.LogInfo($"Dump {(ok ? "ok" : "FEHLER")}: {recCount} ZDOs von {expected} ({stale} übersprungen, {(sectors != null ? "gebietsweise" : "Gesamtliste")}) · Scan {scanMs / 1000:0.0} s in {frames} Frames, max {maxFrameMs:0.00} ms/Frame (Budget {budgetMs:0.##} ms, {perFrame}/Frame) · " +
                     $"gzip {(cfgFastGzip.Value ? "schnell" : "stark")} {zipMs / 1000:0.0} s · roh {rawBytes / 1048576.0:0.0} MB → {gzBytes / 1048576.0:0.0} MB · " +
                     $"Speicher +{Math.Max(0, memScan) / 1048576.0:0} MB nach Scan, +{Math.Max(0, memPeak) / 1048576.0:0} MB am Ende (GC, ungefähr) · übersprungene Abzüge bisher: {skippedDumps}");
             building = false;
@@ -538,6 +547,7 @@ namespace ValheimWeltLive
             try { File.Replace(tmp, path, null); }
             catch (Exception) { File.Delete(path); File.Move(tmp, path); }
         }
+        static readonly FieldInfo F_SECTORS = typeof(ZDOMan).GetField("m_objectsBySector", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
         static IDictionary GetZdoDict()
         {
             var f = typeof(ZDOMan).GetField("m_objectsByID", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.4
+- World dump reads the objects sector by sector instead of copying the whole object list in one frame (on a ~1 million object world that single copy cost 30–170 ms per dump). Frame time now stays near the configured budget.
+- Server-friendly defaults on dedicated servers (batch mode): dump every 300 s, dump file on, web page off, player positions every 5 s.
+- Performance log shows how many of all objects were exported.
+
 ## 0.6.3
 - Smoother world dump on servers: work per frame is limited by object count (`MaxObjectsPerFrame`, default 2048) and a time budget (`MaxMillisecondsPerFrame`, default 2 ms); the biome grid uses the same budget.
 - Less memory: records are written straight into one buffer and compressed directly into `welt.vwdump.tmp` (no full copies of the snapshot); gzip "Fastest" by default (`FastCompression`).
