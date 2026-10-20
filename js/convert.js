@@ -147,6 +147,7 @@
       const tag = String.fromCharCode(u8[r.p], u8[r.p + 1], u8[r.p + 2], u8[r.p + 3]);
       if (tag === 'EXPL') { r.skip(4); const size = r.i32(), pixel = r.f32(), len = r.i32(); meta.explored = { size, pixel, bits: r.bytes(len) }; }
       else if (tag === 'BIOM') { r.skip(4); const n = r.i32(), res = r.f32(), x0 = r.f32(), len = r.i32(); meta.biomes = { n, res, x0, z0: x0, b: r.bytes(len) }; }
+      else if (tag === 'TAME') { r.skip(4); const n = r.i32(); meta.tamed = []; for (let i = 0; i < n; i++) { const pf = r.i32(), x = r.f32(), z = r.f32(), nm = r.str(), lv = r.i32(); meta.tamed.push([pf, x, z, nm, lv]); } }   // zahme Tiere (Server-Mod ab 0.7.0)
       else break;
     }
     return meta;
@@ -254,7 +255,7 @@
           if (S && S[K.crafterName]) { const ih = S[K.item] ? stable(S[K.item]) : prefab; loose.push([ih, (I && I[K.stack]) || 1, (I && I[K.quality]) || 1, S[K.crafterName]]); }
           if (CONT[prefab] && B && B[K.items]) { try { conts.push({ x, y, z, t: CONT[prefab], c: cr !== undefined ? cr.toString() : '', inv: parseInv(B[K.items]) }); } catch (e) { } }
     };
-    let live = null, EXP = null, BIO = null;
+    let live = null, EXP = null, BIO = null, dumpTamed = null;
     // Biome: 1 Wiesen, 2 Sumpf, 3 Berge, 4 Schwarzwald, 5 Ebenen, 6 Aschelande, 7 Tiefer Norden, 8 Meer, 9 Nebellande
     const BR = 64, bioHint = new Map(), bioVotes = new Map();
     const hintOf = (prefab) => {
@@ -287,6 +288,7 @@
       live = { time: meta.time, players: meta.live.map((p) => ({ name: p.name, x: r1(p.x), y: r1(p.y), z: r1(p.z) })) };
       if (meta.explored && meta.explored.size > 0) EXP = meta.explored;
       if (meta.biomes && meta.biomes.n > 0) BIO = meta.biomes;
+      if (meta.tamed) dumpTamed = meta.tamed;
       prog('Live-Dump gelesen', 0.65);
     } else chunks.forEach((f, i) => {
       try {
@@ -514,7 +516,7 @@
       players: world.players.map((p) => strip ? { name: p.name } : { name: p.name, platform: p.platform }),
       characters: characters.map((c) => strip ? { name: c.name, account: c.account, pieces: c.pieces } : { name: c.name, account: c.account, steam: c.steam, pieces: c.pieces }),
       bosses: dbi.keys.filter((k) => k.startsWith('defeated_')).map((k) => k.slice(9)),
-      globalKeys: dbi.keys, locations: dbi.locations, pins: tablePins, tableMap, resources: resv, tamed, // Rohstoffe: Art → [x, z, f] (f: 1 angebrochen, 2 im Dungeon)
+      globalKeys: dbi.keys, locations: dbi.locations, pins: tablePins, tableMap, resources: resv, tamed: dumpTamed ? dumpTamed.filter((t) => Math.abs(t[1]) < 12000 && Math.abs(t[2]) < 12000).map((t) => [PREF[t[0]] || ('#' + t[0]), Math.round(t[1]), Math.round(t[2]), String(t[3] || '').slice(0, 40), t[4] || 1]) : tamed, // Rohstoffe: Art → [x, z, f] (f: 1 angebrochen, 2 im Dungeon)
       portals: portals.map((p) => ({ tag: p.tag, x: Math.round(p.x), z: Math.round(p.z) })),
       // Grabsteine: Todeszeit = Spielstand-Zeit minus (Weltzeit jetzt − Weltzeit beim Tod); Weltzeit in .NET-Ticks (100 ns)
       tombs: tombs.map((b) => { const ref = opts.saveTime || Date.now(); const t = b.tod && dbi.netTime ? Math.round(ref - (dbi.netTime - b.tod / 1e7) * 1000) : null; return { n: b.n, x: Math.round(b.x), y: Math.round(b.y), z: Math.round(b.z), t: t && t > 1.5e12 && t <= ref + 6e4 ? t : null, items: b.items }; }),

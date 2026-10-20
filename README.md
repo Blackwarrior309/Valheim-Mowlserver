@@ -18,6 +18,11 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 ## Changelog
 
+**21.10.2026**
+- Server-Mod 0.7.0: Live-Kanal vom Server – alle Online-Spieler sekündlich mit Position, Leben, Ausdauer, Ausrüstung; Tiere mit Namen; ohne Client-Mod.
+- Karte: Anzeige „● N online“ oben mit Sitzungs- und Gesamt-Spielzeit je Spieler.
+- Zahme Tiere kommen jetzt auch aus dem Server-Abzug (mit Namen und Stufe).
+
 **20.10.2026**
 - Server-Mod 0.6.3: ruckelfreier Welt-Abzug (max. 2.048 Objekte bzw. 2 ms pro Frame), weniger Speicher, sichere Dateiausgabe, Leistungszeile im Server-Log – Format unverändert.
 - ⚔ Dyrnwyn-Quest (Aschelande): die drei Rätselorte (Spitze, Klinge, Griff/Lord Reto) als eigene Kartenebene mit Koordinaten – auch wenn noch unentdeckt.

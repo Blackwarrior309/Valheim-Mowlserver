@@ -20,6 +20,8 @@
 .vw-tabs{display:flex;gap:4px;flex-wrap:wrap}.vw-tabs button{background:none;border-color:transparent}.vw-tabs button.on{background:var(--chip);border-color:var(--acc);box-shadow:none}
 .vw-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .vw-status{font-size:12px;color:var(--mut)}
+.vwOnline{font-size:12px;font-weight:700}.vwOnline::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#4cc36b;margin-right:6px;box-shadow:0 0 0 3px rgba(76,195,107,.25)}.vwOnline.off::before{background:#999;box-shadow:none}
+.vwOnlineBox{position:absolute;right:14px;top:52px;z-index:20;min-width:240px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 8px 30px rgba(0,0,0,.25);font-size:13px}.vwOnlineBox .r{display:flex;justify-content:space-between;gap:12px;padding:3px 0}.vwOnlineBox .sub{font-size:11.5px;color:var(--mut)}
 .vw-main{position:relative;flex:1;min-height:0}
 .vw-pane{position:absolute;inset:0;overflow:hidden}
 .vw-side{position:absolute;top:12px;left:12px;width:310px;max-width:calc(100% - 32px);max-height:calc(100% - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;z-index:3;backdrop-filter:blur(6px)}
@@ -109,7 +111,8 @@
     R.innerHTML = `
 <div class="vw-top"><span class="vw-title"></span>
   <div class="vw-tabs"><button data-t="map" class="on">Karte</button><button data-t="3d">3D</button><button data-t="chests">Kisten</button><button data-t="players">Live-Spieler</button><button data-t="info">Welt & Spieler</button><button data-t="dungeon" hidden title="Nur mit dem Mod auf diesem PC: Grundriss des Dungeons, in dem du gerade bist">⤓ Dungeon</button></div>
-  <div class="vw-act"><span class="vw-status"></span></div></div>
+  <div class="vw-act"><button class="vwOnline" hidden title="Wer ist gerade online (Server-Mod)"></button><span class="vw-status"></span></div></div>
+  <div class="vwOnlineBox" hidden></div>
 <div class="vw-main">
   <div class="vw-pane" data-p="map"><canvas class="map"></canvas>
     <div class="vw-side"><button class="vw-mob" data-min>Menü</button><button class="pri w3d" style="width:100%;margin-top:4px">🌍 Ganze Welt in 3D ansehen</button><h2>Basen</h2><div class="vw-maplist"></div>
@@ -403,7 +406,7 @@
           ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
           if ((st[2] && view.s > 0.12) || l.k === 'StartTemple' || view.s > 0.35) { ctx.fillStyle = '#fff'; ctx.fillText(T(l.n), x, y - 9); } });
         if (ML.creatures && CREA.length) { ctx.textAlign = 'center'; CREA.forEach((c) => { const [x, y] = toS(c.x, c.z); const col = crCol(c); ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, c.boss ? 7 : 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            if (view.s > 0.8 || c.boss || c.tame) { const t = c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + (c.y > 3000 ? ' ⤓' : ''); ctx.font = '11px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t, x, y - 8); ctx.fillStyle = '#fff'; ctx.fillText(t, x, y - 8); } }); ctx.font = '12px system-ui,sans-serif'; }
+            if (view.s > 0.8 || c.boss || c.tame) { const t = (c.tn ? c.tn + ' · ' : '') + c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + (c.y > 3000 ? ' ⤓' : ''); ctx.font = '11px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t, x, y - 8); ctx.fillStyle = '#fff'; ctx.fillText(t, x, y - 8); } }); ctx.font = '12px system-ui,sans-serif'; }
         if (ML.tamed && S.tamed) { ctx.textAlign = 'center'; S.tamed.forEach((t) => { const [x, y] = toS(t[1], t[2]); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             if (view.s > 1.2 && t[3]) { ctx.font = '10px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t[3], x, y - 6); ctx.fillStyle = '#dfffe6'; ctx.fillText(t[3], x, y - 6); } }); ctx.font = '12px system-ui,sans-serif'; }
         if (ML.beds) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; bedList().forEach((l) => { const [x, y] = toS(l[2], l[4]); ctx.font = '13px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.strokeText('🛏', x, y); ctx.fillStyle = '#9fd3ff'; ctx.fillText('🛏', x, y); if (view.s > 0.3) { const t = l[1] || '(ohne Name)'; ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y - 12); ctx.fillStyle = '#dff1ff'; ctx.fillText(t, x, y - 12); } }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
@@ -1417,7 +1420,7 @@
         let on = true; try { on = JSON.parse(localStorage.getItem('vw-maplayers') || '{}').creatures !== false; } catch (e) { }
         if (!on || !reg || !list || !list.length) { invalidate(); return; } crG = new THREE.Group(); scene.add(crG);
         list.forEach((c) => { if (c.y > 3000) return; const m = new THREE.Mesh(crGeo, new THREE.MeshBasicMaterial({ color: crCol(c), depthTest: false, transparent: true, opacity: 0.9 })); m.renderOrder = 11; m.position.copy(W(c.x, c.y + 1.2, c.z)); if (c.boss) m.scale.setScalar(2.5); crG.add(m);
-          if (c.boss || c.tame || c.lv > 1) { const d = document.createElement('div'); d.className = 'vw-lbl'; d.textContent = c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + ' ❤' + Math.round(c.hp); LB.appendChild(d); crLab.push({ d, v: W(c.x, c.y + 3, c.z) }); } });
+          if (c.boss || c.tame || c.lv > 1) { const d = document.createElement('div'); d.className = 'vw-lbl'; d.textContent = (c.tn ? c.tn + ' · ' : '') + c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + ' ❤' + Math.round(c.hp); LB.appendChild(d); crLab.push({ d, v: W(c.x, c.y + 3, c.z) }); } });
         invalidate();
       }
       const OP = new Map(); // Online-Spieler-Figuren
@@ -1482,13 +1485,14 @@
       function mpStatus(text, retry) { if (destroyed) return; MP_STATUS.textContent = 'Mitspieler: ' + text; MP_RETRY.hidden = !retry; }
       MP_RETRY.onclick = () => { if (MP.cli) { MP.cli.removeAllListeners(); MP.cli.end(true); MP.cli = null; } MP.loading = false; mpStart(); };
       mpStatus('noch nicht verbunden', false);
+      const srvTopic = () => 'vwelt-srv/' + String((S.world && (S.world.seed || S.world.name)) || 'welt').replace(/[^a-z0-9]/gi, '_');
       function mpStart() {
         if (MP.cli || MP.loading || !texBase || location.protocol === 'file:') return; MP.loading = true; mpStatus('verbinde …', false);
         const url = new URLSearchParams(location.search).get('mqtt') || 'wss://broker.emqx.io:8084/mqtt';
         const go = () => { if (destroyed) { MP.loading = false; return; } try {
           const c = g.mqtt.connect(url, { clientId: 'vw_' + MP.me, clean: true, connectTimeout: 15000, reconnectPeriod: 4000, keepalive: 30, will: { topic: mpRoom() + '/p/' + MP.me, payload: '', qos: 0, retain: false } });
           MP.cli = c; MP.loading = false;
-          c.on('connect', () => { c.subscribe([mpRoom() + '/p/+', mpRoom() + '/t/' + MP.me], (err) => { if (err) { mpStatus('Abonnement fehlgeschlagen', true); return; } mpStatus('verbunden', false); MP.lastPub = -Infinity; MP.lastMsg = ''; if (walk && !document.hidden) mpPublish(performance.now(), false); }); });
+          c.on('connect', () => { c.subscribe([mpRoom() + '/p/+', mpRoom() + '/t/' + MP.me, srvTopic() + '/+'], (err) => { if (err) { mpStatus('Abonnement fehlgeschlagen', true); return; } mpStatus('verbunden', false); MP.lastPub = -Infinity; MP.lastMsg = ''; if (walk && !document.hidden) mpPublish(performance.now(), false); }); });
           c.on('reconnect', () => mpStatus('verbinde erneut …', true));
           c.on('offline', () => mpStatus('Verbindung unterbrochen', true));
           c.on('close', () => mpStatus('Verbindung unterbrochen', true));
@@ -1499,6 +1503,7 @@
       const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
       function onPeer(topic, msg) {
         if (destroyed) return;
+        if (topic.startsWith(srvTopic() + '/')) { try { if (msg.length < 600000) document.dispatchEvent(new CustomEvent('vwelt-server', { detail: { kind: topic.slice(srvTopic().length + 1), data: JSON.parse(new TextDecoder().decode(msg)) } })); } catch (e) { } return; }   /* Server-Mod: Spieler/Tiere live */
         if (topic === mpRoom() + '/t/' + MP.me) { if (playground && playground.receive(msg)) return; onGrabbed(msg); return; }
         const packet = g.VWPeerProtocol.decode(mpRoom(), topic, msg); if (!packet) return;
         const { id, data: d } = packet; if (id === MP.me || MP.mine.has(id)) return;
@@ -2248,6 +2253,31 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     function stopFollowing() { playerCard.stop(); }
     let playerPeerSignature = '';
     setInterval(() => { playerCard.tick(); if (party) party.render(); const signature = JSON.stringify(three.peerList()); if (signature !== playerPeerSignature) { playerPeerSignature = signature; three.drawPlayers(); if (tab === 'map') map.draw(); } }, 1000);
+    /* ---- Server-Mod live (MQTT): alle Online-Spieler mit Werten + Spielzeit, Tiere/Gegner mit Namen – ohne Client-Mod */
+    const SRV = { at: 0, players: [], creatures: [], timer: 0 };
+    const hm2 = (sec) => { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60; return h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`; };
+    function renderOnline() {
+      const B = $('.vwOnline'), box = $('.vwOnlineBox'); const fresh = Date.now() - SRV.at < 20000;
+      if (!SRV.at) { B.hidden = true; box.hidden = true; return; }
+      B.hidden = false; B.classList.toggle('off', !fresh); B.textContent = fresh ? `${SRV.players.length} online` : 'Server-Live getrennt';
+      if (box.hidden) return; const now = Date.now();
+      box.innerHTML = `<div style="font-weight:700;margin-bottom:6px">Online auf dem Server</div>` + (SRV.players.length ? SRV.players.map((p) => `<div class="r"><button class="playerOpen" data-name="${esc(p.name)}" style="padding:0;border:0;background:none;font-weight:600;cursor:pointer;color:inherit">● ${esc(p.name)}</button><span>${p.since ? hm2((now - p.since) / 1000) : ''}</span></div><div class="sub" style="margin:-2px 0 4px 14px">gesamt ${hm2(p.total || 0)}${p.details && p.details.maxHealth ? ` · ❤ ${Math.round(p.details.health)}/${Math.round(p.details.maxHealth)}` : ''}${p.details && p.details.inBed ? ' · schläft' : ''}${p.details && p.details.dead ? ' · tot' : ''}</div>`).join('') : '<div class="sub">Niemand online.</div>') + `<div class="sub" style="margin-top:6px">Zeit = diese Sitzung · „gesamt“ zählt der Server-Mod seit seiner Installation.</div>`;
+    }
+    listen(R, 'click', (e) => { if (e.target.closest('.vwOnline')) { const box = $('.vwOnlineBox'); box.hidden = !box.hidden; renderOnline(); } else if (!e.target.closest('.vwOnlineBox')) $('.vwOnlineBox').hidden = true; });
+    listen(document, 'vwelt-server', (e) => {
+      const { kind, data } = e.detail || {}; if (!data || typeof data !== 'object') return;
+      if (data.t && Date.now() - data.t > 60000) return;   // alte, gespeicherte Nachricht (Server aus)
+      if (kind === 'players' && Array.isArray(data.players)) {
+        SRV.at = Date.now(); SRV.players = data.players.filter((p) => p && typeof p.name === 'string' && Number.isFinite(p.x) && Number.isFinite(p.z)).slice(0, 64).map((p) => ({ name: p.name.slice(0, 24), x: p.x, y: p.y, z: p.z, since: +p.since || 0, total: +p.total || 0, details: p.details && g.VWPlayerCard ? g.VWPlayerCard.details(p.details) : null }));
+        if (!GL.on) updateLive(SRV.players.map((p) => ({ name: p.name, x: p.x, y: p.y, z: p.z, details: p.details, server: true })));
+        renderOnline();
+      } else if (kind === 'creatures' && Array.isArray(data.creatures)) {
+        SRV.creatures = data.creatures.slice(0, 400);
+        if (!GL.on) { CREA = SRV.creatures; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); map.draw(); } }
+      }
+    });
+    SRV.timer = setInterval(() => { if (SRV.at && Date.now() - SRV.at > 20000 && !GL.on && LIVE && LIVE.length && LIVE[0].server) { updateLive(null); CREA = []; three.setCreatures(CREA); } renderOnline(); }, 5000); cleanup.push(() => clearInterval(SRV.timer));
+    setTimeout(() => { try { three.mpStart(); } catch (e) { } }, 800);   // Live-Kanal gleich beim Laden verbinden (auch ohne 3D)
     function updateLive(players) { if (destroyed) return; LIVE = players; liveReceivedAt = performance.now(); if (party) party.render(); playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }
     // ---- Eigenes Spiel live (Mod „Valheim Welt Live“ auf diesem PC): Position auf der Online-Karte zeigen und an andere Besucher schicken
     let GL = { on: false, timer: 0, fails: 0, url: 'http://localhost:8686', generation: 0, controller: null, status: 'getrennt' };

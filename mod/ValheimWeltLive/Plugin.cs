@@ -24,11 +24,13 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.6.4";
+        public const string Version = "0.7.0";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
         ConfigEntry<int> cfgMaxObjects; ConfigEntry<float> cfgMaxMs;
+        ConfigEntry<bool> cfgLive; ConfigEntry<string> cfgLiveHost; ConfigEntry<int> cfgLivePort; ConfigEntry<float> cfgLivePlayerSec, cfgLiveCreatureSec;
+        LiveFeed feed; string liveTopic; float nextLivePlayers, nextLiveCreatures, nextLiveStat;
         ConfigEntry<int> cfgPort, cfgWorldSeconds, cfgTrackSeconds, cfgTrackDays;
         ConfigEntry<float> cfgPlayerSeconds;
         ConfigEntry<string> cfgFilePath;
@@ -68,6 +70,11 @@ namespace ValheimWeltLive
             cfgTrackDays = Config.Bind("Spuren", "KeepDays", 3, "Days of position files kept on the server (the live map copies them to GitHub).");
             cfgDeaths = Config.Bind("Spuren", "RecordDeaths", true, "Server: record every new tombstone (tode.csv next to the dump file) – also deaths whose tombstone is looted before the next save.");
             cfgDetails = Config.Bind("Spieler", "ShareDetails", true, "Include local player health, stamina, eitr, equipment and recorded world statistics in /api/players. Shared with map visitors when live game sharing is enabled.");
+            cfgLive = Config.Bind("Live", "Enabled", Application.isBatchMode, "Server: send player positions, health/stamina and creatures (with pet names) every few seconds to the live map's public MQTT channel (outgoing connection only). Everyone on the map can see it.");
+            cfgLiveHost = Config.Bind("Live", "Broker", "broker.emqx.io", "MQTT broker (the live map uses the same one).");
+            cfgLivePort = Config.Bind("Live", "Port", 1883, "MQTT port (plain TCP).");
+            cfgLivePlayerSec = Config.Bind("Live", "PlayerSeconds", 1f, "Seconds between player updates.");
+            cfgLiveCreatureSec = Config.Bind("Live", "CreatureSeconds", 5f, "Seconds between creature updates.");
             LoadPlayerStats();
             webRoot = Path.Combine(Path.GetDirectoryName(Info.Location) ?? ".", "web");
             // Kisten-Suche im Spiel (nur auf Spieler-Rechnern, nicht auf dedizierten Servern)
@@ -80,11 +87,13 @@ namespace ValheimWeltLive
                 try { SuchePatches.Apply(new HarmonyLib.Harmony(Guid), Logger); } catch (Exception e) { Logger.LogWarning("Suche: " + e.Message); }
             }
             if (cfgHttp.Value) StartHttp();
+            if (cfgLive.Value) { feed = new LiveFeed(cfgLiveHost.Value, cfgLivePort.Value, "vwl_srv_" + System.Guid.NewGuid().ToString("N").Substring(0, 12), Logger); feed.Start(); }
             Logger.LogInfo($"{Name} {Version} loaded. Web: {(cfgHttp.Value ? "http://localhost:" + cfgPort.Value + "/" : "off")}, dump file: {(cfgWriteFile.Value ? "on" : "off")}");
         }
 
         void OnDestroy()
         {
+            feed?.Stop(); if (playTotal != null) SavePlaytime();
             SavePlayerStats();
             try { http?.Stop(); http?.Close(); } catch { }
         }
@@ -94,6 +103,7 @@ namespace ValheimWeltLive
             if (statsNetwork != ZNet.instance) { statsSession = null; statsNetwork = ZNet.instance; }
             if (ZNet.instance == null || ZDOMan.instance == null) { statsSession = null; return; }
             float t = Time.realtimeSinceStartup;
+            if (feed != null && ZNet.instance.IsServer()) LiveTick(t);
             if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } if (cfgHttp.Value) { try { creaturesJson = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); } } /* Gegner/Dungeon nur für die eigene Webseite – auf dem Server (Web aus) gespart */ if (cfgHttp.Value && t >= nextDungeon) { nextDungeon = t + 1.5f; try { dungeonJson = CollectDungeon(); } catch (Exception e) { Logger.LogDebug(e); } } }
             if (!biomeBusy && WorldGenerator.instance != null && ZNet.instance != null && (biomeGrid == null || biomeWorld != ZNet.instance.GetWorldName())) StartCoroutine(BuildBiomes());
             if (t >= nextWorld) { nextWorld = t + Mathf.Max(10, cfgWorldSeconds.Value); if (!building) StartCoroutine(BuildDump()); else { skippedDumps++; Logger.LogWarning("World dump skipped – previous one still running (" + skippedDumps + " so far)."); } }
@@ -278,10 +288,15 @@ namespace ValheimWeltLive
         }
         void AppendRemoteDetails(StringBuilder sb, Player p)
         {
+            var zdo = ZDOMan.instance != null ? ZDOMan.instance.GetZDO(p.GetZDOID()) : null; if (zdo == null) return;
+            AppendZdoDetails(sb, zdo, p.GetHealth(), p.GetMaxHealth(), true);
+        }
+        // Werte einer Spielfigur aus ihrem ZDO (das schickt das Spiel selbst übers Netz) – auf dem Server für alle Online-Spieler verfügbar
+        void AppendZdoDetails(StringBuilder sb, ZDO zdo, float hp, float mhp, bool remote)
+        {
             try {
-                var zdo = ZDOMan.instance != null ? ZDOMan.instance.GetZDO(p.GetZDOID()) : null; if (zdo == null) return;
-                var d = new StringBuilder(",\"details\":{\"remote\":true");
-                d.Append(",\"health\":").Append(F(p.GetHealth())).Append(",\"maxHealth\":").Append(F(p.GetMaxHealth()));
+                var d = new StringBuilder(",\"details\":{" + (remote ? "\"remote\":true," : ""));
+                d.Append("\"health\":").Append(F(hp)).Append(",\"maxHealth\":").Append(F(mhp));
                 d.Append(",\"stamina\":").Append(F(zdo.GetFloat(ZDOVars.s_stamina, 0f))).Append(",\"eitr\":").Append(F(zdo.GetFloat(ZDOVars.s_eitr, 0f)));
                 if (zdo.GetBool(ZDOVars.s_dead, false)) d.Append(",\"dead\":true");
                 if (zdo.GetBool(ZDOVars.s_inBed, false)) d.Append(",\"inBed\":true");
@@ -345,6 +360,68 @@ namespace ValheimWeltLive
 
         // Gegner und Tiere im geladenen Gebiet (auch in Dungeons)
         volatile string creaturesJson = "[]";
+        // ---------------- Live-Kanal (Server) ----------------
+        static string Topicify(string s) { var sb = new StringBuilder(); foreach (char ch in s ?? "") sb.Append(char.IsLetterOrDigit(ch) && ch < 128 ? ch : '_'); return sb.Length > 0 ? sb.ToString() : "welt"; }
+        string WorldSeed()
+        {
+            try { var w = typeof(ZNet).GetField("m_world", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)?.GetValue(ZNet.instance) as World; if (w != null && !string.IsNullOrEmpty(w.m_seedName)) return w.m_seedName; } catch { }
+            return ZNet.instance.GetWorldName();
+        }
+        void LiveTick(float t)
+        {
+            if (liveTopic == null) liveTopic = "vwelt-srv/" + Topicify(WorldSeed());
+            long now = Unix() * 1000;
+            if (t >= nextLivePlayers)
+            {
+                string pl = "[]"; try { pl = CollectServerPlayers(); } catch (Exception e) { Logger.LogDebug(e); }
+                nextLivePlayers = t + Mathf.Max(0.5f, pl == "[]" ? 5f : cfgLivePlayerSec.Value);
+                feed.Publish(liveTopic + "/players", "{\"t\":" + now + ",\"players\":" + pl + "}", true);
+            }
+            if (t >= nextLiveCreatures)
+            {
+                nextLiveCreatures = t + Mathf.Max(1f, cfgLiveCreatureSec.Value);
+                string cr = "[]"; try { cr = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); }
+                feed.Publish(liveTopic + "/creatures", "{\"t\":" + now + ",\"creatures\":" + cr + "}", true);
+            }
+            if (t >= nextLiveStat) { nextLiveStat = t + 600f; if (cfgPerfLog.Value) Logger.LogInfo($"Live feed: {(feed.Connected ? "verbunden" : "getrennt" + (feed.LastError != "" ? " (" + feed.LastError + ")" : ""))}, {feed.Sent} Nachrichten gesendet, Thema {liveTopic}/…"); }
+        }
+        // Alle Online-Spieler vom Server aus: Position und Werte aus der Spielfigur (ZDO), sonst die gemeldete Position
+        // Spielzeit: seit wann online (diese Sitzung) und gesamt (gespeichert in spielzeit.json neben dem Dump)
+        readonly Dictionary<string, long> onlineSince = new Dictionary<string, long>(); Dictionary<string, double> playTotal; float playLastT, playSaved;
+        void LoadPlaytime()
+        {
+            playTotal = new Dictionary<string, double>();
+            try { string f = Path.Combine(DataDir(), "spielzeit.json"); if (File.Exists(f) && MiniJson.Parse(File.ReadAllText(f)) is Dictionary<string, object> d) foreach (var kv in d) if (kv.Value is double v) playTotal[kv.Key] = v; } catch (Exception e) { Logger.LogDebug("Spielzeit: " + e.Message); }
+        }
+        void SavePlaytime()
+        {
+            try { string dir = DataDir(); Directory.CreateDirectory(dir); var sb = new StringBuilder("{"); bool f = true; foreach (var kv in playTotal) { if (!f) sb.Append(','); f = false; sb.Append(Json(kv.Key)).Append(':').Append(Math.Round(kv.Value)); } File.WriteAllText(Path.Combine(dir, "spielzeit.json"), sb.Append('}').ToString()); } catch (Exception e) { Logger.LogDebug("Spielzeit: " + e.Message); }
+        }
+        string CollectServerPlayers()
+        {
+            if (playTotal == null) LoadPlaytime();
+            float tNow = Time.realtimeSinceStartup; double dt = playLastT > 0 ? Math.Min(30, tNow - playLastT) : 0; playLastT = tNow; long nowMs = Unix() * 1000;
+            var here = new HashSet<string>();
+            var sb = new StringBuilder("["); bool first = true;
+            foreach (var peer in ZNet.instance.GetPeers())
+            {
+                if (peer == null || string.IsNullOrEmpty(peer.m_playerName)) continue;
+                ZDO z = null; try { if (!peer.m_characterID.IsNone()) z = ZDOMan.instance.GetZDO(peer.m_characterID); } catch { }
+                Vector3 p = z != null ? z.GetPosition() : peer.m_refPos; if (p == Vector3.zero) continue;
+                string nm = peer.m_playerName; here.Add(nm);
+                long since; if (!onlineSince.TryGetValue(nm, out since)) { since = nowMs; onlineSince[nm] = since; }
+                double tot; playTotal.TryGetValue(nm, out tot); tot += dt; playTotal[nm] = tot;
+                if (!first) sb.Append(','); first = false;
+                sb.Append("{\"name\":").Append(Json(nm)).Append(",\"x\":").Append(F(p.x)).Append(",\"y\":").Append(F(p.y)).Append(",\"z\":").Append(F(p.z));
+                sb.Append(",\"since\":").Append(since).Append(",\"total\":").Append(Math.Round(tot));
+                if (z != null) { sb.Append(",\"r\":").Append(F(z.GetRotation().eulerAngles.y)); AppendZdoDetails(sb, z, z.GetFloat(ZDOVars.s_health, 0f), z.GetFloat(ZDOVars.s_maxHealth, 0f), false); }
+                sb.Append('}');
+            }
+            foreach (var k in onlineSince.Keys.Where((k) => !here.Contains(k)).ToList()) onlineSince.Remove(k);   // abgemeldet
+            if (tNow - playSaved > 60f) { playSaved = tNow; SavePlaytime(); }
+            return sb.Append(']').ToString();
+        }
+
         string CollectCreatures()
         {
             var sb = new StringBuilder("["); bool first = true; int n = 0;
@@ -359,7 +436,8 @@ namespace ValheimWeltLive
                       .Append(",\"x\":").Append(F(pos.x)).Append(",\"y\":").Append(F(pos.y)).Append(",\"z\":").Append(F(pos.z))
                       .Append(",\"hp\":").Append(F(c.GetHealth())).Append(",\"mhp\":").Append(F(c.GetMaxHealth())).Append(",\"lv\":").Append(c.GetLevel())
                       .Append(",\"f\":").Append(Json(c.m_faction.ToString()));
-                    if (c.IsTamed()) sb.Append(",\"tame\":1"); if (c.IsBoss()) sb.Append(",\"boss\":1");
+                    if (c.IsTamed()) { sb.Append(",\"tame\":1"); try { var cz = ZDOMan.instance.GetZDO(c.GetZDOID()); string tn = cz != null ? cz.GetString(ZDOVars.s_tamedName, "") : ""; if (!string.IsNullOrEmpty(tn)) sb.Append(",\"tn\":").Append(Json(tn)); } catch { } }
+                    if (c.IsBoss()) sb.Append(",\"boss\":1");
                     sb.Append('}');
                 }
                 catch { }
@@ -410,6 +488,7 @@ namespace ValheimWeltLive
             var strs = new List<KeyValuePair<int, string>>(8);
             int recCount = 0, stale = 0, inFrame = 0;
             var tmpZ = new List<ZDO>(4096); var tmpId = new List<ZDOID>(4096);
+            var tame = new List<KeyValuePair<int, Vector3>>(); var tameName = new List<string>(); var tameLv = new List<int>();   // zahme Tiere (Abschnitt TAME)
             swFrame.Start();
             int total = sectors != null ? sectors.Length : 1;
             for (int si = 0; si < total; si++)
@@ -442,6 +521,7 @@ namespace ValheimWeltLive
                             if ((m & 4) != 0) { int n = Math.Min(255, strs.Count); bw.Write((byte)n); for (int i = 0; i < n; i++) { bw.Write(strs[i].Key); bw.Write(strs[i].Value); } }
                             if ((m & 8) != 0) { bw.Write(it.Length); bw.Write(it); }
                             recCount++;
+                            if (z.GetBool(ZDOVars.s_tamed, false)) { tame.Add(new KeyValuePair<int, Vector3>(z.GetPrefab(), pos)); tameName.Add(z.GetString(ZDOVars.s_tamedName, "")); tameLv.Add(z.GetInt(ZDOVars.s_level, 1)); }
                         }
                         catch { }
                     }
@@ -509,6 +589,8 @@ namespace ValheimWeltLive
                                 // aufgedeckte Karte (nur im Spiel-Client vorhanden): "EXPL", Größe, Pixelgröße, Bits
                                 if (explored != null) { w.Write(Encoding.ASCII.GetBytes("EXPL")); w.Write(expSize); w.Write(expPixel); w.Write(explored.Length); w.Write(explored); }
                                 if (bio != null) { w.Write(Encoding.ASCII.GetBytes("BIOM")); w.Write(BIO_N); w.Write(BIO_RES); w.Write(BIO_X0); w.Write(bio.Length); w.Write(bio); }
+                                // zahme Tiere: "TAME", Anzahl, je Tier: Prefab, x, z, Name, Stufe (ältere Leser hören hier einfach auf)
+                                if (tame.Count > 0) { w.Write(Encoding.ASCII.GetBytes("TAME")); w.Write(tame.Count); for (int i = 0; i < tame.Count; i++) { w.Write(tame[i].Key); w.Write(tame[i].Value.x); w.Write(tame[i].Value.z); w.Write(tameName[i] ?? ""); w.Write(tameLv[i]); } }
                                 w.Flush();
                             }
                         }

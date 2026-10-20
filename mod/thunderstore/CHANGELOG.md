@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+- Server live feed (`[Live]`, on by default on dedicated servers): every second all online players with exact position, health, stamina, eitr, equipment, dead/sleeping, session start and total play time; every 5 s creatures near players incl. pet names. Sent to the live map's public MQTT channel `vwelt-srv/<seed>/…` (outgoing connection only, no port opened). No client mod needed.
+- Play time per player is counted on the server (`spielzeit.json` next to the dump).
+- World dump gets an optional `TAME` section: all tamed animals with name and level (older readers ignore it).
+
 ## 0.6.4
 - World dump reads the objects sector by sector instead of copying the whole object list in one frame (on a ~1 million object world that single copy cost 30–170 ms per dump). Frame time now stays near the configured budget.
 - Server-friendly defaults on dedicated servers (batch mode): dump every 300 s, dump file on, web page off, player positions every 5 s.
