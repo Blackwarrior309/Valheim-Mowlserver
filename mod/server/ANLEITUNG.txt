@@ -2,7 +2,8 @@ Valheim Welt Live – Mod auf einem dedizierten Server (z. B. Nitrado)
 ====================================================================
 
 Was der Mod auf dem Server macht
-- Liest alle 5 Minuten die ganze Welt aus (verteilt auf viele kleine Schritte, damit nichts ruckelt)
+- Liest alle 5 Minuten die ganze Welt aus – verteilt auf viele kleine Schritte: höchstens 2.048 Objekte
+  bzw. 2 ms pro Frame (einstellbar unter [Leistung]), damit der Server auch mit 4–5 Spielern nicht ruckelt
   und schreibt sie nach  BepInEx/config/ValheimWeltLive/welt.vwdump  (eine Datei, wird überschrieben).
 - Die Live-Karte (GitHub Actions oder Valheim-Sync am PC) holt diese Datei per FTP statt der Spielstände:
   aktueller, ohne auf das Speichern des Servers zu warten. Spieler brauchen den Mod NICHT.
@@ -27,9 +28,12 @@ Vorher: ein aktuelles Backup der Welt sicherstellen (Nitrado-Webinterface → Ba
 3. Server starten und ca. 6 Minuten warten
 - Dann muss es  BepInEx/config/ValheimWeltLive/welt.vwdump  geben (einige MB groß).
 - Im Server-Log sollte stehen:
-  „Valheim Welt Live 0.3.0 loaded. Web: off, dump file: on“
+  „Valheim Welt Live 0.6.3 loaded. Web: off, dump file: on“
   „Biome grid computed“
   „World dump written: … objects“
+  und nach jedem Abzug eine Leistungszeile, z. B.
+  „Dump ok: 723718 ZDOs · Scan 9.8 s in 410 Frames, max 2.10 ms/Frame … · roh 31 MB → 14 MB · Speicher +60 MB …“
+  Wichtig ist „max … ms/Frame“: bleibt der Wert um 2 ms, merkt man vom Abzug nichts.
 
 4. Live-Karte
 - Die Live-Karte per GitHub Actions (docs/LIVE-MAP.md) und Valheim-Sync finden die Datei automatisch.
@@ -39,6 +43,11 @@ Tode & Laufwege
 - Der Mod schreibt jeden Tod nach  BepInEx/config/ValheimWeltLive/tode.csv  (an).
 - Laufwege für die Heatmap: in der .cfg unter [Spuren]  RecordPositions = true  setzen – nur, wenn alle Spieler einverstanden sind.
   Die Positionen landen tageweise in  spuren-JJJJMMTT.csv , auf dem Server bleiben nur die letzten 3 Tage.
+
+Erfolge (Steam-Achievements)
+- Der Mod läuft nur auf dem Server, ändert nichts an der Welt (nur lesen) und setzt auf dem Server keine
+  Harmony-Patches. Die Spieler nutzen ein unverändertes Valheim. Erfolge sollten daher weiter funktionieren –
+  im Test bestätigt ist das noch nicht.
 
 Wieder ausschalten
 - Server stoppen, BepInEx/plugins/ValheimWeltLive löschen, Server starten.

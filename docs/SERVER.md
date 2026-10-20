@@ -34,7 +34,7 @@ Before you start: make sure you have a recent backup of the world.
 3. Start the server and wait about 6 minutes
 - Now  BepInEx/config/ValheimWeltLive/welt.vwdump  must exist (a few MB).
 - The server log should contain:
-  "Valheim Welt Live 0.3.0 loaded. Web: off, dump file: on"
+  "Valheim Welt Live 0.6.3 loaded. Web: off, dump file: on"
   "Biome grid computed"
   "World dump written: … objects"
 
@@ -88,7 +88,7 @@ Vorher: ein aktuelles Backup der Welt sicherstellen (Nitrado-Webinterface → Ba
 3. Server starten und ca. 6 Minuten warten
 - Dann muss es  BepInEx/config/ValheimWeltLive/welt.vwdump  geben (einige MB groß).
 - Im Server-Log sollte stehen:
-  „Valheim Welt Live 0.3.0 loaded. Web: off, dump file: on“
+  „Valheim Welt Live 0.6.3 loaded. Web: off, dump file: on“
   „Biome grid computed“
   „World dump written: … objects“
 

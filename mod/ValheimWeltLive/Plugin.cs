@@ -24,10 +24,11 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.6.2";
+        public const string Version = "0.6.3";
         static bool loggedFile;
 
-        ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails;
+        ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
+        ConfigEntry<int> cfgMaxObjects; ConfigEntry<float> cfgMaxMs;
         ConfigEntry<int> cfgPort, cfgWorldSeconds, cfgTrackSeconds, cfgTrackDays;
         ConfigEntry<float> cfgPlayerSeconds;
         ConfigEntry<string> cfgFilePath;
@@ -35,7 +36,6 @@ namespace ValheimWeltLive
         HttpListener http;
         Thread httpThread;
         volatile byte[] dumpGz;          // letzter Dump, gzip
-        volatile byte[] dumpRaw;         // letzter Dump, roh (für Datei)
         volatile string playersJson = "[]";
         volatile string infoJson = "{}";
         long dumpTime;
@@ -56,6 +56,10 @@ namespace ValheimWeltLive
             cfgBindAll = Config.Bind("Web", "BindAll", false, "true = reachable from the network too (server/LAN). On Windows this may need admin rights or a URL reservation.");
             cfgWorldSeconds = Config.Bind("Daten", "WorldIntervalSeconds", 30, "How often the whole world is read again (seconds, min. 10). Servers: 300.");
             cfgPlayerSeconds = Config.Bind("Daten", "PlayerIntervalSeconds", 1f, "How often player positions are updated (seconds).");
+            cfgMaxObjects = Config.Bind("Leistung", "MaxObjectsPerFrame", 2048, "World dump: at most this many objects per frame (64–65536). Smaller = smoother, dump takes longer.");
+            cfgMaxMs = Config.Bind("Leistung", "MaxMillisecondsPerFrame", 2f, "World dump: time budget per frame in milliseconds. Whichever limit is reached first ends the frame's portion.");
+            cfgFastGzip = Config.Bind("Leistung", "FastCompression", true, "true = gzip 'Fastest' (less CPU, slightly bigger file), false = 'Optimal'.");
+            cfgPerfLog = Config.Bind("Leistung", "LogPerformance", true, "Log one line per world dump: objects, scan time, max ms per frame, compression time, sizes, extra memory, skipped dumps.");
             cfgWriteFile = Config.Bind("Datei", "WriteDumpFile", false, "Also write the world dump to a file (for FTP sync, e.g. Nitrado). Set to true on servers.");
             cfgFilePath = Config.Bind("Datei", "DumpPath", "", "Empty = BepInEx/config/ValheimWeltLive/welt.vwdump");
             cfgStrip = Config.Bind("Datenschutz", "StripSteamIds", true, "Do not output Steam IDs (authors of signs/portals).");
@@ -90,9 +94,9 @@ namespace ValheimWeltLive
             if (statsNetwork != ZNet.instance) { statsSession = null; statsNetwork = ZNet.instance; }
             if (ZNet.instance == null || ZDOMan.instance == null) { statsSession = null; return; }
             float t = Time.realtimeSinceStartup;
-            if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } try { creaturesJson = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); } if (t >= nextDungeon) { nextDungeon = t + 1.5f; try { dungeonJson = CollectDungeon(); } catch (Exception e) { Logger.LogDebug(e); } } }
+            if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } if (cfgHttp.Value) { try { creaturesJson = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); } } /* Gegner/Dungeon nur für die eigene Webseite – auf dem Server (Web aus) gespart */ if (cfgHttp.Value && t >= nextDungeon) { nextDungeon = t + 1.5f; try { dungeonJson = CollectDungeon(); } catch (Exception e) { Logger.LogDebug(e); } } }
             if (!biomeBusy && WorldGenerator.instance != null && ZNet.instance != null && (biomeGrid == null || biomeWorld != ZNet.instance.GetWorldName())) StartCoroutine(BuildBiomes());
-            if (t >= nextWorld && !building) { nextWorld = t + Mathf.Max(10, cfgWorldSeconds.Value); StartCoroutine(BuildDump()); }
+            if (t >= nextWorld) { nextWorld = t + Mathf.Max(10, cfgWorldSeconds.Value); if (!building) StartCoroutine(BuildDump()); else { skippedDumps++; Logger.LogWarning("World dump skipped – previous one still running (" + skippedDumps + " so far)."); } }
             if (cfgWriteFile.Value && ZNet.instance.IsServer())
             {
                 if (cfgTracks.Value && t >= nextTrack) { nextTrack = t + Mathf.Max(2, cfgTrackSeconds.Value); try { SampleTracks(); } catch (Exception e) { Logger.LogDebug(e); } }
@@ -162,7 +166,7 @@ namespace ValheimWeltLive
         }
         IEnumerator BuildBiomes()
         {
-            biomeBusy = true; string w = ZNet.instance.GetWorldName(); var g = new byte[BIO_N * BIO_N]; int done = 0;
+            biomeBusy = true; string w = ZNet.instance.GetWorldName(); var g = new byte[BIO_N * BIO_N]; var sw = System.Diagnostics.Stopwatch.StartNew();
             for (int j = 0; j < BIO_N; j++)
             {
                 for (int i = 0; i < BIO_N; i++)
@@ -170,7 +174,7 @@ namespace ValheimWeltLive
                     float x = BIO_X0 + (i + 0.5f) * BIO_RES, z = BIO_X0 + (j + 0.5f) * BIO_RES;
                     try { g[j * BIO_N + i] = (x * x + z * z > 10500f * 10500f) ? (byte)8 : BiomeIndex(WorldGenerator.instance.GetBiome(new Vector3(x, 0f, z))); } catch { }
                 }
-                if (++done % 4 == 0) yield return null;            // auf viele Frames verteilen
+                if (sw.Elapsed.TotalMilliseconds >= Math.Max(0.25, cfgMaxMs.Value)) { yield return null; sw.Reset(); sw.Start(); }   // Zeitbudget je Frame wie beim Welt-Abzug
                 if (WorldGenerator.instance == null) { biomeBusy = false; yield break; }
             }
             biomeGrid = g; biomeWorld = w; biomeBusy = false;
@@ -364,108 +368,176 @@ namespace ValheimWeltLive
         }
 
         // ---------------- Welt-Dump (VWD1) ----------------
-        struct Rec { public int prefab; public Vector3 pos; public float yaw, scale; public long creator, owner; public List<KeyValuePair<int, string>> strings; public byte[] items; }
+        // Ablauf (Format unverändert, siehe docs/FORMAT.md):
+        //  1. Hauptthread: ZDO-Liste kopieren und in kleinen Portionen lesen – begrenzt durch MaxObjectsPerFrame UND MaxMillisecondsPerFrame.
+        //     Jedes Objekt wird sofort binär in einen Puffer geschrieben (keine Zwischenliste, keine Kopie des ganzen Abzugs).
+        //  2. Hintergrund: Kopf + Puffer + Karte/Biome direkt gzip-komprimiert in welt.vwdump.tmp schreiben, Datei schließen,
+        //     dann die alte welt.vwdump ersetzen. Bei einem Fehler bleibt die letzte gültige Datei stehen.
+        //  Kein ZDO- oder Unity-Zugriff im Hintergrund. Es läuft immer nur ein Abzug; fällige Abzüge während eines laufenden werden übersprungen.
+        int skippedDumps; static readonly UTF8Encoding UTF8NoBom = new UTF8Encoding(false);
+        sealed class CountingStream : Stream   // zählt die unkomprimierten Bytes, ohne sie zu speichern
+        {
+            readonly Stream inner; public long Count;
+            public CountingStream(Stream s) { inner = s; }
+            public override void Write(byte[] b, int o, int c) { inner.Write(b, o, c); Count += c; }
+            public override void Flush() { inner.Flush(); }
+            public override bool CanRead => false; public override bool CanSeek => false; public override bool CanWrite => true;
+            public override long Length => Count; public override long Position { get => Count; set => throw new NotSupportedException(); }
+            public override int Read(byte[] b, int o, int c) { throw new NotSupportedException(); }
+            public override long Seek(long o, SeekOrigin s) { throw new NotSupportedException(); }
+            public override void SetLength(long v) { throw new NotSupportedException(); }
+        }
 
         IEnumerator BuildDump()
         {
             building = true;
+            var swTotal = System.Diagnostics.Stopwatch.StartNew(); var swFrame = new System.Diagnostics.Stopwatch();
+            long memStart = GC.GetTotalMemory(false); double maxFrameMs = 0; int frames = 0;
             byte[] explored = null; int expSize = 0; float expPixel = 0f;
             byte[] bio = biomeGrid;
-            List<Rec> recs = null; string world = "", seed = ""; List<string> keys = new List<string>(); string players = playersJson;
+            string world = "", seed = ""; List<string> keys = new List<string>(); string players = playersJson;
             var locs = new List<KeyValuePair<string, Vector3>>(); var locPlaced = new List<bool>();
-            // ZDO-Liste kopieren und in kleinen Portionen (je Frame 16384 Objekte) auslesen – kein Ruckler für Spieler
             var dict = GetZdoDict();
             if (dict == null) { Logger.LogWarning("ZDOs not found (game version changed?)"); building = false; yield break; }
-            ZDO[] all = null;
-            try { all = new ZDO[dict.Count]; dict.Values.CopyTo(all, 0); } catch (Exception e) { Logger.LogWarning("ZDO list: " + e.Message); }
+            ZDOID[] ids = null; ZDO[] all = null;
+            swFrame.Start();
+            try
+            {
+                if (dict is Dictionary<ZDOID, ZDO> gd) { all = new ZDO[gd.Count]; ids = new ZDOID[gd.Count]; gd.Values.CopyTo(all, 0); gd.Keys.CopyTo(ids, 0); }
+                else { all = new ZDO[dict.Count]; dict.Values.CopyTo(all, 0); var o = new object[all.Length]; dict.Keys.CopyTo(o, 0); ids = new ZDOID[o.Length]; for (int i = 0; i < o.Length; i++) ids[i] = o[i] is ZDOID d ? d : ZDOID.None; }
+            }
+            catch (Exception e) { Logger.LogWarning("ZDO list: " + e.Message); all = null; }
             if (all == null) { building = false; yield break; }
-            recs = new List<Rec>(all.Length);
+            int perFrame = Mathf.Clamp(cfgMaxObjects.Value, 64, 65536); double budgetMs = Math.Max(0.25, cfgMaxMs.Value);
             bool strip = cfgStrip.Value;
+            // Datensätze direkt binär schreiben (Größe grob vorab reservieren, damit der Puffer selten wächst)
+            var recBuf = new MemoryStream(Math.Min(int.MaxValue / 2, Math.Max(1 << 20, all.Length * 34)));
+            var bw = new BinaryWriter(recBuf, UTF8NoBom, true);
+            var strs = new List<KeyValuePair<int, string>>(8);
+            int recCount = 0, stale = 0, inFrame = 0;
             for (int zi = 0; zi < all.Length; zi++)
             {
-                ZDO z = all[zi];
-                if (z != null)
+                ZDO z = all[zi]; all[zi] = null;
+                // ZDOs werden vom Spiel wiederverwendet: nur übernehmen, wenn das Objekt noch dieselbe ID hat wie beim Kopieren
+                if (z != null && z.m_uid == ids[zi])
                 {
                     try
                     {
-                        var r = new Rec { prefab = z.GetPrefab(), pos = z.GetPosition(), yaw = z.GetRotation().eulerAngles.y, scale = 1f };
-                        Vector3 sc = z.GetVec3(H_SCALE, Vector3.zero); if (sc != Vector3.zero) r.scale = sc.x;
-                        r.creator = z.GetLong(H_CREATOR, 0L); r.owner = z.GetLong(H_OWNER, 0L);
+                        Vector3 pos = z.GetPosition(); float yaw = z.GetRotation().eulerAngles.y, scale = 1f;
+                        Vector3 sc = z.GetVec3(H_SCALE, Vector3.zero); if (sc != Vector3.zero) scale = sc.x;
+                        long creator = z.GetLong(H_CREATOR, 0L), owner = z.GetLong(H_OWNER, 0L);
+                        strs.Clear();
                         foreach (int k in STRING_KEYS)
                         {
                             if (strip && (k == H_AUTHOR || k == H_TAGAUTHOR)) continue;
-                            string v = z.GetString(k, ""); if (string.IsNullOrEmpty(v)) continue;
-                            (r.strings ?? (r.strings = new List<KeyValuePair<int, string>>())).Add(new KeyValuePair<int, string>(k, v));
+                            string v = z.GetString(k, ""); if (!string.IsNullOrEmpty(v)) strs.Add(new KeyValuePair<int, string>(k, v));
                         }
-                        byte[] it = z.GetByteArray(H_ITEMS, null); if (it != null && it.Length > 0) r.items = it;
-                        recs.Add(r);
+                        byte[] it = z.GetByteArray(H_ITEMS, null); if (it != null && it.Length == 0) it = null;
+                        byte m = 0; if (creator != 0) m |= 1; if (owner != 0) m |= 2; if (strs.Count > 0) m |= 4; if (it != null) m |= 8;
+                        bw.Write(z.GetPrefab()); bw.Write(pos.x); bw.Write(pos.y); bw.Write(pos.z); bw.Write(yaw); bw.Write(scale); bw.Write(m);
+                        if ((m & 1) != 0) bw.Write(creator);
+                        if ((m & 2) != 0) bw.Write(owner);
+                        if ((m & 4) != 0) { int n = Math.Min(255, strs.Count); bw.Write((byte)n); for (int i = 0; i < n; i++) { bw.Write(strs[i].Key); bw.Write(strs[i].Value); } }
+                        if ((m & 8) != 0) { bw.Write(it.Length); bw.Write(it); }
+                        recCount++;
                     }
                     catch { }
                 }
-                if ((zi & 16383) == 16383) yield return null;
-                if (ZNet.instance == null) { building = false; yield break; }   // Welt verlassen
+                else if (z != null) stale++;
+                // Portionsende: max. Objektzahl oder Zeitbudget erreicht (Uhr nur alle 64 Objekte abfragen)
+                if (++inFrame >= perFrame || ((inFrame & 63) == 0 && swFrame.Elapsed.TotalMilliseconds >= budgetMs))
+                {
+                    double ms = swFrame.Elapsed.TotalMilliseconds; if (ms > maxFrameMs) maxFrameMs = ms; frames++;
+                    inFrame = 0; yield return null; swFrame.Reset(); swFrame.Start();
+                    if (ZNet.instance == null) { bw.Dispose(); recBuf.Dispose(); building = false; yield break; }   // Welt verlassen
+                }
             }
+            { double ms = swFrame.Elapsed.TotalMilliseconds; if (ms > maxFrameMs) maxFrameMs = ms; frames++; }
+            all = null; ids = null; bw.Flush();
+            double scanMs = swTotal.Elapsed.TotalMilliseconds; long memScan = GC.GetTotalMemory(false) - memStart;
+            bool dedicated = false;
             try
             {
                 world = ZNet.instance.GetWorldName() ?? "";
+                dedicated = ZNet.instance.IsDedicated();
                 try { var w = typeof(ZNet).GetField("m_world", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)?.GetValue(ZNet.instance) as World; if (w != null) seed = w.m_seedName ?? ""; } catch { }
                 try { keys = ZoneSystem.instance.GetGlobalKeys(); } catch { }
                 try { CollectLocations(locs, locPlaced); } catch (Exception e) { Logger.LogDebug("Locations: " + e.Message); }
                 try { explored = CollectExplored(out expSize, out expPixel); } catch (Exception e) { explored = null; Logger.LogDebug("Map: " + e.Message); }
             }
-            catch (Exception e) { Logger.LogError("Dump failed: " + e); building = false; yield break; }
+            catch (Exception e) { Logger.LogError("Dump failed: " + e); bw.Dispose(); recBuf.Dispose(); building = false; yield break; }
 
-            // Schreiben im Hintergrund, damit das Spiel nicht ruckelt
+            // Schreiben im Hintergrund – nur fertige Kopien (Strings, Bytes), kein Zugriff auf ZDOs oder Unity
             long now = (long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds;
             var livePlayers = ParsePlayers(players);
-            bool done = false;
+            bool keepInMemory = cfgHttp.Value, toFile = cfgWriteFile.Value;
+            string path = string.IsNullOrEmpty(cfgFilePath.Value) ? Path.Combine(Paths.ConfigPath, "ValheimWeltLive", "welt.vwdump") : cfgFilePath.Value;
+            var level = cfgFastGzip.Value ? System.IO.Compression.CompressionLevel.Fastest : System.IO.Compression.CompressionLevel.Optimal;
+            int interval = Math.Max(10, cfgWorldSeconds.Value);
+            bool done = false, ok = false; long rawBytes = 0, gzBytes = 0; double zipMs = 0; string err = null;
             ThreadPool.QueueUserWorkItem(_ =>
             {
+                var sw = System.Diagnostics.Stopwatch.StartNew(); string tmp = path + ".tmp"; MemoryStream mem = null;
                 try
                 {
-                    var ms = new MemoryStream();
-                    using (var bw = new BinaryWriter(ms, Encoding.UTF8, true))
+                    Stream target;
+                    if (keepInMemory) target = mem = new MemoryStream();
+                    else { Directory.CreateDirectory(Path.GetDirectoryName(path)); target = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16); }
+                    using (target)
                     {
-                        bw.Write(Encoding.ASCII.GetBytes("VWD1")); bw.Write(1); bw.Write(world); bw.Write(seed); bw.Write(now);
-                        bw.Write(keys.Count); foreach (var k in keys) bw.Write(k);
-                        bw.Write(livePlayers.Count); foreach (var p in livePlayers) { bw.Write(p.Key); bw.Write(p.Value.x); bw.Write(p.Value.y); bw.Write(p.Value.z); }
-                        bw.Write(locs.Count); for (int i = 0; i < locs.Count; i++) { bw.Write(locs[i].Key); bw.Write(locs[i].Value.x); bw.Write(locs[i].Value.z); bw.Write((byte)(locPlaced[i] ? 1 : 0)); }
-                        bw.Write(recs.Count);
-                        foreach (var r in recs)
+                        CountingStream cnt;
+                        using (var gz = new GZipStream(target, level, true))
                         {
-                            byte m = 0; if (r.creator != 0) m |= 1; if (r.owner != 0) m |= 2; if (r.strings != null) m |= 4; if (r.items != null) m |= 8;
-                            bw.Write(r.prefab); bw.Write(r.pos.x); bw.Write(r.pos.y); bw.Write(r.pos.z); bw.Write(r.yaw); bw.Write(r.scale); bw.Write(m);
-                            if ((m & 1) != 0) bw.Write(r.creator);
-                            if ((m & 2) != 0) bw.Write(r.owner);
-                            if ((m & 4) != 0) { bw.Write((byte)Math.Min(255, r.strings.Count)); for (int i = 0; i < r.strings.Count && i < 255; i++) { bw.Write(r.strings[i].Key); bw.Write(r.strings[i].Value); } }
-                            if ((m & 8) != 0) { bw.Write(r.items.Length); bw.Write(r.items); }
+                            cnt = new CountingStream(gz);
+                            using (var w = new BinaryWriter(cnt, UTF8NoBom, true))
+                            {
+                                w.Write(Encoding.ASCII.GetBytes("VWD1")); w.Write(1); w.Write(world); w.Write(seed); w.Write(now);
+                                w.Write(keys.Count); foreach (var k in keys) w.Write(k);
+                                w.Write(livePlayers.Count); foreach (var p in livePlayers) { w.Write(p.Key); w.Write(p.Value.x); w.Write(p.Value.y); w.Write(p.Value.z); }
+                                w.Write(locs.Count); for (int i = 0; i < locs.Count; i++) { w.Write(locs[i].Key); w.Write(locs[i].Value.x); w.Write(locs[i].Value.z); w.Write((byte)(locPlaced[i] ? 1 : 0)); }
+                                w.Write(recCount); w.Flush();
+                                cnt.Write(recBuf.GetBuffer(), 0, (int)recBuf.Length);   // Datensätze ohne weitere Kopie
+                                // aufgedeckte Karte (nur im Spiel-Client vorhanden): "EXPL", Größe, Pixelgröße, Bits
+                                if (explored != null) { w.Write(Encoding.ASCII.GetBytes("EXPL")); w.Write(expSize); w.Write(expPixel); w.Write(explored.Length); w.Write(explored); }
+                                if (bio != null) { w.Write(Encoding.ASCII.GetBytes("BIOM")); w.Write(BIO_N); w.Write(BIO_RES); w.Write(BIO_X0); w.Write(bio.Length); w.Write(bio); }
+                                w.Flush();
+                            }
                         }
-                        // aufgedeckte Karte (nur im Spiel-Client vorhanden): "EXPL", Größe, Pixelgröße, Bits
-                        if (explored != null) { bw.Write(Encoding.ASCII.GetBytes("EXPL")); bw.Write(expSize); bw.Write(expPixel); bw.Write(explored.Length); bw.Write(explored); }
-                        if (bio != null) { bw.Write(Encoding.ASCII.GetBytes("BIOM")); bw.Write(BIO_N); bw.Write(BIO_RES); bw.Write(BIO_X0); bw.Write(bio.Length); bw.Write(bio); }
+                        rawBytes = cnt.Count; target.Flush();
+                        if (target is FileStream fs) { fs.Flush(true); gzBytes = fs.Length; }
                     }
-                    byte[] raw = ms.ToArray();
-                    var gz = new MemoryStream(); using (var z = new GZipStream(gz, CompressionMode.Compress, true)) z.Write(raw, 0, raw.Length);
-                    dumpRaw = raw; dumpGz = gz.ToArray(); dumpTime = now;
-                    infoJson = "{\"mod\":\"" + Version + "\",\"world\":" + Json(world) + ",\"zdos\":" + recs.Count + ",\"dumpTime\":" + now + ",\"bytes\":" + dumpGz.Length + ",\"worldInterval\":" + Math.Max(10, cfgWorldSeconds.Value) + ",\"server\":" + (ZNet.instance != null && ZNet.instance.IsDedicated() ? "true" : "false") + "}";
-                    if (cfgWriteFile.Value)
+                    recBuf.Dispose();
+                    if (mem != null)
                     {
-                        string path = string.IsNullOrEmpty(cfgFilePath.Value) ? Path.Combine(Paths.ConfigPath, "ValheimWeltLive", "welt.vwdump") : cfgFilePath.Value;
-                        Directory.CreateDirectory(Path.GetDirectoryName(path));
-                        File.WriteAllBytes(path + ".tmp", dumpGz); // gzip-komprimiert (VWD1 innen)
-                        if (File.Exists(path)) File.Delete(path);
-                        File.Move(path + ".tmp", path);
-                        if (!loggedFile) { loggedFile = true; Logger.LogInfo($"World dump written: {recs.Count} objects, {dumpGz.Length / 1024} KB -> {path}"); }
+                        var gzArr = mem.ToArray(); mem = null; gzBytes = gzArr.Length; dumpGz = gzArr;
+                        if (toFile) { Directory.CreateDirectory(Path.GetDirectoryName(path)); using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16)) { fs.Write(gzArr, 0, gzArr.Length); fs.Flush(true); } }
                     }
+                    if (toFile) ReplaceFile(tmp, path);
+                    dumpTime = now;
+                    infoJson = "{\"mod\":\"" + Version + "\",\"world\":" + Json(world) + ",\"zdos\":" + recCount + ",\"dumpTime\":" + now + ",\"bytes\":" + gzBytes + ",\"worldInterval\":" + interval + ",\"server\":" + (dedicated ? "true" : "false") + "}";
+                    ok = true;
                 }
-                catch (Exception e) { Logger.LogError("Writing dump: " + e.Message); }
-                finally { done = true; }
+                catch (Exception e) { err = e.Message; try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } }   // alte welt.vwdump bleibt unangetastet
+                finally { try { recBuf.Dispose(); } catch { } zipMs = sw.Elapsed.TotalMilliseconds; done = true; }
             });
             while (!done) yield return null;
-            Logger.LogDebug($"Dump: {recs.Count} objects, {(dumpGz?.Length ?? 0) / 1024} KB");
+            long memPeak = GC.GetTotalMemory(false) - memStart;
+            if (!ok) Logger.LogError("Writing dump: " + err);
+            else if (toFile && !loggedFile) { loggedFile = true; Logger.LogInfo($"World dump written: {recCount} objects, {gzBytes / 1024} KB -> {path}"); }
+            if (cfgPerfLog.Value)
+                Logger.LogInfo($"Dump {(ok ? "ok" : "FEHLER")}: {recCount} ZDOs ({stale} übersprungen) · Scan {scanMs / 1000:0.0} s in {frames} Frames, max {maxFrameMs:0.00} ms/Frame (Budget {budgetMs:0.##} ms, {perFrame}/Frame) · " +
+                    $"gzip {(cfgFastGzip.Value ? "schnell" : "stark")} {zipMs / 1000:0.0} s · roh {rawBytes / 1048576.0:0.0} MB → {gzBytes / 1048576.0:0.0} MB · " +
+                    $"Speicher +{Math.Max(0, memScan) / 1048576.0:0} MB nach Scan, +{Math.Max(0, memPeak) / 1048576.0:0} MB am Ende (GC, ungefähr) · übersprungene Abzüge bisher: {skippedDumps}");
             building = false;
         }
 
+        // welt.vwdump.tmp → welt.vwdump: ersetzen in einem Schritt, wo das Dateisystem es kann; sonst kurz löschen + umbenennen
+        static void ReplaceFile(string tmp, string path)
+        {
+            if (!File.Exists(path)) { File.Move(tmp, path); return; }
+            try { File.Replace(tmp, path, null); }
+            catch (Exception) { File.Delete(path); File.Move(tmp, path); }
+        }
         static IDictionary GetZdoDict()
         {
             var f = typeof(ZDOMan).GetField("m_objectsByID", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);

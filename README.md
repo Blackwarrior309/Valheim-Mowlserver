@@ -19,6 +19,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **20.10.2026**
+- Server-Mod 0.6.3: ruckelfreier Welt-Abzug (max. 2.048 Objekte bzw. 2 ms pro Frame), weniger Speicher, sichere Dateiausgabe, Leistungszeile im Server-Log – Format unverändert.
 - ⚔ Dyrnwyn-Quest (Aschelande): die drei Rätselorte (Spitze, Klinge, Griff/Lord Reto) als eigene Kartenebene mit Koordinaten – auch wenn noch unentdeckt.
 - 📏 Messen: in der 2D-Karte und in 3D Punkte setzen – Länge jeder Strecke, Summe und (in 3D) Höhenunterschied.
 - 🧱 Probe-Bauteil (3D): jedes Bauteil aus dem Spiel zum Ausprobieren in die Welt stellen, verschieben, drehen, löschen. Bleibt nur in deinem Browser.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.3
+- Smoother world dump on servers: work per frame is limited by object count (`MaxObjectsPerFrame`, default 2048) and a time budget (`MaxMillisecondsPerFrame`, default 2 ms); the biome grid uses the same budget.
+- Less memory: records are written straight into one buffer and compressed directly into `welt.vwdump.tmp` (no full copies of the snapshot); gzip "Fastest" by default (`FastCompression`).
+- Safe file output: the old `welt.vwdump` is replaced only after the new file is complete and closed; on errors the last valid dump stays.
+- ZDOs that were removed or reused during the scan are skipped instead of exported with mixed data.
+- Never two dumps at once; skipped dumps are logged. One performance line per dump (`LogPerformance`).
+- Dedicated servers (web page off) no longer collect creature/dungeon data nobody reads. Format of `.vwdump` unchanged.
+
 ## 0.6.1
 - New `/api/dungeon`: rooms, chests with contents, pickables and scrap piles of the dungeon you are in – shown in the map's new “Dungeon” tab.
 
