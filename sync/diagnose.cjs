@@ -5,7 +5,7 @@
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const root = path.join(__dirname, '..');
 require(path.join(root, 'js/data.js'));
-const { parseChunk, stable } = require(path.join(root, 'js/convert.js'));
+const { parseChunk, stable, parseInv, parseDb } = require(path.join(root, 'js/convert.js'));
 const D = globalThis.VW_DATA, PREF = D.prefabs, ITEMS = D.items;
 const dir = process.argv[2]; const files = [];
 (function walk(d) { for (const n of fs.readdirSync(d)) { const p = path.join(d, n); if (fs.statSync(p).isDirectory()) walk(p); else files.push(p); } })(dir);
@@ -15,12 +15,22 @@ const FISH = new Set(Array.from({ length: 14 }, (_, i) => stable('Fish' + (i + 1
 const zone = new Map(), byPrefab = new Map(); let total = 0, built = 0, drops = 0, tamed = 0, interior = 0;
 const dropZ = new Map(), tameZ = new Map(), tameKind = new Map(), fires = new Map(), ships = [], smelt = new Map();
 const FIRE = /fire|hearth|brazier|sconce|torch|lantern|bonfire|candle|lamp/i, SHIP = /^(VikingShip|Karve|Raft|Cart|Trailership|Ship)/, SMELT = /^(smelter|blastfurnace|charcoal_kiln|eitrrefinery|windmill|piece_spinningwheel|fermenter|piece_beehive|piece_oven|cooking_station|piece_cookingstation)/i;
+/* Dyrnwyn-Suche: Fragmente/Schwert liegend, in Kisten, Grabsteinen usw. (Spieler-Inventare liegen auf den PCs, nicht im Spielstand) */
+const DYI = new Map(['DyrnwynHiltFragment', 'DyrnwynBladeFragment', 'DyrnwynTipFragment', 'SwordDyrnwyn'].map((n) => [stable(n), n]));
+Object.entries(ITEMS).forEach(([h, n]) => { if (/dyrnwyn/i.test(String(n))) DYI.set(+h, String(n)); });
+const DYBOSS = new Set(['Charred_Melee_Dyrnwyn', 'LordReto', 'Lord_Reto'].map(stable)); const dyFound = [];
+const H_ITEMS = stable('items');
 const zk = (x, z) => Math.floor(x / 64) + ',' + Math.floor(z / 64);
 const inc = (m, k, n = 1) => m.set(k, (m.get(k) || 0) + n);
 for (const f of chunks) {
   try {
     parseChunk(new Uint8Array(fs.readFileSync(f)), (prefab, x, y, z, yaw, scale, L, S, B, I) => {
-      total++; if (y > 2000) { interior++; return; }
+      total++;
+      { const pos = `x ${Math.round(x)} / z ${Math.round(z)}` + (y > 2000 ? ' (im Dungeon/Innenraum)' : '');
+        if (DYI.has(prefab)) dyFound.push(`${DYI.get(prefab)} liegt herum bei ${pos}`);
+        if (DYBOSS.has(prefab)) dyFound.push(`Lord Reto (Boss) lebt noch bei ${pos}`);
+        if (B && B[H_ITEMS]) { try { parseInv(B[H_ITEMS]).forEach((it) => { if (DYI.has(it[0])) dyFound.push(`${DYI.get(it[0])} in ${PREF[prefab] || 'Behälter'} bei ${pos}`); }); } catch (e) { } } }
+      if (y > 2000) { interior++; return; }
       const name = PREF[prefab] || (ITEMS[prefab] ? 'Item:' + ITEMS[prefab] : '#' + prefab);
       inc(zone, zk(x, z)); inc(byPrefab, name);
       if (L && L[H_CREATOR] !== undefined) built++;
@@ -47,6 +57,9 @@ L.push(`Gebaute Feuer/Lichter: ${[...fires.values()].reduce((a, b) => a + b, 0)}
 L.push(`Schiffe/Karren: ${ships.length}` + (ships.length ? ' – ' + ships.slice(0, 12).map((s) => `${s[0]} (${s[1]}/${s[2]})`).join(', ') : ''));
 L.push(`Werkstationen mit Dauerbetrieb: ` + top(smelt, 10).map(([k, n]) => `${k} ${n}`).join(', '));
 L.push('', 'Betten: ' + beds.map((b) => `${b[0]} (x ${b[1]} / z ${b[3]})`).join(', '));
+{ const dbf = files.find((f) => /\.db2?$/.test(f)); let locs = []; try { if (dbf) locs = parseDb(new Uint8Array(fs.readFileSync(dbf)), (u) => zlib.gunzipSync(u)).locations.filter((l) => /^PlaceofMystery/.test(l.k)); } catch (e) { }
+  L.push('', 'Dyrnwyn-Suche:'); locs.forEach((l) => L.push(`  ${l.n}: x ${l.x} / z ${l.z} – ${l.v ? 'Gebiet schon geladen (besucht)' : 'noch nie besucht'}`));
+  if (dyFound.length) dyFound.forEach((t) => L.push('  ' + t)); else L.push('  Kein Fragment/Schwert in der Welt (Kisten, Boden, Grabsteine) – entweder noch nicht gefunden oder im Inventar eines Spielers.'); }
 L.push('', 'Häufigste Objekte:'); top(byPrefab, 15).forEach(([k, n]) => L.push(`  ${n.toLocaleString('de-DE')}  ${k}`));
 const out = L.join('\n'); console.log(out);
 const esc = (x) => x.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
