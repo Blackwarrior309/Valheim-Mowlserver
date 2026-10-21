@@ -2274,22 +2274,33 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
       const { kind, data } = e.detail || {}; if (!data || typeof data !== 'object') return;
       if (data.t && Date.now() - data.t > 60000) return;   // alte, gespeicherte Nachricht (Server aus)
       if (kind === 'players' && Array.isArray(data.players)) {
-        SRV.at = Date.now(); SRV.players = data.players.filter((p) => p && typeof p.name === 'string' && Number.isFinite(p.x) && Number.isFinite(p.z)).slice(0, 64).map((p) => ({ name: p.name.slice(0, 24), x: p.x, y: p.y, z: p.z, since: +p.since || 0, total: +p.total || 0, details: p.details && g.VWPlayerCard ? g.VWPlayerCard.details(p.details) : null }));
-        if (!GL.on) updateLive(SRV.players.map((p) => ({ name: p.name, x: p.x, y: p.y, z: p.z, details: p.details, server: true })));
+        SRV.at = Date.now(); SRV.players = data.players.filter((p) => p && typeof p.name === 'string' && Number.isFinite(p.x) && Number.isFinite(p.z)).slice(0, 64).map((p) => ({ name: p.name.slice(0, 24), x: p.x, y: p.y, z: p.z, since: +p.since || 0, total: +p.total || 0, details: p.details && g.VWPlayerCard ? Object.assign(g.VWPlayerCard.details(p.details) || {}, p.total ? { playedSeconds: +p.total } : {}) : null }));
+        applyLive();
         renderOnline();
       } else if (kind === 'playtime' && data.players && typeof data.players === 'object') {
         SRV.playtime = {}; Object.entries(data.players).slice(0, 500).forEach(([n, v]) => { if (Number.isFinite(+v)) SRV.playtime[String(n).slice(0, 24)] = +v; });
         if (tab === 'info') info();
       } else if (kind === 'creatures' && Array.isArray(data.creatures)) {
         SRV.creatures = data.creatures.slice(0, 400);
-        if (!GL.on) { CREA = SRV.creatures; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); map.draw(); } }
+        if (!localFresh()) { CREA = SRV.creatures; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); map.draw(); } }
       }
     });
-    SRV.timer = setInterval(() => { if (SRV.at && Date.now() - SRV.at > 20000 && !GL.on && LIVE && LIVE.length && LIVE[0].server) { updateLive(null); CREA = []; three.setCreatures(CREA); } renderOnline(); }, 5000); cleanup.push(() => clearInterval(SRV.timer));
+    SRV.timer = setInterval(() => { if (SRV.at && Date.now() - SRV.at > 20000 && !localFresh() && LIVE && LIVE.length && LIVE[0].server) { CREA = []; three.setCreatures(CREA); } if (SRV.at) applyLive(); renderOnline(); }, 5000);
+    /* Wer liefert die Live-Spieler? Eigener Client-Mod (wenn er gerade antwortet) hat Vorrang für die eigene Figur; alle anderen und fehlende Werte kommen vom Server-Mod */
+    function localFresh() { return GL.on && GL.okAt && Date.now() - GL.okAt < 6000; }
+    function applyLive() {
+      const srv = SRV.at && Date.now() - SRV.at < 20000 ? SRV.players.map((p) => ({ name: p.name, x: p.x, y: p.y, z: p.z, details: p.details, server: true })) : [];
+      if (localFresh()) {
+        const loc = (GL.list || []).map((p) => { const q = srv.find((x) => x.name === p.name); return q && !(p.details && p.details.health != null) ? Object.assign({}, p, { details: q.details }) : p; });
+        srv.forEach((q) => { if (!loc.some((p) => p.name === q.name)) loc.push(q); });
+        updateLive(loc);
+      } else if (srv.length || (LIVE && LIVE.length && LIVE[0].server)) updateLive(srv.length ? srv : null);
+      else if (!GL.on && LIVE && !srv.length && SRV.at) updateLive(null);
+    } cleanup.push(() => clearInterval(SRV.timer));
     setTimeout(() => { try { three.mpStart(); } catch (e) { } }, 800);   // Live-Kanal gleich beim Laden verbinden (auch ohne 3D)
     function updateLive(players) { if (destroyed) return; LIVE = players; liveReceivedAt = performance.now(); if (party) party.render(); playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }
     // ---- Eigenes Spiel live (Mod „Valheim Welt Live“ auf diesem PC): Position auf der Online-Karte zeigen und an andere Besucher schicken
-    let GL = { on: false, timer: 0, fails: 0, url: 'http://localhost:8686', generation: 0, controller: null, status: 'getrennt' };
+    let GL = { on: false, okAt: 0, list: null, timer: 0, fails: 0, url: 'http://localhost:8686', generation: 0, controller: null, status: 'getrennt' };
     async function gamePoll() {
       if (GL.controller || !GL.on || destroyed) return;
       const generation = GL.generation, ctl = new AbortController(); GL.controller = ctl;
@@ -2299,13 +2310,13 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const l = await response.json(); if (!Array.isArray(l)) throw new Error('Ungültige Spielerliste');
         if (destroyed || !GL.on || generation !== GL.generation) return;
-        GL.fails = 0; GL.status = 'verbunden'; updateLive(l); three.pubGame(l);
+        GL.fails = 0; GL.status = 'verbunden'; GL.okAt = Date.now(); GL.list = l; applyLive(); three.pubGame(l);
         try { const cr = await (await fetch(GL.url + '/api/creatures', { cache: 'no-store', signal: ctl.signal })).json(); if (destroyed || !GL.on || generation !== GL.generation) return; CREA = Array.isArray(cr) ? cr.slice(0, 400) : []; three.setCreatures(CREA); if (tab === 'map') { map.layersChanged(); } } catch (e) { CREA = []; }
         try { const dj = await (await fetch(GL.url + '/api/dungeon', { cache: 'no-store', signal: ctl.signal })).json(); if (destroyed || !GL.on || generation !== GL.generation) return; if (dj && typeof dj.inside === "boolean" && g.VWDungeon) { const tb = $('.vw-tabs [data-t="dungeon"]'); { tb.hidden = false; /* sichtbar, sobald der Mod verbunden ist (ab 0.6.1); ● = gerade im Dungeon */ if (!DG && g.VWDungeon) DG = g.VWDungeon.mount($('.vw-pane[data-p="dungeon"]'), { T }); if (DG) DG.update(dj, CREA, l); tb.textContent = dj.inside ? '⤓ Dungeon ●' : '⤓ Dungeon'; } } } catch (e) { }
         $('.gameLink').textContent = '🎮 ' + T('Spiel verbunden') + (l[0] ? ' · ' + l[0].name : '');
       } catch (e) {
         if (destroyed || !GL.on || generation !== GL.generation) return;
-        GL.fails++; GL.status = 'nicht erreichbar'; $('.gameLink').textContent = '🎮 ' + T('Spiel nicht erreichbar – läuft Valheim mit dem Mod?'); if (GL.fails > 3) LIVE = null;
+        GL.fails++; GL.status = 'nicht erreichbar'; $('.gameLink').textContent = '🎮 ' + T('Spiel nicht erreichbar – läuft Valheim mit dem Mod?'); if (GL.fails > 3) applyLive();
       } finally { clearTimeout(to); if (GL.controller === ctl) GL.controller = null; if (!destroyed && party) party.render(); }
     }
     function gameLink(on) {
