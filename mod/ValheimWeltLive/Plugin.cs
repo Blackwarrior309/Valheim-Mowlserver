@@ -24,13 +24,14 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.7.0";
+        public const string Version = "0.7.1";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
         ConfigEntry<int> cfgMaxObjects; ConfigEntry<float> cfgMaxMs;
         ConfigEntry<bool> cfgLive; ConfigEntry<string> cfgLiveHost; ConfigEntry<int> cfgLivePort; ConfigEntry<float> cfgLivePlayerSec, cfgLiveCreatureSec;
-        LiveFeed feed; string liveTopic; float nextLivePlayers, nextLiveCreatures, nextLiveStat, nextLivePlaytime;
+        LiveFeed feed; string liveTopic; float nextLivePlayers, nextLiveCreatures, nextLiveStat, nextLivePlaytime, nextLivePerf, nextLiveKills;
+        float perfAcc, perfMax; int perfFrames; readonly List<string> perfHist = new List<string>(); ZDOMan hookedMan;
         ConfigEntry<int> cfgPort, cfgWorldSeconds, cfgTrackSeconds, cfgTrackDays;
         ConfigEntry<float> cfgPlayerSeconds;
         ConfigEntry<string> cfgFilePath;
@@ -93,7 +94,7 @@ namespace ValheimWeltLive
 
         void OnDestroy()
         {
-            feed?.Stop(); if (playTotal != null) SavePlaytime();
+            feed?.Stop(); if (playTotal != null) SavePlaytime(); SaveKills();
             SavePlayerStats();
             try { http?.Stop(); http?.Close(); } catch { }
         }
@@ -103,7 +104,12 @@ namespace ValheimWeltLive
             if (statsNetwork != ZNet.instance) { statsSession = null; statsNetwork = ZNet.instance; }
             if (ZNet.instance == null || ZDOMan.instance == null) { statsSession = null; return; }
             float t = Time.realtimeSinceStartup;
-            if (feed != null && ZNet.instance.IsServer()) LiveTick(t);
+            if (feed != null && ZNet.instance.IsServer())
+            {
+                float fdt = Time.unscaledDeltaTime; perfAcc += fdt; perfFrames++; if (fdt > perfMax) perfMax = fdt;
+                if (hookedMan != ZDOMan.instance) { hookedMan = ZDOMan.instance; try { ZDOMan.instance.m_onZDODestroyed += OnZdoDestroyed; } catch (Exception e) { Logger.LogWarning("Kills: " + e.Message); } }
+                LiveTick(t);
+            }
             if (t >= nextPlayers) { nextPlayers = t + Mathf.Max(0.25f, cfgPlayerSeconds.Value); try { playersJson = CollectPlayers(); } catch (Exception e) { Logger.LogDebug(e); } if (cfgHttp.Value) { try { creaturesJson = CollectCreatures(); } catch (Exception e) { Logger.LogDebug(e); } } /* Gegner/Dungeon nur für die eigene Webseite – auf dem Server (Web aus) gespart */ if (cfgHttp.Value && t >= nextDungeon) { nextDungeon = t + 1.5f; try { dungeonJson = CollectDungeon(); } catch (Exception e) { Logger.LogDebug(e); } } }
             if (!biomeBusy && WorldGenerator.instance != null && ZNet.instance != null && (biomeGrid == null || biomeWorld != ZNet.instance.GetWorldName())) StartCoroutine(BuildBiomes());
             if (t >= nextWorld) { nextWorld = t + Mathf.Max(10, cfgWorldSeconds.Value); if (!building) StartCoroutine(BuildDump()); else { skippedDumps++; Logger.LogWarning("World dump skipped – previous one still running (" + skippedDumps + " so far)."); } }
@@ -390,8 +396,112 @@ namespace ValheimWeltLive
                 foreach (var kv in playTotal) { if (!f) sb.Append(','); f = false; sb.Append(Json(kv.Key)).Append(':').Append(Math.Round(kv.Value)); }
                 feed.Publish(liveTopic + "/playtime", sb.Append("}}").ToString(), true);
             }
+            if (t >= nextLivePerf) { nextLivePerf = t + 10f; try { feed.Publish(liveTopic + "/perf", CollectPerf(now), true); } catch (Exception e) { Logger.LogDebug(e); } }
+            if (killsDirty && t >= nextLiveKills || t >= nextLiveKills + 60f) { nextLiveKills = t + 5f; killsDirty = false; try { feed.Publish(liveTopic + "/kills", KillsJson(now), true); if (t - killsSaved > 60f) { killsSaved = t; SaveKills(); } } catch (Exception e) { Logger.LogDebug(e); } }
             if (t >= nextLiveStat) { nextLiveStat = t + 600f; if (cfgPerfLog.Value) Logger.LogInfo($"Live feed: {(feed.Connected ? "verbunden" : "getrennt" + (feed.LastError != "" ? " (" + feed.LastError + ")" : ""))}, {feed.Sent} Nachrichten gesendet, Thema {liveTopic}/…"); }
         }
+        // ---------------- Leistung (Lag-Messung) ----------------
+        static readonly FieldInfo F_INSTANCES = typeof(ZNetScene).GetField("m_instances", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+        string CollectPerf(long now)
+        {
+            float fps = perfAcc > 0 ? perfFrames / perfAcc : 0, avg = perfFrames > 0 ? perfAcc / perfFrames * 1000f : 0, max = perfMax * 1000f;
+            perfAcc = 0; perfFrames = 0; perfMax = 0;
+            int zdos = 0; try { var d = GetZdoDict(); if (d != null) zdos = d.Count; } catch { }
+            int inst = 0; var zone = new Dictionary<long, int>();
+            try
+            {
+                if (ZNetScene.instance != null && F_INSTANCES?.GetValue(ZNetScene.instance) is IDictionary di)
+                {
+                    inst = di.Count;
+                    foreach (var k in di.Keys) { if (!(k is ZDO z)) continue; var p = z.GetPosition(); if (p.y > 3000f) continue; long key = ((long)Mathf.FloorToInt(p.x / 64f) << 32) ^ (uint)Mathf.FloorToInt(p.z / 64f); int c; zone.TryGetValue(key, out c); zone[key] = c + 1; }
+                }
+            }
+            catch { }
+            var hot = zone.OrderByDescending((kv) => kv.Value).Take(6).Select((kv) => "[" + ((int)(kv.Key >> 32) * 64 + 32) + "," + ((int)(uint)kv.Key * 64 + 32) + "," + kv.Value + "]");
+            string pt = "[" + now + "," + F(fps) + "," + F(max) + "," + inst + "]"; perfHist.Add(pt); if (perfHist.Count > 90) perfHist.RemoveAt(0);   // 15 Minuten Verlauf
+            return "{\"t\":" + now + ",\"fps\":" + F(fps) + ",\"avgMs\":" + F(avg) + ",\"maxMs\":" + F(max) + ",\"zdos\":" + zdos + ",\"inst\":" + inst + ",\"peers\":" + ZNet.instance.GetPeers().Count + ",\"hot\":[" + string.Join(",", hot.ToArray()) + "],\"hist\":[" + string.Join(",", perfHist.ToArray()) + "]}";
+        }
+
+        // ---------------- Kills (Bestenliste) ----------------
+        // Server-Sicht: eine Kreatur, deren Objekt mit Leben 0 verschwindet, ist gestorben. Gutgeschrieben wird dem nächsten Spieler im Umkreis von 50 m,
+        // Bosse allen Spielern im Umkreis von 80 m. Wer genau den letzten Schlag gesetzt hat, sieht der Server nicht.
+        sealed class KillStat { public int total; public readonly Dictionary<string, int> by = new Dictionary<string, int>(); public readonly Dictionary<string, int> boss = new Dictionary<string, int>(); }
+        Dictionary<string, KillStat> kills; bool killsDirty; float killsSaved;
+        readonly Dictionary<int, string> charName = new Dictionary<int, string>(); readonly HashSet<int> charBoss = new HashSet<int>(), notChar = new HashSet<int>();
+        bool CreatureInfo(int prefab, out string name, out bool boss)
+        {
+            name = null; boss = false; if (notChar.Contains(prefab)) return false;
+            if (!charName.TryGetValue(prefab, out name))
+            {
+                var go = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab(prefab) : null;
+                var ch = go != null ? go.GetComponent(typeof(Character)) as Character : null;
+                if (ch == null || ch is Player) { notChar.Add(prefab); return false; }
+                name = WeltSuche.L(ch.m_name); charName[prefab] = name; if (ch.m_boss) charBoss.Add(prefab);
+            }
+            boss = charBoss.Contains(prefab); return true;
+        }
+        void OnZdoDestroyed(ZDO z)
+        {
+            try
+            {
+                if (z == null || ZNet.instance == null || !ZNet.instance.IsServer()) return;
+                string name; bool boss; if (!CreatureInfo(z.GetPrefab(), out name, out boss)) return;
+                if (z.GetBool(ZDOVars.s_tamed, false)) return;                 // eigene Tiere zählen nicht
+                if (z.GetFloat(ZDOVars.s_health, 1f) > 0f) return;            // verschwunden, nicht gestorben
+                Vector3 pos = z.GetPosition(); if (kills == null) LoadKills();
+                var near = new List<KeyValuePair<string, float>>();
+                foreach (var peer in ZNet.instance.GetPeers())
+                {
+                    if (peer == null || string.IsNullOrEmpty(peer.m_playerName)) continue;
+                    ZDO pz = null; try { if (!peer.m_characterID.IsNone()) pz = ZDOMan.instance.GetZDO(peer.m_characterID); } catch { }
+                    float d = Vector3.Distance(pz != null ? pz.GetPosition() : peer.m_refPos, pos); if (d <= (boss ? 80f : 50f)) near.Add(new KeyValuePair<string, float>(peer.m_playerName, d));
+                }
+                if (near.Count == 0) return;
+                var who = boss ? near.Select((n) => n.Key).ToList() : new List<string> { near.OrderBy((n) => n.Value).First().Key };
+                foreach (var w in who)
+                {
+                    KillStat k; if (!kills.TryGetValue(w, out k)) kills[w] = k = new KillStat();
+                    k.total++; int c; k.by.TryGetValue(name, out c); k.by[name] = c + 1;
+                    if (boss) { k.boss.TryGetValue(name, out c); k.boss[name] = c + 1; }
+                }
+                killsDirty = true;
+                if (boss) Logger.LogInfo("Boss besiegt: " + name + " – dabei: " + string.Join(", ", who.ToArray()));
+            }
+            catch (Exception e) { Logger.LogDebug("Kills: " + e.Message); }
+        }
+        string KillsJson(long now)
+        {
+            if (kills == null) LoadKills();
+            var sb = new StringBuilder("{\"t\":" + now + ",\"players\":{"); bool f = true;
+            foreach (var kv in kills)
+            {
+                if (!f) sb.Append(','); f = false;
+                sb.Append(Json(kv.Key)).Append(":{\"total\":").Append(kv.Value.total).Append(",\"by\":{");
+                sb.Append(string.Join(",", kv.Value.by.OrderByDescending((x) => x.Value).Take(40).Select((x) => Json(x.Key) + ":" + x.Value).ToArray())).Append("},\"boss\":{");
+                sb.Append(string.Join(",", kv.Value.boss.Select((x) => Json(x.Key) + ":" + x.Value).ToArray())).Append("}}");
+            }
+            return sb.Append("}}").ToString();
+        }
+        void LoadKills()
+        {
+            kills = new Dictionary<string, KillStat>();
+            try
+            {
+                string f = Path.Combine(DataDir(), "kills.json"); if (!File.Exists(f)) return;
+                if (!(MiniJson.Parse(File.ReadAllText(f)) is Dictionary<string, object> root) || !(root.TryGetValue("players", out var po) && po is Dictionary<string, object> pl)) return;
+                foreach (var kv in pl)
+                {
+                    if (!(kv.Value is Dictionary<string, object> o)) continue; var k = new KillStat();
+                    if (o.TryGetValue("total", out var tv) && tv is double td) k.total = (int)td;
+                    if (o.TryGetValue("by", out var bv) && bv is Dictionary<string, object> bd) foreach (var x in bd) if (x.Value is double d) k.by[x.Key] = (int)d;
+                    if (o.TryGetValue("boss", out var sv) && sv is Dictionary<string, object> sd) foreach (var x in sd) if (x.Value is double d) k.boss[x.Key] = (int)d;
+                    kills[kv.Key] = k;
+                }
+            }
+            catch (Exception e) { Logger.LogDebug("Kills laden: " + e.Message); }
+        }
+        void SaveKills() { try { if (kills == null) return; string dir = DataDir(); Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "kills.json"), KillsJson(Unix() * 1000)); } catch (Exception e) { Logger.LogDebug("Kills speichern: " + e.Message); } }
+
         // Alle Online-Spieler vom Server aus: Position und Werte aus der Spielfigur (ZDO), sonst die gemeldete Position
         // Spielzeit: seit wann online (diese Sitzung) und gesamt (gespeichert in spielzeit.json neben dem Dump)
         readonly Dictionary<string, long> onlineSince = new Dictionary<string, long>(); Dictionary<string, double> playTotal; float playLastT, playSaved;

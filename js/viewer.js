@@ -187,7 +187,7 @@
     (opts.actions || []).forEach((a) => { const b = document.createElement('button'); b.textContent = a.label; if (a.primary) b.className = 'pri'; if (a.title) b.title = a.title; b.onclick = a.onClick; act.appendChild(b); });
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
-    const SRV = { at: 0, players: [], creatures: [], timer: 0, playtime: null };   // Server-Mod live (MQTT)
+    const SRV = { at: 0, players: [], creatures: [], timer: 0, playtime: null, perf: null, kills: null };   // Server-Mod live (MQTT)
     let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null, liveReceivedAt = -Infinity, party = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
     /* Zahme Tiere aus dem Spielstand: [Art, x, z, Name, Stufe] */
@@ -2189,12 +2189,34 @@
 <h2>Welt-Einstellungen</h2><div class="sub">${mods}</div></div>
 <div class="vw-panel"><h2 style="margin-top:0">Charaktere (wer hat gebaut)</h2><table>${S.characters.map((c) => `<tr><td>${esc(c.name || '?')}${c.account ? ' <span class="sub">· ' + esc(c.account) + '</span>' : ''}${c.steam ? '<br><span class="sub">' + esc(c.steam) + '</span>' : ''}</td><td class="n">${fmt(c.pieces)}</td></tr>`).join('')}</table>
 <h2>Spieler auf dem Server</h2><table>${S.players.map((p) => `<tr><td><button class="playerOpen" data-name="${esc(p.name)}">${esc(p.name)}</button>${p.platform ? '<br><span class="sub">' + esc(p.platform) + '</span>' : ''}</td></tr>`).join('') || '<tr><td class="sub">–</td></tr>'}</table></div></div>
+<div class="srvPerf">${perfPanel()}</div>
 ${board()}
 <div class="sub" style="margin-top:16px">Snapshot vom ${new Date(S.created).toLocaleString(LOC())} · Format v${S.version}${(S.warnings || []).length ? '<br>Hinweise: ' + S.warnings.map(esc).join(' · ') : ''}<br>Inoffizieller Fan-Viewer, nicht mit Iron Gate verbunden.</div>`;
     }
 
     // Bestenliste: Tode (Grabsteine), gebaute Teile, Spielzeit und Strecke (Laufwege, nur mit Server-Mod)
     let boardDays = null;
+    /* Lag-Messung vom Server-Mod: Server-FPS, längster Frame, aktive Objekte und wo sie sich ballen */
+    function perfPanel() {
+      const P = SRV.perf; if (!P) return '';
+      const fps = +P.fps || 0, col = fps >= 40 ? '#4cc36b' : fps >= 20 ? '#e0a854' : '#ff5a4a', H = (P.hist || []).filter((h) => Array.isArray(h) && h.length >= 4);
+      const W = 320, Hh = 56, top = Math.max(60, ...H.map((h) => +h[1] || 0));
+      const line = H.map((h, i) => `${(i / Math.max(1, H.length - 1) * W).toFixed(1)},${(Hh - (+h[1] || 0) / top * (Hh - 4)).toFixed(1)}`).join(' ');
+      const spikes = H.map((h, i) => (+h[2] || 0) > 100 ? `<rect x="${(i / Math.max(1, H.length - 1) * W - 1.5).toFixed(1)}" y="0" width="3" height="${Hh}" fill="#ff5a4a" opacity=".35"><title>Ruckler ${Math.round(h[2])} ms</title></rect>` : '').join('');
+      const hot = (P.hot || []).filter((h) => Array.isArray(h) && h.length >= 3);
+      return `<div class="vw-panel" style="margin-top:18px"><h2 style="margin-top:0">Server-Leistung (live)</h2>
+<div class="vw-stats"><div class="vw-stat"><b style="color:${col}">${Math.round(fps)}</b><span>Server-FPS</span></div><div class="vw-stat"><b>${Math.round(+P.maxMs || 0)} ms</b><span>längster Frame (10 s)</span></div><div class="vw-stat"><b>${fmt(+P.inst || 0)}</b><span>aktive Objekte</span></div><div class="vw-stat"><b>${fmt(+P.zdos || 0)}</b><span>Objekte in der Welt</span></div><div class="vw-stat"><b>${+P.peers || 0}</b><span>Spieler</span></div></div>
+${H.length > 1 ? `<svg viewBox="0 0 ${W} ${Hh}" width="100%" height="${Hh}" preserveAspectRatio="none" style="display:block;margin:8px 0;background:rgba(127,127,127,.08);border-radius:6px">${spikes}<polyline points="${line}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg><div class="sub">Server-FPS der letzten ${Math.round(H.length / 6)} Min · rote Streifen = Ruckler über 100 ms</div>` : ''}
+${hot.length ? `<h2>Wo der Server gerade am meisten rechnet</h2><table>${hot.map((h) => `<tr><td>x ${h[0]} / z ${h[1]}</td><td class="n" style="white-space:nowrap">${fmt(h[2])} aktive Objekte</td><td class="n"><button class="hotGo" data-x="${h[0]}" data-z="${h[1]}">Karte</button></td></tr>`).join('')}</table><div class="sub" style="margin-top:4px">Aktiv ist, was der Server rund um die Spieler gerade simuliert (64 × 64 m-Felder). Sehr viele aktive Objekte an einer Stelle – Tiere, Feuer, herumliegende Sachen, Bauteile – sind der übliche Lag-Grund.</div>` : ''}</div>`;
+    }
+    listen(R, 'click', (e) => { const b = e.target.closest('.hotGo'); if (b) { setTab('map'); map.focus([{ x: +b.dataset.x, z: +b.dataset.z }]); } });
+    /* Kills vom Server-Mod (geschätzt: nächster Spieler beim Tod der Kreatur, Bosse für alle in der Nähe) */
+    function killsHtml() {
+      const K = SRV.kills; if (!K) return '';
+      const rows = Object.entries(K).map(([n, k]) => ({ n, total: +(k && k.total) || 0, by: Object.entries((k && k.by) || {}).sort((a, b) => b[1] - a[1]), boss: Object.entries((k && k.boss) || {}) })).filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
+      if (!rows.length) return `<h2 style="font-size:13px">⚔ Kills</h2><div class="sub" style="margin-bottom:12px">Noch keine Kills gezählt – die Zählung läuft seit Server-Mod 0.7.1.</div>`;
+      return `<h2 style="font-size:13px">⚔ Kills</h2><table>${rows.map((r, i) => `<tr><td style="width:2em" class="sub">${i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.'}</td><td>${esc(r.n)}<div class="sub">${r.by.slice(0, 4).map(([s, c]) => esc(s) + ' ' + fmt(c)).join(' · ')}${r.by.length > 4 ? ' …' : ''}${r.boss.length ? '<br>☠ ' + r.boss.map(([s, c]) => esc(s) + (c > 1 ? ' ×' + c : '')).join(', ') : ''}</div></td><td class="n" style="white-space:nowrap;vertical-align:top">${fmt(r.total)}</td></tr>`).join('')}</table><div class="sub" style="margin:4px 0 12px">Vom Server-Mod gezählt (ab 0.7.1): ein Kill zählt für den Spieler, der beim Tod am nächsten dran war; Bosse für alle in der Nähe.</div>`;
+    }
     /* Spielzeit vom Server-Mod: gespeicherte Summen + laufende Sitzungen der Online-Spieler */
     const srvPlaytime = () => { const out = Object.assign({}, SRV.playtime || {}); (SRV.players || []).forEach((p) => { if (p.total > (out[p.name] || 0)) out[p.name] = p.total; }); return out; };
     function board() {
@@ -2209,13 +2231,14 @@ ${board()}
       const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs || p.made || p.pins || p.play).sort((a, b) => b.pieces - a.pieces);
       const hasP = Object.keys(PT).length > 0, onl = new Set((SRV.players || []).map((p) => p.name));
       const playRank = rows.filter((r) => r.play > 0).sort((a, b) => b.play - a.play);
-      if (!rows.length) return '';
+      if (!rows.length && !SRV.kills) return '';
       const hasT = !!(boardDays && boardDays.length);
       const hm = (s) => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; };
       const top = (k) => Math.max(0, ...rows.map((r) => r[k]));
       const cell = (r, k, v) => `<td class="n" style="white-space:nowrap">${r[k] && r[k] === top(k) ? '👑 ' : ''}${v}</td>`;
       const last = D.filter((d) => d.t || d.seen).sort((a, b) => (b.t || b.seen) - (a.t || a.seen)).slice(0, 8);
       return `<div class="vw-panel" style="margin-top:18px"><h2 style="margin-top:0">Bestenliste</h2>
+<div class="srvKills">${killsHtml()}</div>
 ${hasP ? `<h2 style="font-size:13px">⏱ Spielzeit</h2><table>${playRank.map((r, i) => `<tr><td style="width:2em" class="sub">${i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.'}</td><td>${esc(r.n)}${onl.has(r.n) ? ' <span style="color:#4cc36b" title="gerade online">●</span>' : ''}</td><td class="n" style="white-space:nowrap">${hm(r.play)}</td></tr>`).join('')}</table><div class="sub" style="margin:4px 0 12px">Vom Server-Mod gezählt (seit seiner Installation), live aktualisiert.</div>` : ''}
 <table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${CR.length ? '<td class="n sub">Hergestellt</td>' : ''}${PN.length ? '<td class="n sub" title="Pins auf dem Kartentisch (☠ = Bosse gefunden)" style="white-space:nowrap">📍 Pins</td>' : ''}${hasP ? '<td class="n sub">⏱ Spielzeit</td>' : ''}${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
 ${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${CR.length ? cell(r, 'made', fmt(r.made)) : ''}${PN.length ? cell(r, 'pins', fmt(r.pins) + (r.boss ? ' · ☠ ' + r.boss : '')) : ''}${hasP ? cell(r, 'play', r.play ? hm(r.play) : '–') : ''}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
@@ -2277,6 +2300,10 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
         SRV.at = Date.now(); SRV.players = data.players.filter((p) => p && typeof p.name === 'string' && Number.isFinite(p.x) && Number.isFinite(p.z)).slice(0, 64).map((p) => ({ name: p.name.slice(0, 24), x: p.x, y: p.y, z: p.z, since: +p.since || 0, total: +p.total || 0, details: p.details && g.VWPlayerCard ? Object.assign(g.VWPlayerCard.details(p.details) || {}, p.total ? { playedSeconds: +p.total } : {}) : null }));
         applyLive();
         renderOnline();
+      } else if (kind === 'perf' && Number.isFinite(+data.fps)) {
+        SRV.perf = data; const el = $('.srvPerf'); if (el && tab === 'info') el.innerHTML = perfPanel();
+      } else if (kind === 'kills' && data.players && typeof data.players === 'object') {
+        SRV.kills = data.players; const el = $('.srvKills'); if (el && tab === 'info') el.innerHTML = killsHtml(); else if (tab === 'info' && !el) info();
       } else if (kind === 'playtime' && data.players && typeof data.players === 'object') {
         SRV.playtime = {}; Object.entries(data.players).slice(0, 500).forEach(([n, v]) => { if (Number.isFinite(+v)) SRV.playtime[String(n).slice(0, 24)] = +v; });
         if (tab === 'info') info();
@@ -2294,8 +2321,8 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
         const loc = (GL.list || []).map((p) => { const q = srv.find((x) => x.name === p.name); return q && !(p.details && p.details.health != null) ? Object.assign({}, p, { details: q.details }) : p; });
         srv.forEach((q) => { if (!loc.some((p) => p.name === q.name)) loc.push(q); });
         updateLive(loc);
-      } else if (srv.length || (LIVE && LIVE.length && LIVE[0].server)) updateLive(srv.length ? srv : null);
-      else if (!GL.on && LIVE && !srv.length && SRV.at) updateLive(null);
+      } else if (SRV.at && Date.now() - SRV.at < 20000) { SRV.applied = true; updateLive(srv); }   /* auch leer: ausgeloggte Spieler verschwinden sofort, kein Rückfall auf den 5-Minuten-Stand */
+      else if (SRV.applied) { SRV.applied = false; updateLive(null); }
     } cleanup.push(() => clearInterval(SRV.timer));
     setTimeout(() => { try { three.mpStart(); } catch (e) { } }, 800);   // Live-Kanal gleich beim Laden verbinden (auch ohne 3D)
     function updateLive(players) { if (destroyed) return; LIVE = players; liveReceivedAt = performance.now(); if (party) party.render(); playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+- Lag measurement on the server: server FPS, longest frame, active objects and the 64 m areas with the most active objects every 10 s (`…/perf`, 15 min history).
+- Kill leaderboard: a creature whose object disappears with 0 health counts for the nearest player within 50 m; bosses count for everyone within 80 m (`…/kills`, saved in `kills.json`). Boss kills are logged.
+
 ## 0.7.0
 - Server live feed (`[Live]`, on by default on dedicated servers): every second all online players with exact position, health, stamina, eitr, equipment, dead/sleeping, session start and total play time; every 5 s creatures near players incl. pet names. Sent to the live map's public MQTT channel `vwelt-srv/<seed>/…` (outgoing connection only, no port opened). No client mod needed.
 - Play time per player is counted on the server (`spielzeit.json` next to the dump).

@@ -19,6 +19,8 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **21.10.2026**
+- Karte: Wer sich ausloggt, verschwindet sofort von der Karte (kein alter Standort aus dem 5-Minuten-Abzug mehr).
+- Server-Mod 0.7.1: Lag-Messung live unter „Welt & Spieler“ (Server-FPS, Ruckler, wo der Server am meisten rechnet) und Bestenliste „⚔ Kills“ inkl. Bosse.
 - Server-Mod 0.7.0: Live-Kanal vom Server – alle Online-Spieler sekündlich mit Position, Leben, Ausdauer, Ausrüstung; Tiere mit Namen; ohne Client-Mod.
 - Karte: Anzeige „● N online“ oben mit Sitzungs- und Gesamt-Spielzeit je Spieler; Bestenliste „⏱ Spielzeit“ unter „Welt & Spieler“.
 - Zahme Tiere kommen jetzt auch aus dem Server-Abzug (mit Namen und Stufe).
