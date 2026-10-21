@@ -118,6 +118,7 @@
     <div class="vw-side"><button class="vw-mob" data-min>Menü</button><button class="pri w3d" style="width:100%;margin-top:4px">🌍 Ganze Welt in 3D ansehen</button><h2>Basen</h2><div class="vw-maplist"></div>
       <h2 data-en="Map layers">Karten-Ebenen</h2><div class="vw-filter"></div>
       <h2>📏 Messen</h2><div class="row"><button class="ms2On">Punkte setzen</button><button class="ms2Undo" title="Letzten Punkt entfernen">↶</button><button class="ms2Clr">Löschen</button></div><div class="sub ms2Info" style="margin-top:4px">„Punkte setzen“ an, dann in die Karte klicken – Länge jeder Strecke und Summe erscheinen.</div>
+      <div class="egCtl vw-panel" hidden style="margin-top:8px;padding:10px"></div>
       <div class="heatCtl" hidden><div class="row" style="margin-top:6px"><select class="hPl" style="flex:1;min-width:0"></select><select class="hDays"><option value="0">Alle Tage</option><option value="1">Heute</option><option value="7">7 Tage</option><option value="30">30 Tage</option></select></div></div>
       <div class="sub mlInfo" style="margin-top:6px"></div>
       <button class="gameLink" style="width:100%;margin-top:8px" title="Braucht den Mod „Valheim Welt Live“ auf diesem PC (http://localhost:8686). Deine Position wird live auf der Karte gezeigt und an andere Besucher der Karte geschickt.">🎮 Mein Spiel live zeigen (Mod)</button>
@@ -195,6 +196,49 @@
     const tameName = (k) => TAME_DE[k] || k.replace(/_/g, ' ');
     const tameCount = () => { const c = {}; (S.tamed || []).forEach((t) => (c[t[0]] = (c[t[0]] || 0) + 1)); return Object.entries(c).sort((a, b) => b[1] - a[1]); };
     const tameText = () => tameCount().map(([k, n]) => `${tameName(k)} ${fmt(n)}`).join(' · ');
+    /* Endspiel-Route: 3–4 Festungen (Glockenfragmente) → Fader → Hoher Norden, mit Zeitplan bis 5.11. Erledigte Ziele hakt man ab (nur in diesem Browser). */
+    let EG_DONE = {}; try { EG_DONE = JSON.parse(localStorage.getItem('vw-endgame-done') || '{}') || {}; } catch (e) { }
+    const egKey = (p) => p.k + '@' + Math.round(p.x) + ',' + Math.round(p.z);
+    const EG_PLAN = [['2026-10-21', 'Mi 21.10.'], ['2026-10-22', 'Do 22.10.'], ['2026-10-22', 'Do 22.10.'], ['2026-10-23', 'Fr 23.10.']];
+    let EG_WG = null;
+    const egBio = (x, z) => { const b = bioAt(x, z); if (b) return b; try { if (g.VWWorldGen && S.world && S.world.seed) { if (!EG_WG || EG_WG.s !== S.world.seed) EG_WG = { s: S.world.seed, w: g.VWWorldGen.create(S.world.seed, S.world.worldGen) }; return EG_WG.w.biome(x, z); } } catch (e) { } return 0; };
+    let EG_CACHE = null;
+    function egRoute() { const ck = S.created + '|' + JSON.stringify(EG_DONE); if (EG_CACHE && EG_CACHE.k === ck) return EG_CACHE.r; const r = egRoute0(); EG_CACHE = { k: ck, r }; return r; }
+    function egRoute0() {
+      const L = S.locations || [], d2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+      const forts = L.filter((l) => l.k === 'CharredFortress'), fader = L.find((l) => l.k === 'FaderLocation');
+      if (!forts.length && !fader) return null;
+      const ports = (S.portals || []).map((p) => ({ x: p.x, z: p.z, tag: p.tag || '', b: egBio(p.x, p.z) }));
+      const home = S.bases && S.bases[0] ? { x: S.bases[0].center[0], z: S.bases[0].center[1] } : { x: 0, z: 0 };
+      const ashP = ports.filter((p) => p.b === 6), dnP = ports.filter((p) => p.b === 7);
+      const fc = forts.length ? { x: forts.reduce((a, f) => a + f.x, 0) / forts.length, z: forts.reduce((a, f) => a + f.z, 0) / forts.length } : home;
+      const start = ashP.length ? ashP.slice().sort((a, b) => d2(a, fc) - d2(b, fc))[0] : null;
+      const stops = [];
+      if (start) stops.push({ kind: 'start', name: 'Portal' + (start.tag ? ' „' + start.tag + '“' : '') + ' (Aschelande)', x: start.x, z: start.z, date: 'Start' });
+      // bis 4 offene Festungen, nächste zuerst (Rundweg ab Portal, sonst ab dem Fader-Ort)
+      let cur = start || fader || fc; const open = forts.filter((f) => !EG_DONE[egKey(f)]); const pick = [];
+      while (pick.length < 4 && open.length) { open.sort((a, b) => d2(a, cur) - d2(b, cur)); cur = open.shift(); pick.push(cur); }
+      pick.forEach((f, i) => stops.push({ kind: 'fort', key: egKey(f), name: 'Verkohlte Festung' + (f.v ? '' : ' (unerkundet)'), x: f.x, z: f.z, date: EG_PLAN[i][1], iso: EG_PLAN[i][0], note: 'Glockenfragment + Blutstein' }));
+      if (fader) stops.push({ kind: 'fader', key: egKey(fader), name: 'Fader rufen (Glocke)', x: fader.x, z: fader.z, date: 'Sa 24. – So 25.10.', iso: '2026-10-24', note: '3 Glockenfragmente → Glocke' });
+      // Hoher Norden: eigenes Portal dort, sonst der Punkt des Hohen Nordens, der eurer Hauptbasis am nächsten liegt
+      let dn = dnP.length ? dnP.slice().sort((a, b) => d2(a, home) - d2(b, home))[0] : null, dnName = dn ? 'Portal' + (dn.tag ? ' „' + dn.tag + '“' : '') + ' (Hoher Norden)' : 'Hoher Norden – nächster Küstenpunkt';
+      if (!dn) { let best = null, bd = 1e9; for (let z = 4000; z <= 10400; z += 128) for (let x = -10400; x <= 10400; x += 128) { if (Math.hypot(x, z) > 10400 || egBio(x, z) !== 7) continue; const dd = Math.hypot(x - home.x, z - home.z); if (dd < bd) { bd = dd; best = { x, z }; } } dn = best; }
+      if (dn) stops.push({ kind: 'north', key: 'north', name: dnName, x: dn.x, z: dn.z, date: 'Mo 26.10. – So 1.11.', iso: '2026-10-26', note: 'per Portal zur Hauptbasis, dann per Schiff · Ausrüstung, Verdrehte Tunnel (Schlüssel), Mörkhalla, Jotun-Invasionen → Böses Blut' });
+      if (dn) stops.push({ kind: 'kall', key: 'kall', name: 'Kall Fimbulbringer (Æsir-Portal)', x: dn.x, z: dn.z, date: 'Mo 2. – Mi 4.11.', iso: '2026-11-02', note: '3× Böses Blut in die Opferschale vor dem Æsir-Portal', noPin: true });
+      for (let i = 1; i < stops.length; i++) stops[i].dist = stops[i].noPin ? 0 : stops[i].kind === 'north' ? d2(stops[i], home) : d2(stops[i], stops[i - 1]);
+      let n = 0; stops.forEach((st) => { if (st.kind !== 'start') st.no = ++n; });
+      return { stops, home };
+    }
+    function egPanel() {
+      const R0 = egRoute(); if (!R0) return '<div class="sub">Keine Festungen/Fader-Ort im Spielstand gefunden.</div>';
+      const today = new Date().toISOString().slice(0, 10), fortsAll = (S.locations || []).filter((l) => l.k === 'CharredFortress');
+      const doneF = fortsAll.filter((f) => EG_DONE[egKey(f)]);
+      return `<div style="font-weight:700;margin-bottom:6px">🧭 Route bis 5. November</div><table style="font-size:12.5px">${R0.stops.map((st, i) => `<tr style="${st.iso && st.iso < today && !EG_DONE[st.key] ? 'color:#ff8a3d' : ''}"><td style="vertical-align:top;width:1.6em"><b>${st.kind === 'start' ? '⚑' : st.no}</b></td><td>${esc(st.name)}<div class="sub">${st.date}${st.note ? ' · ' + esc(st.note) : ''}${st.dist ? ' · ' + fmtM(st.dist) + (st.kind === 'north' ? ' ab Hauptbasis' : '') : ''} · x ${Math.round(st.x)} / z ${Math.round(st.z)}</div></td><td style="vertical-align:top">${st.key ? `<label title="erledigt"><input type="checkbox" data-egdone="${esc(st.key)}" ${EG_DONE[st.key] ? 'checked' : ''}></label>` : ''}</td></tr>`).join('')}</table>
+<div class="sub" style="margin-top:6px">Festungen: ${doneF.length} abgehakt. Abgehakte Festungen fallen raus, die nächste offene rückt nach. Rote Einträge sind überfällig.${doneF.length ? ` <button class="egReset" style="font-size:11px">Haken zurücksetzen</button>` : ''}</div>`;
+    }
+    const egSave = () => { try { localStorage.setItem('vw-endgame-done', JSON.stringify(EG_DONE)); } catch (e) { } };
+    listen(R, 'change', (e) => { const c = e.target.closest('[data-egdone]'); if (!c) return; if (c.checked) EG_DONE[c.dataset.egdone] = 1; else delete EG_DONE[c.dataset.egdone]; egSave(); map.layersChanged(); map.draw(); });
+    listen(R, 'click', (e) => { if (!e.target.closest('.egReset')) return; EG_DONE = {}; egSave(); map.layersChanged(); map.draw(); });
     const bedList = () => { const seen = new Set(), out = []; [S.world3d].concat(S.regions || []).forEach((r) => ((r && r.labels) || []).forEach((l) => { const k = l[0] === 'bed' && l[1] + '|' + Math.round(l[2]) + '|' + Math.round(l[4]); if (k && !seen.has(k)) { seen.add(k); out.push(l); } })); return out; };
     const SEEDW = { seed: '', meta: null, data: null, reg: null, regS: null };
     function seedRegion() {
@@ -255,7 +299,7 @@
       ['giant', '#9aa3ad', 'Riesenreste'], ['tissue', '#e07aa0', 'Weichgewebe'], ['blackcore', '#5a3b8a', 'Schwarzer Kern'], ['surtling', '#ffb23d', 'Surtlingkern'], ['chitin', '#7fc7b8', 'Chitin'], ['flametal', '#ff6a2a', 'Flammenmetall']];
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
-      ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['tamed', '🐾', '#4cc36b', 'Zahme Tiere'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
+      ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['tamed', '🐾', '#4cc36b', 'Zahme Tiere'], ['endgame', '🧭', '#ff8a3d', 'Route bis 5.11.'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
       ['L_x', '⚔', '#ff8a3d', 'Dyrnwyn-Quest (Aschelande)'], ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
       ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager'], ['_h', '', '', 'Rohstoffe']].concat(RES_K.map(([k, c, de]) => ['R_' + k, '◆', c, de]));
     const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], x: ['#ff8a3d', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
@@ -410,6 +454,12 @@
             if (view.s > 0.8 || c.boss || c.tame) { const t = (c.tn ? c.tn + ' · ' : '') + c.n + (c.lv > 1 ? ' ' + '★'.repeat(c.lv - 1) : '') + (c.y > 3000 ? ' ⤓' : ''); ctx.font = '11px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t, x, y - 8); ctx.fillStyle = '#fff'; ctx.fillText(t, x, y - 8); } }); ctx.font = '12px system-ui,sans-serif'; }
         if (ML.tamed && S.tamed) { ctx.textAlign = 'center'; S.tamed.forEach((t) => { const [x, y] = toS(t[1], t[2]); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             if (view.s > 1.2 && t[3]) { ctx.font = '10px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t[3], x, y - 6); ctx.fillStyle = '#dfffe6'; ctx.fillText(t[3], x, y - 6); } }); ctx.font = '12px system-ui,sans-serif'; }
+        if (ML.endgame) { const R0 = egRoute(); if (R0) { const P = R0.stops; ctx.save(); ctx.lineWidth = 3; ctx.setLineDash([12, 7]); ctx.strokeStyle = 'rgba(255,138,61,.95)'; ctx.beginPath(); let first = true; P.forEach((st) => { if (st.noPin || st.kind === 'north') return; const [x, y] = toS(st.x, st.z); first ? ctx.moveTo(x, y) : ctx.lineTo(x, y); first = false; }); ctx.stroke();
+            const N = P.find((st) => st.kind === 'north'); if (N) { const [hx, hy] = toS(R0.home.x, R0.home.z), [nx, ny] = toS(N.x, N.z); ctx.setLineDash([3, 7]); ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(232,88,74,.9)'; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(nx, ny); ctx.stroke(); }
+            ctx.setLineDash([]);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; P.forEach((st, i) => { if (st.noPin) return; const [x, y] = toS(st.x, st.z), done = st.key && EG_DONE[st.key]; ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI * 2); ctx.fillStyle = done ? '#7a7a7a' : st.kind === 'fader' || st.kind === 'north' ? '#e8584a' : '#ff8a3d'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+              ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(st.kind === 'start' ? '⚑' : String(st.no), x, y + 0.5); if (st.kind !== 'fort' && st.kind !== 'start' || view.s > 0.12) { const t = (st.kind === 'north' ? st.name + ' + Kall' : st.name) + ' · ' + st.date; ctx.font = 'bold 11.5px system-ui,sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(t, x, y - 20); ctx.fillStyle = done ? '#cfcfcf' : '#ffd9bd'; ctx.fillText(t, x, y - 20); } });
+            ctx.restore(); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; } }
         if (ML.beds) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; bedList().forEach((l) => { const [x, y] = toS(l[2], l[4]); ctx.font = '13px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.strokeText('🛏', x, y); ctx.fillStyle = '#9fd3ff'; ctx.fillText('🛏', x, y); if (view.s > 0.3) { const t = l[1] || '(ohne Name)'; ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y - 12); ctx.fillStyle = '#dff1ff'; ctx.fillText(t, x, y - 12); } }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
         if (ML.pins) { ctx.textBaseline = 'middle'; (S.pins || []).forEach((p) => { const [x, y] = toS(p.x, p.z); const ic = PIN_IC[p.t] || '•'; ctx.globalAlpha = p.c ? 0.5 : 1; ctx.font = (p.t === 9 ? 'bold 15px' : '13px') + ' system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = p.t === 9 ? '#ffb4a8' : '#ffe08a'; ctx.strokeText(ic, x, y); ctx.fillText(ic, x, y);
             if (view.s > 0.25) { const nm = pinName(p); const t = (nm ? nm + ' · ' : '') + (p.by || ''); if (t) { ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y + 13); ctx.fillStyle = '#fff3c9'; ctx.fillText(t, x, y + 13); } } ctx.globalAlpha = 1; }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
@@ -445,7 +495,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_x: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, endgame: false, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_x: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -488,6 +538,7 @@
         $('[data-fk="seed"]').hidden = !(g.VWWorldGen && S.world && S.world.seed); if (ML.seed) buildSeed();
         $('[data-fk="heat"]').hidden = !EX.days.length; $('[data-fk="pins"]').hidden = !(S.pins || []).length; $('[data-fk="creatures"]').hidden = !CREA.length && !ML.creatures; cnt.creatures = CREA.length; { const lb = $('[data-fk="creatures"] .n'); if (lb) lb.textContent = CREA.length ? fmt(CREA.length) : ''; }
         $('.heatCtl').hidden = !(ML.heat && EX.days.length);
+        { const eg = $('.egCtl'); eg.hidden = !ML.endgame; if (ML.endgame) eg.innerHTML = egPanel(); }
         if (EX.days.length && !$('.hPl').options.length) {
           const names = new Set(); Promise.resolve(heatDays(7)).then((ds) => { ds.forEach((d) => Object.keys(d.players || {}).forEach((n) => names.add(n))); $('.hPl').innerHTML = '<option value="">Alle Spieler</option>' + [...names].sort().map((n) => `<option>${esc(n)}</option>`).join(''); });
         }
