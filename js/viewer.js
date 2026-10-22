@@ -202,6 +202,33 @@
     const EG_PLAN = [['2026-10-21', 'Mi 21.10.'], ['2026-10-22', 'Do 22.10.'], ['2026-10-22', 'Do 22.10.'], ['2026-10-23', 'Fr 23.10.']];
     let EG_WG = null;
     const egBio = (x, z) => { const b = bioAt(x, z); if (b) return b; try { if (g.VWWorldGen && S.world && S.world.seed) { if (!EG_WG || EG_WG.s !== S.world.seed) EG_WG = { s: S.world.seed, w: g.VWWorldGen.create(S.world.seed, S.world.worldGen) }; return EG_WG.w.biome(x, z); } } catch (e) { } return 0; };
+    /* Kurslinie beim Segeln: Bewegung der letzten Sekunden → Richtung + Tempo; voraus auf Land prüfen */
+    const TRK = new Map();
+    function trackPlayers(list) {
+      const now = Date.now(); (list || []).forEach((p) => { if (!p || !p.name || !Number.isFinite(p.x) || !Number.isFinite(p.z)) return; let a = TRK.get(p.name); if (!a) TRK.set(p.name, (a = [])); const l = a[a.length - 1]; if (!l || l[1] !== p.x || l[2] !== p.z || now - l[0] > 1500) a.push([now, p.x, p.z]); while (a.length && now - a[0][0] > 12000) a.shift(); });
+    }
+    /* Wasser? Genaue Geländehöhen der ganzen Welt (weltkarte/<Seed>-gelaende.bin, 24-m-Raster, Wasserspiegel 30 m) – sonst Biom-Schätzung */
+    let terrLoading = false;
+    function seedTerrain() {
+      if (SEEDW.data) return SEEDW.data; if (terrLoading || !SEEDW.meta || !SEEDW.meta.terrain) return null; terrLoading = true;
+      const t = SEEDW.meta.terrain, N = t.n * t.n;
+      fetch('weltkarte/' + t.file).then((r) => (r.ok ? r.arrayBuffer() : null)).then((ab) => { if (!ab || SEEDW.data) return; const b = new Uint8Array(ab), u = (b[0] === 0x1f && b[1] === 0x8b) ? fflate.gunzipSync(b) : b; SEEDW.data = { H: new Int16Array(u.buffer.slice(u.byteOffset, u.byteOffset + N * 2)), B: u.slice(N * 2, N * 3), F: u.slice(N * 3, N * 4) }; if (tab === 'map') map.draw(); }).catch(() => { }).finally(() => { terrLoading = false; });
+      return null;
+    }
+    function isWater(x, z) {
+      const D = seedTerrain(), t = SEEDW.meta && SEEDW.meta.terrain;
+      if (D && t) { const i = Math.round((x - t.x0) / t.res), j = Math.round((z - t.z0) / t.res); if (i >= 0 && j >= 0 && i < t.n && j < t.n) return D.H[j * t.n + i] < 295; }
+      return egBio(x, z) === 8;
+    }
+    function courseOf(p) {
+      const a = TRK.get(p.name); if (!a || a.length < 2) return null; const now = Date.now(), last = a[a.length - 1]; if (now - last[0] > 6000) return null;
+      let first = null; for (const s of a) if (last[0] - s[0] >= 2500 && last[0] - s[0] <= 10000) { first = s; break; } if (!first) return null;
+      const dt = (last[0] - first[0]) / 1000, dx = p.x - first[1], dz = p.z - first[2], v = Math.hypot(dx, dz) / dt;
+      if (v < 2.5 || v > 40 || !isWater(p.x, p.z)) return null;   // nur auf dem Wasser und in Fahrt
+      const ux = dx / Math.hypot(dx, dz), uz = dz / Math.hypot(dx, dz), range = Math.max(500, Math.min(1500, v * 90));
+      let land = null; for (let d = 12; d <= range; d += 12) { if (!isWater(p.x + ux * d, p.z + uz * d)) { land = d; break; } }
+      return { ux, uz, v, range, land };
+    }
     let EG_CACHE = null;
     function egRoute() { const ck = S.created + '|' + JSON.stringify(EG_DONE); if (EG_CACHE && EG_CACHE.k === ck) return EG_CACHE.r; const r = egRoute0(); EG_CACHE = { k: ck, r }; return r; }
     function egRoute0() {
@@ -464,6 +491,10 @@
         if (ML.pins) { ctx.textBaseline = 'middle'; (S.pins || []).forEach((p) => { const [x, y] = toS(p.x, p.z); const ic = PIN_IC[p.t] || '•'; ctx.globalAlpha = p.c ? 0.5 : 1; ctx.font = (p.t === 9 ? 'bold 15px' : '13px') + ' system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = p.t === 9 ? '#ffb4a8' : '#ffe08a'; ctx.strokeText(ic, x, y); ctx.fillText(ic, x, y);
             if (view.s > 0.25) { const nm = pinName(p); const t = (nm ? nm + ' · ' : '') + (p.by || ''); if (t) { ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y + 13); ctx.fillStyle = '#fff3c9'; ctx.fillText(t, x, y + 13); } } ctx.globalAlpha = 1; }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
         if (ML.portals) S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
+        if (ML.players) livePlayers().forEach((p) => { const c = courseOf(p); if (!c) return; const [x0, y0] = toS(p.x, p.z), end = c.land || c.range, [x1, y1] = toS(p.x + c.ux * end, p.z + c.uz * end);
+          ctx.save(); ctx.lineWidth = 3; ctx.setLineDash([10, 6]); ctx.strokeStyle = c.land ? (c.land < c.v * 30 ? '#ff4a3d' : '#ffb347') : '#5fe0ff'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]);
+          const ang = Math.atan2(y1 - y0, x1 - x0); if (c.land) { ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x1 - 7, y1 - 7); ctx.lineTo(x1 + 7, y1 + 7); ctx.moveTo(x1 + 7, y1 - 7); ctx.lineTo(x1 - 7, y1 + 7); ctx.stroke(); } else { ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.moveTo(x1 + Math.cos(ang) * 10, y1 + Math.sin(ang) * 10); ctx.lineTo(x1 + Math.cos(ang + 2.5) * 9, y1 + Math.sin(ang + 2.5) * 9); ctx.lineTo(x1 + Math.cos(ang - 2.5) * 9, y1 + Math.sin(ang - 2.5) * 9); ctx.closePath(); ctx.fill(); }
+          const t = c.land ? `⚠ Land in ${fmtM(c.land)} (~${Math.round(c.land / c.v)} s)` : `Kurs frei ${fmtM(c.range)} · ${Math.round(c.v * 3.6)} km/h`; ctx.font = 'bold 11.5px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(t, x1, y1 - 14); ctx.fillStyle = '#fff'; ctx.fillText(t, x1, y1 - 14); ctx.restore(); });
         if (ML.players) livePlayers().forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#4cc36b'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d9ffe3'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(p.name, x, y + 18); ctx.font = '12px system-ui,sans-serif'; });
         if (ML.bases) S.bases.forEach((b, i) => { const [x, y] = toS(b.center[0], b.center[1]); const rr = Math.max(5, Math.min(14, 3 + Math.sqrt(b.pieces) / 8)); ctx.fillStyle = hover === i ? '#ffd27a' : '#e0a854'; ctx.strokeStyle = '#1b1408'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillText(T(b.name), x, y - rr - 4); ctx.font = '12px system-ui,sans-serif'; });
         if (MS2.pts.length) { ctx.save(); ctx.strokeStyle = '#ffd23f'; ctx.fillStyle = '#ffd23f'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 5]); ctx.beginPath(); MS2.pts.forEach(([x, z], i) => { const [sx, sy] = toS(x, z); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.stroke(); ctx.setLineDash([]);
@@ -2376,7 +2407,7 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
       else if (SRV.applied) { SRV.applied = false; updateLive(null); }
     } cleanup.push(() => clearInterval(SRV.timer));
     setTimeout(() => { try { three.mpStart(); } catch (e) { } }, 800);   // Live-Kanal gleich beim Laden verbinden (auch ohne 3D)
-    function updateLive(players) { if (destroyed) return; LIVE = players; liveReceivedAt = performance.now(); if (party) party.render(); playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }
+    function updateLive(players) { if (destroyed) return; trackPlayers(players); LIVE = players; liveReceivedAt = performance.now(); if (party) party.render(); playerCard.refresh(); three.drawPlayers(); if (tab === 'map') map.draw(); }
     // ---- Eigenes Spiel live (Mod „Valheim Welt Live“ auf diesem PC): Position auf der Online-Karte zeigen und an andere Besucher schicken
     let GL = { on: false, okAt: 0, list: null, timer: 0, fails: 0, url: 'http://localhost:8686', generation: 0, controller: null, status: 'getrennt' };
     async function gamePoll() {
