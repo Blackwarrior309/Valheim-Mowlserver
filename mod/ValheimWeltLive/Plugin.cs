@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.7.1";
+        public const string Version = "0.7.2";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
@@ -607,11 +607,12 @@ namespace ValheimWeltLive
             var tmpZ = new List<ZDO>(4096); var tmpId = new List<ZDOID>(4096);
             var tame = new List<KeyValuePair<int, Vector3>>(); var tameName = new List<string>(); var tameLv = new List<int>();   // zahme Tiere (Abschnitt TAME)
             swFrame.Start();
-            int total = sectors != null ? sectors.Length : 1;
+            int total = sectors != null ? sectors.Length + 1 : 1;   // +1: Portale führt das Spiel in einer eigenen Liste (nicht in den Gebieten)
             for (int si = 0; si < total; si++)
             {
                 tmpZ.Clear(); tmpId.Clear();
-                if (sectors != null) { var lst = sectors[si]; if (lst != null) for (int k = 0; k < lst.Count; k++) { var z = lst[k]; if (z != null) { tmpZ.Add(z); tmpId.Add(z.m_uid); } } }
+                if (sectors != null && si == sectors.Length) { try { foreach (var z in ZDOMan.instance.GetPortalList()) if (z != null) { tmpZ.Add(z); tmpId.Add(z.m_uid); } } catch (Exception e) { Logger.LogDebug("Portale: " + e.Message); } }
+                else if (sectors != null) { var lst = sectors[si]; if (lst != null) for (int k = 0; k < lst.Count; k++) { var z = lst[k]; if (z != null) { tmpZ.Add(z); tmpId.Add(z.m_uid); } } }
                 else { foreach (DictionaryEntry e in dict) { tmpZ.Add((ZDO)e.Value); tmpId.Add((ZDOID)e.Key); } }   // Rückfall (alte Spielversion): wie früher alles auf einmal
                 for (int k = 0; k < tmpZ.Count; k++)
                 {

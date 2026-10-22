@@ -232,7 +232,7 @@
     let gx = new Float32Array(1 << 16), gn = 0; // Bodenpunkte x,y,z
     const gCells = new Set(), alt = []; // Ersatz-Bodenpunkte für Gebiete ohne bekannte Pflanzen (z. B. Aschelande)
     const pushG = (x, y, z) => { if (gn * 3 + 3 > gx.length) { const t = new Float32Array(gx.length * 2); t.set(gx); gx = t; } gx[gn * 3] = x; gx[gn * 3 + 1] = y; gx[gn * 3 + 2] = z; gn++; };
-    const mapTables = []; const pieces = []; const nature = []; const signs = []; const portals = []; const beds = []; const conts = []; const tombs = []; const loose = [];
+    const mapTables = []; const pieces = []; const nature = []; const signs = []; const portals = [], portalSeen = new Set(); const beds = []; const conts = []; const tombs = []; const loose = [];
     let total = 0;
     const RESD = D.resources || {}, resv = {};
     const visitor = (prefab, x, y, z, yaw, scale, L, S, B, I) => {
@@ -247,7 +247,7 @@
           const nk = NAT[prefab]; if (nk) nature.push([nk, x, y, z, yaw, scale, name]);
           if (cr === undefined) { const bh = hintOf(prefab); if (bh) { const k = Math.floor(x / BR) + ',' + Math.floor(z / BR); let v = bioVotes.get(k); if (!v) bioVotes.set(k, (v = new Uint16Array(10))); v[bh]++; } }
           if (prefab === H_MAPT && B && B[K_DATA]) mapTables.push({ x, z, d: B[K_DATA] });
-          if (H_PORTAL.has(prefab)) portals.push({ tag: (S && S[K.tag]) || '', x, y, z });
+          if (H_PORTAL.has(prefab)) { const pk = Math.round(x * 2) + ',' + Math.round(z * 2); if (!portalSeen.has(pk)) { portalSeen.add(pk); portals.push({ tag: (S && S[K.tag]) || '', x, y, z }); } }   // doppelt (Gebiet + Portal-Liste) nur einmal
           else if (prefab === H_SIGN && S && S[K.text]) signs.push({ x, y, z, t: clean(S[K.text]), a: S[K.author] || '', an: S[K_AUTHOR_NAME] || '', c: cr !== undefined ? cr.toString() : '' });
           else if (H_BED.has(prefab) && S && S[K.ownerName]) beds.push({ x, y, z, n: S[K.ownerName], o: L && L[K.owner] !== undefined ? L[K.owner].toString() : '' });
           else if (prefab === H_TOMB) { let items = 0; try { if (B && B[K.items]) parseInv(B[K.items]).forEach((it) => (items += it[1])); } catch (e) { } tombs.push({ x, y, z, n: (S && S[K.ownerName]) || '', tod: L && L[K.timeOfDeath] !== undefined ? Number(L[K.timeOfDeath]) : null, items }); }

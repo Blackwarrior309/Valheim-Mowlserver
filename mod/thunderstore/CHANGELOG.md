@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.2
+- Fix: portals were missing from the world dump since 0.6.4 (the game keeps them in a separate list, not in the sector lists) – portal network on the map works again.
+
 ## 0.7.1
 - Lag measurement on the server: server FPS, longest frame, active objects and the 64 m areas with the most active objects every 10 s (`…/perf`, 15 min history).
 - Kill leaderboard: a creature whose object disappears with 0 health counts for the nearest player within 50 m; bosses count for everyone within 80 m (`…/kills`, saved in `kills.json`). Boss kills are logged.
