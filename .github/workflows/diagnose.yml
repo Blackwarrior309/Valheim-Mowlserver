@@ -38,3 +38,12 @@ jobs:
             { tail -n 15 "$RUNNER_TEMP/sync.log"; tail -n 5 "$RUNNER_TEMP/err.txt"; find "$RUNNER_TEMP/sync-data" -maxdepth 3 | head -20; } | sed -E 's/[0-9]{15,20}/***/g' | while IFS= read -r l; do echo "::warning title=Diagnose-Fehler::$l"; done
             exit 1
           fi
+      - name: Karten-Stand prüfen (Portale, Orte)
+        if: ${{ always() }}
+        run: |
+          node -e '
+          const fs=require("fs"),z=require("zlib");const f=process.env.RUNNER_TEMP+"/sync-data/letzter-stand.vwelt";
+          if(!fs.existsSync(f)){console.log("::notice title=Kartenstand::keine letzter-stand.vwelt");process.exit(0);}
+          const d=JSON.parse(z.gunzipSync(fs.readFileSync(f)));const P=d.portals||[];const tags={};P.forEach(p=>{if(p.tag)tags[p.tag]=(tags[p.tag]||0)+1;});
+          const msg=`Stand ${d.created} · Quelle ${d.generator||"?"} · Portale ${P.length}, mit Namen ${P.filter(p=>p.tag).length}, Paare ${Object.values(tags).filter(n=>n>=2).length} · Orte ${(d.locations||[]).length} · Beispiel ${JSON.stringify(P.slice(0,2))}`;
+          console.log("::notice title=Kartenstand::"+msg.replace(/\d{15,20}/g,"[ID]"));'
