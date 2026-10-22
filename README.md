@@ -19,7 +19,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **22.10.2026**
-- 2D-Karte: Kurslinie beim Segeln – gestrichelte Linie in Fahrtrichtung, warnt „⚠ Land in … m (~… s)“, sonst „Kurs frei“ mit Tempo.
+- 2D-Karte: Kurslinie beim Segeln (Ebene „⛵ Kurslinie“ ein/aus) – gestrichelte Linie in Fahrtrichtung, warnt „⚠ Land in … m (~… s)“, sonst „Kurs frei“ mit Tempo.
 - Server-Mod 0.7.2: Portale fehlten seit 0.6.4 im Server-Abzug – Portal-Netz auf der Karte geht wieder.
 
 **21.10.2026**
