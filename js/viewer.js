@@ -335,9 +335,9 @@
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
       ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['tamed', '🐾', '#4cc36b', 'Zahme Tiere'], ['endgame', '🧭', '#ff8a3d', 'Route bis 5.11.'], ['course', '⛵', '#5fe0ff', 'Kurslinie (Segeln)'], ['events', '⚠', '#ff3d6e', 'Invasionen & Angriffe'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
-      ['L_x', '⚔', '#ff8a3d', 'Dyrnwyn-Quest (Aschelande)'], ['L_z', '❄', '#9fd3ff', 'Hoher Norden (Loch, Mörkhalla, Kall …)'], ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
+      ['L_x', '⚔', '#ff8a3d', 'Dyrnwyn-Quest (Aschelande)'], ['L_z', '❄', '#9fd3ff', 'Hoher Norden (Loch, Mörkhalla, Kall …)'], ['L_a', '🕯', '#ffb35c', 'Uralte Altäre (Ahnen rufen)'], ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
       ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager'], ['_h', '', '', 'Rohstoffe']].concat(RES_K.map(([k, c, de]) => ['R_' + k, '◆', c, de]));
-    const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], x: ['#ff8a3d', 'dia', 1], z: ['#9fd3ff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
+    const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], x: ['#ff8a3d', 'dia', 1], z: ['#9fd3ff', 'dia', 1], a: ['#ffb35c', 'tri', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
     const LOCK = {}; Object.values((g.VW_DATA && g.VW_DATA.locations) || {}).forEach((l) => { if (l[2]) LOCK[l[0]] = l[2]; });
     const DYRN = { PlaceofMystery1: 'Spitze', PlaceofMystery2: 'Klinge', PlaceofMystery3: 'Griff (Lord Reto)' };
     const locCat = (l) => DYRN[l.k] ? 'x' : LOCK[l.k] || l.c || 'b';
@@ -548,7 +548,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, endgame: false, course: true, events: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_x: true, L_z: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, endgame: false, course: true, events: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_x: true, L_z: true, L_a: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });

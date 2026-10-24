@@ -39,7 +39,8 @@ LOC={'StartTemple':'Spawn','Eikthyrnir':'Eikthyr','GDKing':'Der Älteste','Bonem
 LOCC={'StartTemple':'s','Vendor_BlackForest':'t','Hildir_camp':'t','BogWitch_Camp':'t'}
 DUN={'d':{'Crypt2':'Grabkammer','Crypt3':'Grabkammer','Crypt4':'Grabkammer','TrollCave02':'Trollhöhle','SunkenCrypt4':'Versunkene Krypta','MountainCave02':'Frosthöhle',
           'Mistlands_DvergrTownEntrance1':'Befallene Mine','Mistlands_DvergrTownEntrance2':'Befallene Mine','CharredFortress':'Festung (Aschelande)','MorgenHole1':'Morgen-Höhle','MorgenHole2':'Morgen-Höhle','MorgenHole3':'Morgen-Höhle'},
-     'z':{'TheHole01':'Das Loch (Hoher Norden)','MorkBorg':'Mörkhalla (Hoher Norden)','DN_Bossroom':'Kall Fimbulbringer – Bossraum','NorthVillage':'Nord-Dorf (Hoher Norden)','NorthMemorialPlace':'Gedenkstätte (Hoher Norden)','DN_hut01':'Hütte (Hoher Norden)','LumberCamp':'Holzfällerlager (Hoher Norden)','Runestone_DeepNorth':'Runenstein (Hoher Norden)'},
+     'z':{'TheHole01':'Das Loch (Hoher Norden)','MorkBorg':'Mörkhalla (Hoher Norden)','DN_Bossroom':'Kall Fimbulbringer – Bossraum','NorthVillage':'Nord-Dorf (Hoher Norden)','DN_hut01':'Hütte (Hoher Norden)','LumberCamp':'Holzfällerlager (Hoher Norden)','Runestone_DeepNorth':'Runenstein (Hoher Norden)'},
+     'a':{'NorthMemorialPlace':'Uralter Altar – Ahnen rufen (3× Gedenkkohle)'},
      'q':{'PlaceofMystery1':'Dyrnwyn: Spitze (Rätselort 1)','PlaceofMystery2':'Dyrnwyn: Klinge (Rätselort 2)','PlaceofMystery3':'Dyrnwyn: Griff · Lord Reto (Rätselort 3)','Hildir_crypt':'Hildir: Rauchige Gruft','Hildir_cave':'Hildir: Heulende Höhle','Hildir_plainsfortress':'Hildir: Festung'},
      'h':{'GoblinCamp2':'Fulingdorf','WoodVillage1':'Draugr-Dorf','WoodVillage2':'Draugr-Dorf','CharredFortress':None},
      'n':{'Greydwarf_camp1':'Grauzwerg-Nest','DrakeNest01':'Drachennest'},
