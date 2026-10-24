@@ -28,6 +28,15 @@ jobs:
           VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
           VS_FTP_SECURE: ${{ secrets.VS_FTP_SECURE }}
         run: node sync/ftp-scan.cjs
+      - name: Ortstypen aus dem Server-Abzug
+        if: ${{ inputs.scan }}
+        env:
+          VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
+          VS_FTP_PORT: ${{ secrets.VS_FTP_PORT }}
+          VS_FTP_USER: ${{ secrets.VS_FTP_USER }}
+          VS_FTP_PASSWORD: ${{ secrets.VS_FTP_PASSWORD }}
+          VS_FTP_SECURE: ${{ secrets.VS_FTP_SECURE }}
+        run: node sync/dump-locations.cjs || true
       - name: Steam-Abfrage (Spielerzahl)
         env:
           VS_FTP_HOST: ${{ secrets.VS_FTP_HOST }}
