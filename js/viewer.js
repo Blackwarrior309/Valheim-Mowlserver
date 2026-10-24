@@ -253,8 +253,8 @@
       if (!dn) { let best = null, bd = 1e9; for (let z = 4000; z <= 10400; z += 128) for (let x = -10400; x <= 10400; x += 128) { if (Math.hypot(x, z) > 10400 || egBio(x, z) !== 7) continue; const dd = Math.hypot(x - home.x, z - home.z); if (dd < bd) { bd = dd; best = { x, z }; } } dn = best; }
       if (dn) {
         stops.push({ kind: 'north', key: 'north', name: dnName, x: dn.x, z: dn.z, date: 'Mo 26.10.', iso: '2026-10-26', note: 'per Portal zur Hauptbasis, dann per Schiff · dort Portal bauen, Ausrüstung' });
-        const near = (k, ref) => L.filter((l) => l.k === k).sort((a, b) => d2(a, ref) - d2(b, ref))[0];
-        const hole = near('TheHole01', dn), mork = near('MorkBorg', hole || dn), boss = near('DN_Bossroom', mork || hole || dn);
+        const nearL = (k, ref) => L.filter((l) => l.k === k).sort((a, b) => d2(a, ref) - d2(b, ref))[0];
+        const hole = nearL('TheHole01', dn), mork = nearL('MorkBorg', hole || dn), boss = nearL('DN_Bossroom', mork || hole || dn);
         if (hole) stops.push({ kind: 'dn', key: egKey(hole), name: 'Das Loch', x: hole.x, z: hole.z, date: 'Di 27. – Mi 28.10.', iso: '2026-10-27', note: 'Verdrehte Tunnel: Gussform für den verzierten Schlüssel' });
         if (mork) stops.push({ kind: 'dn', key: egKey(mork), name: 'Mörkhalla', x: mork.x, z: mork.z, date: 'Do 29.10. – So 1.11.', iso: '2026-10-29', note: 'mit dem Schlüssel öffnen, Schwarzes Blut zerstören → Jotun-Invasion → Böses Blut (3×)' });
         if (boss) stops.push({ kind: 'boss', key: egKey(boss), name: 'Kall Fimbulbringer (Bossraum)', x: boss.x, z: boss.z, date: 'Mo 2. – Mi 4.11.', iso: '2026-11-02', note: '3× Böses Blut in die Opferschale vor dem Æsir-Portal' });
