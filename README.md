@@ -19,7 +19,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **24.10.2026**
-- Neuer Tab „❄ Hoher Norden“: Crafting-Kompendium mit allen 77 Gegenständen (Waffen, Magie, Schilde, Rüstung, Trinkets, Kochen) – Werte, Rezept, Station, Fundort; Suche, Filter, „hab ich“ abhaken, Rohstoff-Lexikon.
+- Neuer Tab „❄ Hoher Norden“: Crafting-Kompendium mit allen 77 Gegenständen (Waffen, Magie, Schilde, Rüstung, Trinkets, Kochen) – Werte, Rezept, Station, Fundort; Suche, Filter, „hab ich“ abhaken, Rohstoff-Lexikon, mit Bildern zu jedem Gegenstand.
 - Neue Kartenebene „🕯 Uralte Altäre“: 15 Altäre im Hohen Norden, an denen man mit 3× Gedenkkohle Ahnen ruft (Frostfeuer-/Donnerblut-Essenz).
 - 2D-Karte: alle hellen Beschriftungen mit dunklem Rand – auf Schnee/Eis wieder lesbar.
 - Live-Karte aktualisiert wieder alle 5 Minuten (hängender Lauf vom 22.10. blockierte alle Updates).
