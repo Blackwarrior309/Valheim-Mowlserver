@@ -18,6 +18,10 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 ## Changelog
 
+**24.10.2026**
+- Neue Kartenebene „❄ Hoher Norden“: Das Loch (Verdrehte Tunnel), Mörkhalla, Kall-Bossraum, Nord-Dörfer, Hütten, Gedenkstätten, Holzfällerlager, Runensteine. Alle 3 Fader-Orte als Bosse.
+- Route bis 5.11.: nimmt den nächsten Fader-Ort und führt im Hohen Norden über Das Loch → Mörkhalla → Kall-Bossraum.
+
 **22.10.2026**
 - 2D-Karte: Kurslinie beim Segeln (Ebene „⛵ Kurslinie“ ein/aus) – gestrichelte Linie in Fahrtrichtung, warnt „⚠ Land in … m (~… s)“, sonst „Kurs frei“ mit Tempo.
 - Server-Mod 0.7.2: Portale fehlten seit 0.6.4 im Server-Abzug – Portal-Netz auf der Karte geht wieder.
