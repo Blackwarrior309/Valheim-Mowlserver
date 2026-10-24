@@ -17,7 +17,8 @@ const E = process.env, KNOWN = new Set(Object.values(globalThis.VW_DATA.location
   for (let i = 0; i < nl; i++) { const n = str(), x = f32(), z = f32(), pl = u[p++]; let e = by.get(n); if (!e) by.set(n, (e = { n, c: 0, v: 0, north: 0, south: 0, ex: null })); e.c++; if (pl) e.v++; if (z > 6000) e.north++; if (z < -6000) e.south++; if (!e.ex) e.ex = [Math.round(x), Math.round(z)]; }
   const unk = [...by.values()].filter((e) => !KNOWN.has(e.n)).sort((a, b) => (b.north + b.south) - (a.north + a.south) || b.c - a.c);
   const fmt = (e) => `${e.n} ×${e.c}${e.north ? ' N' + e.north : ''}${e.south ? ' S' + e.south : ''}${e.v ? ' besucht ' + e.v : ''} (${e.ex.join('/')})`;
-  const L = [`${nl} Orte, ${by.size} Typen, ${unk.length} unbekannt.`, 'Hoher Norden/Aschelande: ' + unk.filter((e) => e.north || e.south).map(fmt).join(' · '), 'Übrige: ' + unk.filter((e) => !e.north && !e.south).slice(0, 80).map((e) => e.n + ' ×' + e.c).join(', ')];
+  const NN = unk.filter((e) => e.north >= e.c * 0.5).map((e) => `${e.n} ×${e.c} b${e.v} (${e.ex.join('/')})`).join(' · ');
+  const L = ['Hoher Norden: ' + NN, `${nl} Orte, ${by.size} Typen, ${unk.length} unbekannt.`, 'Hoher Norden/Aschelande: ' + unk.filter((e) => e.north || e.south).map(fmt).join(' · '), 'Übrige: ' + unk.filter((e) => !e.north && !e.south).slice(0, 80).map((e) => e.n + ' ×' + e.c).join(', ')];
   const out = L.join('\n'); console.log(out); console.log('::notice title=Ortstypen::' + out.replace(/%/g, '%25').replace(/\n/g, '%0A'));
   process.exit(0);
 })().catch((e) => { console.log('::error title=Ortstypen::' + String(e.message).replace(/\d{15,20}/g, '[ID]')); process.exit(1); });
