@@ -385,6 +385,11 @@
     // ================= Karte (2D) =================
     const map = (function () {
       const cv = $('canvas.map'), ctx = cv.getContext('2d');
+      { /* helle Schrift bekommt immer einen dunklen Rand – sonst unlesbar auf Schnee/Eis (Hoher Norden, Berge) */
+        const ft = ctx.fillText.bind(ctx), st = ctx.strokeText.bind(ctx);
+        const light = (c) => { if (typeof c !== 'string') return false; let r, g, b; const m = c.match(/^#([0-9a-f]{6})$/i); if (m) { const n = parseInt(m[1], 16); r = n >> 16; g = (n >> 8) & 255; b = n & 255; } else { const q = c.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/); if (!q) return false; r = +q[1]; g = +q[2]; b = +q[3]; } return 0.299 * r + 0.587 * g + 0.114 * b > 150; };
+        ctx.fillText = function (t, x, y, w) { if (light(ctx.fillStyle)) { const lw = ctx.lineWidth, ss = ctx.strokeStyle, lj = ctx.lineJoin; ctx.lineWidth = Math.max(3, lw); ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.lineJoin = 'round'; w === undefined ? st(t, x, y) : st(t, x, y, w); ctx.lineWidth = lw; ctx.strokeStyle = ss; ctx.lineJoin = lj; } return w === undefined ? ft(t, x, y) : ft(t, x, y, w); };
+      }
       let img = null, fog = null, fogTab = null, view = { cx: 0, cz: 0, s: 0.1 }, hover = null;
       function build() {
         const o = S.overview; const u = b64u8(o.h); const c = document.createElement('canvas'); c.width = o.nx; c.height = o.nz;
