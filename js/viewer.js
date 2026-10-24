@@ -110,7 +110,7 @@
     const R = document.createElement('div'); R.className = 'vw'; root.appendChild(R);
     R.innerHTML = `
 <div class="vw-top"><span class="vw-title"></span>
-  <div class="vw-tabs"><button data-t="map" class="on">Karte</button><button data-t="3d">3D</button><button data-t="chests">Kisten</button><button data-t="players">Live-Spieler</button><button data-t="info">Welt & Spieler</button><button data-t="dungeon" hidden title="Nur mit dem Mod auf diesem PC: Grundriss des Dungeons, in dem du gerade bist">⤓ Dungeon</button></div>
+  <div class="vw-tabs"><button data-t="map" class="on">Karte</button><button data-t="3d">3D</button><button data-t="chests">Kisten</button><button data-t="players">Live-Spieler</button><button data-t="info">Welt & Spieler</button><button data-t="nord">❄ Hoher Norden</button><button data-t="dungeon" hidden title="Nur mit dem Mod auf diesem PC: Grundriss des Dungeons, in dem du gerade bist">⤓ Dungeon</button></div>
   <div class="vw-act"><button class="vwOnline" hidden title="Wer ist gerade online (Server-Mod)"></button><span class="vw-status"></span></div></div>
   <div class="vwOnlineBox" hidden></div>
 <div class="vw-main">
@@ -181,6 +181,7 @@
   </div></div></div>
   <div class="vw-pane" data-p="players" hidden><div class="vw-party"></div></div>
   <div class="vw-pane" data-p="dungeon" hidden></div>
+  <div class="vw-pane" data-p="nord" hidden><div class="vw-scroll ngHost"></div></div>
   <div class="vw-pane" data-p="info" hidden><div class="vw-scroll"><div class="vw-wrap info"></div></div></div>
 </div>`;
     const $ = (s, p) => (p || R).querySelector(s), $$ = (s, p) => Array.from((p || R).querySelectorAll(s));
@@ -351,12 +352,13 @@
     const bioAt = (x, z) => { const B = S.biomes; if (!B) return 0; if (BIOS !== B) { BIOS = B; BIOU = b64u8(B.b); } const i = Math.floor((x - B.x0) / B.res), j = Math.floor((z - B.z0) / B.res); return (i < 0 || j < 0 || i >= B.nx || j >= B.nz) ? 0 : BIOU[j * B.nx + i]; };
     const setStatus = (t) => { $('.vw-status').textContent = t || ''; };
     setStatus(opts.status);
+    let ngDone = false;
     function setTab(t) {
       tab = t; $$('.vw-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
       $$('.vw-pane').forEach((p) => (p.hidden = p.dataset.p !== t));
       if (t === 'map') map.draw(); if (t === '3d') three.start(); else three.stop();
       if (t === 'chests') kisten.render(); if (t === 'info') info(); if (t === 'dungeon' && DG) setTimeout(() => DG.draw(), 0);
-      if (t === 'players') three.mpStart(); if (party) party.setActive(t === 'players');
+      if (t === 'nord' && g.VWNordGuide && !ngDone) { ngDone = true; g.VWNordGuide.mount($('.ngHost'), { onMap: () => setTab('map') }); } if (t === 'players') three.mpStart(); if (party) party.setActive(t === 'players');
     }
     $$('.vw-tabs button').forEach((b) => (b.onclick = () => setTab(b.dataset.t)));
 
