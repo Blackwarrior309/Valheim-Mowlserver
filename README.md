@@ -19,6 +19,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **24.10.2026**
+- Server-Mod 0.7.3 + Karte: Invasionen & Angriffe live (roter Kreis mit Restzeit, Hinweis oben), frühere Ereignisse als Punkte mit Datum.
 - Neue Kartenebene „❄ Hoher Norden“: Das Loch (Verdrehte Tunnel), Mörkhalla, Kall-Bossraum, Nord-Dörfer, Hütten, Gedenkstätten, Holzfällerlager, Runensteine. Alle 3 Fader-Orte als Bosse.
 - Route bis 5.11.: nimmt den nächsten Fader-Ort und führt im Hohen Norden über Das Loch → Mörkhalla → Kall-Bossraum.
 

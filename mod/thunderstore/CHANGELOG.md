@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.3
+- Live events/invasions: the server's current random or forced event (name, message, position, radius, time) every 5 s on `…/event`, plus a history of the last 40 events (`ereignisse.json`).
+
 ## 0.7.2
 - Fix: portals were missing from the world dump since 0.6.4 (the game keeps them in a separate list, not in the sector lists) – portal network on the map works again.
 

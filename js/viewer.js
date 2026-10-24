@@ -188,7 +188,7 @@
     (opts.actions || []).forEach((a) => { const b = document.createElement('button'); b.textContent = a.label; if (a.primary) b.className = 'pri'; if (a.title) b.title = a.title; b.onclick = a.onClick; act.appendChild(b); });
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
-    const SRV = { at: 0, players: [], creatures: [], timer: 0, playtime: null, perf: null, kills: null };   // Server-Mod live (MQTT)
+    const SRV = { at: 0, players: [], creatures: [], timer: 0, playtime: null, perf: null, kills: null, event: null };   // Server-Mod live (MQTT)
     let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null, liveReceivedAt = -Infinity, party = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
     /* Zahme Tiere aus dem Spielstand: [Art, x, z, Name, Stufe] */
@@ -334,7 +334,7 @@
       ['giant', '#9aa3ad', 'Riesenreste'], ['tissue', '#e07aa0', 'Weichgewebe'], ['blackcore', '#5a3b8a', 'Schwarzer Kern'], ['surtling', '#ffb23d', 'Surtlingkern'], ['chitin', '#7fc7b8', 'Chitin'], ['flametal', '#ff6a2a', 'Flammenmetall']];
     // Kartenfilter: [Schlüssel, Symbol, Farbe, Text]; Orte nach Kategorie (tools/gen_data.py)
     const FILTERS = [['seed', '🗺', '#9ec3d8', 'Ganze Welt'], ['bases', '●', '#e0a854', 'Basen'], ['players', '●', '#4cc36b', 'Spieler online'], ['portals', '◆', '#b48cff', 'Portale'],
-      ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['tamed', '🐾', '#4cc36b', 'Zahme Tiere'], ['endgame', '🧭', '#ff8a3d', 'Route bis 5.11.'], ['course', '⛵', '#5fe0ff', 'Kurslinie (Segeln)'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
+      ['deaths', '✝', '#ff6b5a', 'Tode'], ['beds', '🛏', '#9fd3ff', 'Betten'], ['tamed', '🐾', '#4cc36b', 'Zahme Tiere'], ['endgame', '🧭', '#ff8a3d', 'Route bis 5.11.'], ['course', '⛵', '#5fe0ff', 'Kurslinie (Segeln)'], ['events', '⚠', '#ff3d6e', 'Invasionen & Angriffe'], ['pins', '📍', '#ffe08a', 'Kartentisch-Pins'], ['creatures', '●', '#ff5a4a', 'Gegner & Tiere (Mod)'], ['heat', '👣', '#ffb347', 'Laufwege'], ['L_s', '▲', '#e8584a', 'Spawn'], ['L_b', '▲', '#e8584a', 'Bosse'], ['L_t', '●', '#ffd34d', 'Händler'],
       ['L_x', '⚔', '#ff8a3d', 'Dyrnwyn-Quest (Aschelande)'], ['L_z', '❄', '#9fd3ff', 'Hoher Norden (Loch, Mörkhalla, Kall …)'], ['L_q', '◆', '#d07cff', 'Quests'], ['L_d', '■', '#c9935a', 'Dungeons'], ['L_h', '■', '#b5483a', 'Feindl. Dörfer'], ['L_n', '●', '#7fbf5a', 'Nester'],
       ['L_m', '●', '#2b2b2b', 'Material'], ['L_v', '■', '#58c7d6', 'Dvergr-Lager'], ['_h', '', '', 'Rohstoffe']].concat(RES_K.map(([k, c, de]) => ['R_' + k, '◆', c, de]));
     const LOCSTY = { s: ['#e8584a', 'tri', 1], b: ['#e8584a', 'tri', 1], t: ['#ffd34d', 'dot', 1], q: ['#d07cff', 'dia', 1], x: ['#ff8a3d', 'dia', 1], z: ['#9fd3ff', 'dia', 1], d: ['#c9935a', 'sq'], h: ['#b5483a', 'sq'], n: ['#7fbf5a', 'dot'], m: ['#2b2b2b', 'dot'], v: ['#58c7d6', 'sq'] };
@@ -500,6 +500,14 @@
         if (ML.pins) { ctx.textBaseline = 'middle'; (S.pins || []).forEach((p) => { const [x, y] = toS(p.x, p.z); const ic = PIN_IC[p.t] || '•'; ctx.globalAlpha = p.c ? 0.5 : 1; ctx.font = (p.t === 9 ? 'bold 15px' : '13px') + ' system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = p.t === 9 ? '#ffb4a8' : '#ffe08a'; ctx.strokeText(ic, x, y); ctx.fillText(ic, x, y);
             if (view.s > 0.25) { const nm = pinName(p); const t = (nm ? nm + ' · ' : '') + (p.by || ''); if (t) { ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y + 13); ctx.fillStyle = '#fff3c9'; ctx.fillText(t, x, y + 13); } } ctx.globalAlpha = 1; }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
         if (ML.portals) S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
+        if (ML.events && SRV.event) { const E = SRV.event, now = Date.now(); ctx.save(); ctx.textAlign = 'center';
+          (E.hist || []).forEach((h) => { if (!Number.isFinite(h.x)) return; if (E.active && Math.hypot(h.x - E.x, h.z - E.z) < 60 && now - h.at < 3600e3) return; const [x, y] = toS(h.x, h.z); ctx.fillStyle = 'rgba(255,61,110,.55)'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            if (view.s > 0.3) { const d = new Date(h.at), t = (h.msg || h.name) + ' · ' + d.toLocaleString(LOC(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); ctx.font = '10.5px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t, x, y - 9); ctx.fillStyle = '#ffd0dc'; ctx.fillText(t, x, y - 9); } });
+          if (E.active && now - (SRV.eventAt || 0) < 30000) { const [x, y] = toS(E.x, E.z), r = Math.max(14, (E.r || 60) * view.s), pulse = 0.5 + 0.5 * Math.sin(now / 300);
+            ctx.fillStyle = `rgba(255,61,110,${0.12 + 0.12 * pulse})`; ctx.strokeStyle = '#ff3d6e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            const left = E.dur > 0 ? Math.max(0, E.dur - (E.time || 0) - (now - SRV.eventAt) / 1000) : 0, t = '⚠ ' + (E.msg || E.name) + (left ? ` · noch ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : '');
+            ctx.font = 'bold 13px system-ui,sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(t, x, y - r - 8); ctx.fillStyle = '#ffd0dc'; ctx.fillText(t, x, y - r - 8); if (!evAnim) { evAnim = setTimeout(() => { evAnim = 0; if (tab === 'map') draw(); }, 120); } }
+          ctx.restore(); ctx.font = '12px system-ui,sans-serif'; }
         if (ML.players && ML.course) livePlayers().forEach((p) => { const c = courseOf(p); if (!c) return; const [x0, y0] = toS(p.x, p.z), end = c.land || c.range, [x1, y1] = toS(p.x + c.ux * end, p.z + c.uz * end);
           ctx.save(); ctx.lineWidth = 3; ctx.setLineDash([10, 6]); ctx.strokeStyle = c.land ? (c.land < c.v * 30 ? '#ff4a3d' : '#ffb347') : '#5fe0ff'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]);
           const ang = Math.atan2(y1 - y0, x1 - x0); if (c.land) { ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x1 - 7, y1 - 7); ctx.lineTo(x1 + 7, y1 + 7); ctx.moveTo(x1 + 7, y1 - 7); ctx.lineTo(x1 - 7, y1 + 7); ctx.stroke(); } else { ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.moveTo(x1 + Math.cos(ang) * 10, y1 + Math.sin(ang) * 10); ctx.lineTo(x1 + Math.cos(ang + 2.5) * 9, y1 + Math.sin(ang + 2.5) * 9); ctx.lineTo(x1 + Math.cos(ang - 2.5) * 9, y1 + Math.sin(ang - 2.5) * 9); ctx.closePath(); ctx.fill(); }
@@ -512,7 +520,7 @@
             if (i) { const [px, pz] = MS2.pts[i - 1], [ax, ay] = toS(px, pz), t = fmtM(Math.hypot(x - px, z - pz)); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(t, (ax + sx) / 2, (ay + sy) / 2 - 10); ctx.fillStyle = '#ffe98a'; ctx.fillText(t, (ax + sx) / 2, (ay + sy) / 2 - 10); } });
           ctx.restore(); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
       }
-      const ptr = new Map(); let pd = 0, moved = 0;
+      const ptr = new Map(); let pd = 0, moved = 0, evAnim = 0;
       /* Messen auf der 2D-Karte: Punkte in Weltkoordinaten (x, z) */
       const MS2 = { on: false, pts: [] };
       function ms2Info() { let t = 0; for (let i = 1; i < MS2.pts.length; i++) t += Math.hypot(MS2.pts[i][0] - MS2.pts[i - 1][0], MS2.pts[i][1] - MS2.pts[i - 1][1]);
@@ -535,7 +543,7 @@
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       cv.addEventListener('wheel', (e) => { stopFollowing(); e.preventDefault(); const r = cv.getBoundingClientRect(); const [wx, wz] = toW(e.clientX - r.left, e.clientY - r.top); view.s *= Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.02, Math.min(8, view.s)); const [nx, nz] = toW(e.clientX - r.left, e.clientY - r.top); view.cx += wx - nx; view.cz += wz - nz; draw(); }, { passive: false });
       // ---- Ebenen: Portal-Netz, Tode, Laufwege
-      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, endgame: false, course: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_x: true, L_z: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
+      let ML = { seed: true, bases: true, players: true, portals: true, deaths: false, beds: true, tamed: true, endgame: false, course: true, events: true, pins: true, creatures: true, heat: false, L_s: true, L_b: true, L_t: true, L_x: true, L_z: true, L_q: false, L_d: false, L_h: false, L_n: false, L_m: false, L_v: false }; try { Object.assign(ML, JSON.parse(localStorage.getItem('vw-maplayers') || '{}')); } catch (e) { }
       let heatCells = null, heatMax = 1, heatCell = 16, baseInfo = '';
       function portalNet() {
         const g = {}; (S.portals || []).forEach((p) => { if (p.tag) (g[p.tag] || (g[p.tag] = [])).push(p); });
@@ -2379,7 +2387,7 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
     function renderOnline() {
       const B = $('.vwOnline'), box = $('.vwOnlineBox'); const fresh = Date.now() - SRV.at < 20000;
       if (!SRV.at) { B.hidden = true; box.hidden = true; return; }
-      B.hidden = false; B.classList.toggle('off', !fresh); B.textContent = fresh ? `${SRV.players.length} online` : 'Server-Live getrennt';
+      B.hidden = false; B.classList.toggle('off', !fresh); const evA = SRV.event && SRV.event.active && Date.now() - (SRV.eventAt || 0) < 30000; B.textContent = (fresh ? `${SRV.players.length} online` : 'Server-Live getrennt') + (evA ? ' · ⚠ ' + (SRV.event.msg || SRV.event.name || 'Ereignis') : '');
       if (box.hidden) return; const now = Date.now();
       box.innerHTML = `<div style="font-weight:700;margin-bottom:6px">Online auf dem Server</div>` + (SRV.players.length ? SRV.players.map((p) => `<div class="r"><button class="playerOpen" data-name="${esc(p.name)}" style="padding:0;border:0;background:none;font-weight:600;cursor:pointer;color:inherit">● ${esc(p.name)}</button><span>${p.since ? hm2((now - p.since) / 1000) : ''}</span></div><div class="sub" style="margin:-2px 0 4px 14px">gesamt ${hm2(p.total || 0)}${p.details && p.details.maxHealth ? ` · ❤ ${Math.round(p.details.health)}/${Math.round(p.details.maxHealth)}` : ''}${p.details && p.details.inBed ? ' · schläft' : ''}${p.details && p.details.dead ? ' · tot' : ''}</div>`).join('') : '<div class="sub">Niemand online.</div>') + `<div class="sub" style="margin-top:6px">Zeit = diese Sitzung · „gesamt“ zählt der Server-Mod seit seiner Installation.</div>`;
     }
@@ -2391,6 +2399,9 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
         SRV.at = Date.now(); SRV.players = data.players.filter((p) => p && typeof p.name === 'string' && Number.isFinite(p.x) && Number.isFinite(p.z)).slice(0, 64).map((p) => ({ name: p.name.slice(0, 24), x: p.x, y: p.y, z: p.z, since: +p.since || 0, total: +p.total || 0, details: p.details && g.VWPlayerCard ? Object.assign(g.VWPlayerCard.details(p.details) || {}, p.total ? { playedSeconds: +p.total } : {}) : null }));
         applyLive();
         renderOnline();
+      } else if (kind === 'event') {
+        const was = SRV.event && SRV.event.active; SRV.event = data; SRV.eventAt = Date.now(); renderOnline(); if (tab === 'map') map.draw();
+        if (data.active && !was) setStatus('⚠ ' + (data.msg || data.name || 'Ereignis') + ' bei x ' + Math.round(data.x) + ' / z ' + Math.round(data.z));
       } else if (kind === 'perf' && Number.isFinite(+data.fps)) {
         SRV.perf = data; const el = $('.srvPerf'); if (el && tab === 'info') el.innerHTML = perfPanel();
       } else if (kind === 'kills' && data.players && typeof data.players === 'object') {

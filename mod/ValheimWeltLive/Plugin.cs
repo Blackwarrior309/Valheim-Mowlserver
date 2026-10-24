@@ -24,13 +24,13 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.7.2";
+        public const string Version = "0.7.3";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
         ConfigEntry<int> cfgMaxObjects; ConfigEntry<float> cfgMaxMs;
         ConfigEntry<bool> cfgLive; ConfigEntry<string> cfgLiveHost; ConfigEntry<int> cfgLivePort; ConfigEntry<float> cfgLivePlayerSec, cfgLiveCreatureSec;
-        LiveFeed feed; string liveTopic; float nextLivePlayers, nextLiveCreatures, nextLiveStat, nextLivePlaytime, nextLivePerf, nextLiveKills;
+        LiveFeed feed; string liveTopic; float nextLivePlayers, nextLiveCreatures, nextLiveStat, nextLivePlaytime, nextLivePerf, nextLiveKills, nextLiveEvent;
         float perfAcc, perfMax; int perfFrames; readonly List<string> perfHist = new List<string>(); ZDOMan hookedMan;
         ConfigEntry<int> cfgPort, cfgWorldSeconds, cfgTrackSeconds, cfgTrackDays;
         ConfigEntry<float> cfgPlayerSeconds;
@@ -396,6 +396,7 @@ namespace ValheimWeltLive
                 foreach (var kv in playTotal) { if (!f) sb.Append(','); f = false; sb.Append(Json(kv.Key)).Append(':').Append(Math.Round(kv.Value)); }
                 feed.Publish(liveTopic + "/playtime", sb.Append("}}").ToString(), true);
             }
+            if (t >= nextLiveEvent) { nextLiveEvent = t + 5f; try { feed.Publish(liveTopic + "/event", CollectEvent(now), true); } catch (Exception e) { Logger.LogDebug(e); } }
             if (t >= nextLivePerf) { nextLivePerf = t + 10f; try { feed.Publish(liveTopic + "/perf", CollectPerf(now), true); } catch (Exception e) { Logger.LogDebug(e); } }
             if (killsDirty && t >= nextLiveKills || t >= nextLiveKills + 60f) { nextLiveKills = t + 5f; killsDirty = false; try { feed.Publish(liveTopic + "/kills", KillsJson(now), true); if (t - killsSaved > 60f) { killsSaved = t; SaveKills(); } } catch (Exception e) { Logger.LogDebug(e); } }
             if (t >= nextLiveStat) { nextLiveStat = t + 600f; if (cfgPerfLog.Value) Logger.LogInfo($"Live feed: {(feed.Connected ? "verbunden" : "getrennt" + (feed.LastError != "" ? " (" + feed.LastError + ")" : ""))}, {feed.Sent} Nachrichten gesendet, Thema {liveTopic}/…"); }
@@ -420,6 +421,36 @@ namespace ValheimWeltLive
             var hot = zone.OrderByDescending((kv) => kv.Value).Take(6).Select((kv) => "[" + ((int)(kv.Key >> 32) * 64 + 32) + "," + ((int)(uint)kv.Key * 64 + 32) + "," + kv.Value + "]");
             string pt = "[" + now + "," + F(fps) + "," + F(max) + "," + inst + "]"; perfHist.Add(pt); if (perfHist.Count > 90) perfHist.RemoveAt(0);   // 15 Minuten Verlauf
             return "{\"t\":" + now + ",\"fps\":" + F(fps) + ",\"avgMs\":" + F(avg) + ",\"maxMs\":" + F(max) + ",\"zdos\":" + zdos + ",\"inst\":" + inst + ",\"peers\":" + ZNet.instance.GetPeers().Count + ",\"hot\":[" + string.Join(",", hot.ToArray()) + "],\"hist\":[" + string.Join(",", perfHist.ToArray()) + "]}";
+        }
+
+        // ---------------- Ereignisse / Invasionen ----------------
+        // Das Spiel führt auf dem Server ein laufendes Zufallsereignis (Angriff, Invasion …) mit Ort, Radius und Dauer; erzwungene Ereignisse separat.
+        static readonly FieldInfo F_FORCED = typeof(RandEventSystem).GetField("m_forcedEvent", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+        readonly List<string> eventHist = new List<string>(); string lastEventKey; bool eventsLoaded;
+        string CollectEvent(long now)
+        {
+            var res = RandEventSystem.instance; RandomEvent ev = null;
+            if (!eventsLoaded) { eventsLoaded = true; try { string f = Path.Combine(DataDir(), "ereignisse.json"); if (File.Exists(f)) { var txt = File.ReadAllText(f).Trim(); if (txt.StartsWith("[") && txt.Length > 2) eventHist.AddRange(txt.Substring(1, txt.Length - 2).Split(new[] { "},{" }, StringSplitOptions.None).Select((x) => "{" + x.Trim('{', '}') + "}")); } } catch { } }
+            try { if (res != null) ev = res.GetCurrentRandomEvent(); } catch { }
+            try { if (ev == null && res != null) ev = F_FORCED?.GetValue(res) as RandomEvent; } catch { }
+            var sb = new StringBuilder("{\"t\":" + now);
+            if (ev != null)
+            {
+                string msg = ""; try { msg = WeltSuche.L(ev.m_startMessage ?? ""); } catch { }
+                sb.Append(",\"active\":true,\"name\":").Append(Json(ev.m_name ?? "")).Append(",\"msg\":").Append(Json(msg))
+                  .Append(",\"x\":").Append(F(ev.m_pos.x)).Append(",\"z\":").Append(F(ev.m_pos.z)).Append(",\"r\":").Append(F(ev.m_eventRange))
+                  .Append(",\"time\":").Append(F(ev.m_time)).Append(",\"dur\":").Append(F(ev.m_duration));
+                string key = ev.m_name + "@" + Mathf.RoundToInt(ev.m_pos.x / 50f) + "," + Mathf.RoundToInt(ev.m_pos.z / 50f);
+                if (key != lastEventKey)
+                {
+                    lastEventKey = key; Logger.LogInfo($"Ereignis: {ev.m_name} ({msg}) bei x {Mathf.RoundToInt(ev.m_pos.x)} / z {Mathf.RoundToInt(ev.m_pos.z)}");
+                    eventHist.Add("{\"at\":" + now + ",\"name\":" + Json(ev.m_name ?? "") + ",\"msg\":" + Json(msg) + ",\"x\":" + Mathf.RoundToInt(ev.m_pos.x) + ",\"z\":" + Mathf.RoundToInt(ev.m_pos.z) + "}");
+                    while (eventHist.Count > 40) eventHist.RemoveAt(0);
+                    try { Directory.CreateDirectory(DataDir()); File.WriteAllText(Path.Combine(DataDir(), "ereignisse.json"), "[" + string.Join(",", eventHist.ToArray()) + "]"); } catch { }
+                }
+            }
+            else { sb.Append(",\"active\":false"); lastEventKey = null; }
+            return sb.Append(",\"hist\":[").Append(string.Join(",", eventHist.ToArray())).Append("]}").ToString();
         }
 
         // ---------------- Kills (Bestenliste) ----------------
