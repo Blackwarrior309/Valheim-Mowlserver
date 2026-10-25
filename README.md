@@ -18,6 +18,10 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 ## Changelog
 
+**25.10.2026**
+- Bestenliste Spielzeit: zusätzlich Ø Spielzeit pro Tag (Gesamtzeit ÷ Tage seit Zählbeginn 21.10.).
+- Nord-Kompendium mit Kistenbestand verknüpft (siehe 24.10.).
+
 **24.10.2026**
 - Neuer Tab „❄ Hoher Norden“: Crafting-Kompendium mit allen 77 Gegenständen (Waffen, Magie, Schilde, Rüstung, Trinkets, Kochen) – Werte, Rezept, Station, Fundort; Suche, Filter, „hab ich“ abhaken, Rohstoff-Lexikon, mit Bildern zu jedem Gegenstand und der nötigen Stationsstufe (⚒ z. B. „Schmiede 4“).
 - Kompendium ↔ Kisten: jede Karte zeigt, ob ihr den Gegenstand habt (📦), ob alle Zutaten da sind (✔ herstellbar) oder was genau fehlt (✘); Filter „Haben wir / Herstellbar / Fehlt was“, Zutat anklicken = in der Kisten-Liste suchen.
