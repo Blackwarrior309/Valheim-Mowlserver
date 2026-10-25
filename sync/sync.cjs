@@ -404,7 +404,6 @@ async function publish(cfg, state, list, world) {
     if (cfg.saveShareHtml !== false) fs.writeFileSync(path.join(outDir, base + '.html'), shareHtml(snap, gz));
     if (cfg.outFile) { fs.mkdirSync(path.dirname(cfg.outFile), { recursive: true }); fs.writeFileSync(cfg.outFile, gz); log('Gespeichert als', cfg.outFile); }
     changedOut = true;
-    { const sc = snap.seedCaches || [], by = {}; sc.forEach((c) => { const k = (c.at || '?') + ' #' + c.p; by[k] = (by[k] || 0) + 1; }); log(`Saatgut in Welt-Behältern: ${sc.length} (${Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => k + ' ×' + n).join(', ')})`); }
     log(`Umgewandelt: ${snap.stats.zdos.toLocaleString('de-DE')} Objekte, ${snap.bases.length} Basen, ${(gz.length / 1e6).toFixed(2)} MB → Ordner „ausgabe“.`);
     snap.warnings.forEach((w) => log('Hinweis:', w));
     if (cfg.historyDir) {

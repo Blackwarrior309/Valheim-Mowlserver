@@ -232,10 +232,9 @@
     let gx = new Float32Array(1 << 16), gn = 0; // Bodenpunkte x,y,z
     const gCells = new Set(), alt = []; // Ersatz-Bodenpunkte für Gebiete ohne bekannte Pflanzen (z. B. Aschelande)
     const pushG = (x, y, z) => { if (gn * 3 + 3 > gx.length) { const t = new Float32Array(gx.length * 2); t.set(gx); gx = t; } gx[gn * 3] = x; gx[gn * 3 + 1] = y; gx[gn * 3 + 2] = z; gn++; };
-    const mapTables = []; const pieces = []; const nature = []; const signs = []; const portals = [], portalSeen = new Set(); const beds = []; const conts = []; const seedC = []; const tombs = []; const loose = [];
+    const mapTables = []; const pieces = []; const nature = []; const signs = []; const portals = [], portalSeen = new Set(); const beds = []; const conts = []; const tombs = []; const loose = [];
     let total = 0;
     const RESD = D.resources || {}, resv = {};
-    const SEEDS = new Set(['KaleSeeds', 'OatSeeds', 'PoteitrSeeds', 'OnionSeeds', 'TurnipSeeds', 'CarrotSeeds', 'VineberrySeeds', 'AncientSeed'].map(stable));
     const visitor = (prefab, x, y, z, yaw, scale, L, S, B, I) => {
           const rs = RESD[prefab]; if (rs) { (resv[rs[0]] || (resv[rs[0]] = [])).push(Math.round(x), Math.round(z), y > 2000 ? 2 : rs[1]); } // Rohstoffe (auch in Dungeons, liegen ~5000 m höher)
           if (y > 2000 || Math.abs(x) > 12000 || Math.abs(z) > 12000) return;
@@ -254,7 +253,6 @@
           else if (prefab === H_TOMB) { let items = 0; try { if (B && B[K.items]) parseInv(B[K.items]).forEach((it) => (items += it[1])); } catch (e) { } tombs.push({ x, y, z, n: (S && S[K.ownerName]) || '', tod: L && L[K.timeOfDeath] !== undefined ? Number(L[K.timeOfDeath]) : null, items }); }
           if (I && I[K_TAMED] && name) tamed.push([name, Math.round(x), Math.round(z), String((S && S[K_TNAME]) || '').slice(0, 40), (I && I[K_LEVEL]) || 1]); /* zahme Tiere: Art, x, z, Name, Stufe */
           if (S && S[K.crafterName]) { const ih = S[K.item] ? stable(S[K.item]) : prefab; loose.push([ih, (I && I[K.stack]) || 1, (I && I[K.quality]) || 1, S[K.crafterName]]); }
-          else if (cr === undefined && !CONT[prefab] && B && B[K.items]) { try { const inv = parseInv(B[K.items]).filter((it) => SEEDS.has(it[0])); if (inv.length) seedC.push({ x, z, p: prefab, i: inv.map((it) => [it[0], it[1]]) }); } catch (e) { } } /* Fässer/Truhen der Welt mit Saatgut (z. B. Hoher Norden) */
           if (CONT[prefab] && B && B[K.items]) { try { conts.push({ x, y, z, t: CONT[prefab], c: cr !== undefined ? cr.toString() : '', inv: parseInv(B[K.items]) }); } catch (e) { } }
     };
     let live = null, EXP = null, BIO = null, dumpTamed = null;
@@ -528,7 +526,6 @@
       regions,
       world3d,
       looseChests,
-      seedCaches: seedC.map((c) => { let best = null, bd = 80 * 80; (dbi.locations || []).forEach((l) => { const d = (l.x - c.x) ** 2 + (l.z - c.z) ** 2; if (d < bd) { bd = d; best = l; } }); return { x: Math.round(c.x), z: Math.round(c.z), p: c.p, i: c.i.map(([h, n]) => [(D.items && D.items[h]) || String(h), n]), at: best ? best.k : '' }; }),
       live,
       stats: { zdos: total, chunks: chunks.length, duplicatesSkipped: dupes, pieces: pieces.length, playerPieces: Object.values(builderCount).reduce((a, b) => a + b, 0), containers: conts.length, groundPoints: gn },
       warnings
