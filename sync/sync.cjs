@@ -404,7 +404,7 @@ async function publish(cfg, state, list, world) {
     if (cfg.saveShareHtml !== false) fs.writeFileSync(path.join(outDir, base + '.html'), shareHtml(snap, gz));
     if (cfg.outFile) { fs.mkdirSync(path.dirname(cfg.outFile), { recursive: true }); fs.writeFileSync(cfg.outFile, gz); log('Gespeichert als', cfg.outFile); }
     changedOut = true;
-    { const sc = snap.seedCaches || [], by = {}; sc.forEach((c) => { const k = (c.at || '?') + ' #' + c.p; by[k] = (by[k] || 0) + 1; }); const tot = {}; sc.forEach((c) => c.i.forEach(([n, k]) => { const kk = (c.at || '?') + ': ' + n; tot[kk] = (tot[kk] || 0) + k; })); const msg = `Saatgut in Welt-Behältern: ${sc.length} – ${Object.entries(tot).map(([k, n]) => k + ' ' + n).join(', ')} (${Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => k + ' ×' + n).join(', ')})`; log(msg); if (process.env.GITHUB_ACTIONS) console.log('::notice title=Saatgut::' + msg); }
+    { const sc = snap.seedCaches || [], by = {}; sc.forEach((c) => { const k = (c.at || '?') + ' #' + c.p; by[k] = (by[k] || 0) + 1; }); const msg = `Saatgut in Welt-Behältern: ${sc.length} (${Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => k + ' ×' + n).join(', ')})`; log(msg); if (process.env.GITHUB_ACTIONS) console.log('::notice title=Saatgut::' + msg); }
     log(`Umgewandelt: ${snap.stats.zdos.toLocaleString('de-DE')} Objekte, ${snap.bases.length} Basen, ${(gz.length / 1e6).toFixed(2)} MB → Ordner „ausgabe“.`);
     snap.warnings.forEach((w) => log('Hinweis:', w));
     if (cfg.historyDir) {
