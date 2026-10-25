@@ -352,13 +352,13 @@
     const bioAt = (x, z) => { const B = S.biomes; if (!B) return 0; if (BIOS !== B) { BIOS = B; BIOU = b64u8(B.b); } const i = Math.floor((x - B.x0) / B.res), j = Math.floor((z - B.z0) / B.res); return (i < 0 || j < 0 || i >= B.nx || j >= B.nz) ? 0 : BIOU[j * B.nx + i]; };
     const setStatus = (t) => { $('.vw-status').textContent = t || ''; };
     setStatus(opts.status);
-    let ngDone = false;
+    let NG = null;
     function setTab(t) {
       tab = t; $$('.vw-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
       $$('.vw-pane').forEach((p) => (p.hidden = p.dataset.p !== t));
       if (t === 'map') map.draw(); if (t === '3d') three.start(); else three.stop();
       if (t === 'chests') kisten.render(); if (t === 'info') info(); if (t === 'dungeon' && DG) setTimeout(() => DG.draw(), 0);
-      if (t === 'nord' && g.VWNordGuide && !ngDone) { ngDone = true; g.VWNordGuide.mount($('.ngHost'), { onMap: () => setTab('map') }); } if (t === 'players') three.mpStart(); if (party) party.setActive(t === 'players');
+      if (t === 'nord' && g.VWNordGuide) { if (!NG) NG = g.VWNordGuide.mount($('.ngHost'), { onMap: () => setTab('map'), lookup: ngLookup, onChests: (n) => { setTab('chests'); const q = $('.kq'); q.value = n; kisten.render(); } }); else NG.refresh(); } if (t === 'players') three.mpStart(); if (party) party.setActive(t === 'players');
     }
     $$('.vw-tabs button').forEach((b) => (b.onclick = () => setTab(b.dataset.t)));
 
@@ -2081,6 +2081,18 @@
       // Kisten tragen Namen (aus data.js) – Bestand je Hash über denselben Namen nachschlagen
       STOCK = new Proxy({}, { get: (o, h) => byName[itemName(h)] || 0 });
       return STOCK;
+    }
+    /* Crafting-Kompendium ↔ Kistenbestand: englischer Name → Bestand, Rezept, was fehlt */
+    let ENH = null;
+    function ngLookup(names) {
+      if (!RC) return null;
+      if (!ENH) { ENH = {}; Object.entries(RC.items).forEach(([h, v]) => { if (v[1]) ENH[v[1].toLowerCase()] = h; }); }
+      const h = names.map((n) => ENH[n.toLowerCase()]).find(Boolean); if (!h) return null;
+      const st = stock(), find = (x) => RC.recipes.find((r) => String(r[0]) === String(x));
+      let r = find(h); if (!r) { const c = ENH['cast: ' + RC.items[h][1].toLowerCase()]; if (c) r = find(c); }
+      const rows = r ? r[2].map(([i, n]) => ({ name: T(itemName(i)), raw: itemName(i), need: n, have: st[i] || 0 })) : [];
+      const can = rows.length ? Math.min(...rows.map((x) => Math.floor(x.have / x.need))) : 0;
+      return { name: T(itemName(h)), raw: itemName(h), have: st[h] || 0, rows, can };
     }
     function recipesFor(q) {
       if (!RC || !q || q.length < 3) return [];
