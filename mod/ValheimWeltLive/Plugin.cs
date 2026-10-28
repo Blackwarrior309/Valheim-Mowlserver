@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.7.3";
+        public const string Version = "0.7.4";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
@@ -392,7 +392,7 @@ namespace ValheimWeltLive
             if (t >= nextLivePlaytime)   // Bestenliste Spielzeit: alle je gesehenen Spieler (auch offline), gespeichert auf dem Broker
             {
                 nextLivePlaytime = t + 60f; if (playTotal == null) LoadPlaytime();
-                var sb = new StringBuilder("{\"t\":" + now + ",\"players\":{"); bool f = true;
+                var sb = new StringBuilder("{\"t\":" + now + (playSince > 0 ? ",\"since\":" + playSince : "") + ",\"players\":{"); bool f = true;
                 foreach (var kv in playTotal) { if (!f) sb.Append(','); f = false; sb.Append(Json(kv.Key)).Append(':').Append(Math.Round(kv.Value)); }
                 feed.Publish(liveTopic + "/playtime", sb.Append("}}").ToString(), true);
             }
@@ -535,10 +535,12 @@ namespace ValheimWeltLive
 
         // Alle Online-Spieler vom Server aus: Position und Werte aus der Spielfigur (ZDO), sonst die gemeldete Position
         // Spielzeit: seit wann online (diese Sitzung) und gesamt (gespeichert in spielzeit.json neben dem Dump)
-        readonly Dictionary<string, long> onlineSince = new Dictionary<string, long>(); Dictionary<string, double> playTotal; float playLastT, playSaved;
+        readonly Dictionary<string, long> onlineSince = new Dictionary<string, long>(); Dictionary<string, double> playTotal; float playLastT, playSaved; long playSince;   // Zählbeginn (Unix-Sekunden), 0 = unbekannt
         void LoadPlaytime()
         {
             playTotal = new Dictionary<string, double>();
+            // Zählbeginn: spielzeit-start.txt (Unix-Sekunden). Nur bei frischer Zählung anlegen – bei alter spielzeit.json ohne Startdatum bleibt er unbekannt (kann man von Hand eintragen).
+            try { string sf = Path.Combine(DataDir(), "spielzeit-start.txt"); if (File.Exists(sf)) long.TryParse(File.ReadAllText(sf).Trim(), out playSince); else if (!File.Exists(Path.Combine(DataDir(), "spielzeit.json"))) { playSince = Unix(); Directory.CreateDirectory(DataDir()); File.WriteAllText(sf, playSince.ToString()); } } catch (Exception e) { Logger.LogDebug("Spielzeit-Start: " + e.Message); }
             try { string f = Path.Combine(DataDir(), "spielzeit.json"); if (File.Exists(f) && MiniJson.Parse(File.ReadAllText(f)) is Dictionary<string, object> d) foreach (var kv in d) if (kv.Value is double v) playTotal[kv.Key] = v; } catch (Exception e) { Logger.LogDebug("Spielzeit: " + e.Message); }
         }
         void SavePlaytime()

@@ -189,7 +189,7 @@
     (opts.actions || []).forEach((a) => { const b = document.createElement('button'); b.textContent = a.label; if (a.primary) b.className = 'pri'; if (a.title) b.title = a.title; b.onclick = a.onClick; act.appendChild(b); });
     $$('[data-min]').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('min'); if (innerWidth <= 760) b.parentElement.classList.add('min'); });
 
-    const SRV = { at: 0, players: [], creatures: [], timer: 0, playtime: null, perf: null, kills: null, event: null };   // Server-Mod live (MQTT)
+    const SRV = { at: 0, players: [], creatures: [], timer: 0, playtime: null, playSince: 0, perf: null, kills: null, event: null };   // Server-Mod live (MQTT)
     let S = snap, tab = 'map', LIVE = null, CREA = [], DG = null, liveReceivedAt = -Infinity, party = null; // DG: Dungeon-Ansicht (js/dungeon.js), nur mit Mod // CREA: Gegner und Tiere vom eigenen Mod (geladenes Gebiet)
     // ---- 3D-Gelände der ganzen Welt inkl. unerkundeter Gebiete (weltkarte/<Seed>.json → terrain, aus tools/weltkarte.py)
     /* Zahme Tiere aus dem Spielstand: [Art, x, z, Name, Stufe] */
@@ -2349,16 +2349,16 @@ ${hot.length ? `<h2>Wo der Server gerade am meisten rechnet</h2><table>${hot.map
       const rows = Object.values(P).filter((p) => p.deaths || p.pieces || p.secs || p.made || p.pins || p.play).sort((a, b) => b.pieces - a.pieces);
       const hasP = Object.keys(PT).length > 0, onl = new Set((SRV.players || []).map((p) => p.name));
       const playRank = rows.filter((r) => r.play > 0).sort((a, b) => b.play - a.play);
-      const PT_DAYS = Math.max(1, (Date.now() - Date.parse('2026-10-21T00:00:00+02:00')) / 864e5); /* Zählbeginn: Server-Mod 0.7.0 auf Nitrado */
+      const PT_START = SRV.playSince || Date.parse('2026-10-21T00:00:00+02:00'), PT_DAYS = Math.max(1, (Date.now() - PT_START) / 864e5); /* shortcut: Ersatz-Datum = Mowlserver (Mod 0.7.0 ab 21.10.); andere Welten mit Mod vor 0.7.4 tragen ihr Datum in spielzeit-start.txt ein */
       if (!rows.length && !SRV.kills) return '';
       const hasT = !!(boardDays && boardDays.length);
-      const hm = (s) => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; };
+      const hm = (s) => { s = Math.round(s / 60) * 60; const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; };
       const top = (k) => Math.max(0, ...rows.map((r) => r[k]));
       const cell = (r, k, v) => `<td class="n" style="white-space:nowrap">${r[k] && r[k] === top(k) ? '👑 ' : ''}${v}</td>`;
       const last = D.filter((d) => d.t || d.seen).sort((a, b) => (b.t || b.seen) - (a.t || a.seen)).slice(0, 8);
       return `<div class="vw-panel" style="margin-top:18px"><h2 style="margin-top:0">Bestenliste</h2>
 <div class="srvKills">${killsHtml()}</div>
-${hasP ? `<h2 style="font-size:13px">⏱ Spielzeit</h2><table>${playRank.map((r, i) => `<tr><td style="width:2em" class="sub">${i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.'}</td><td>${esc(r.n)}${onl.has(r.n) ? ' <span style="color:#4cc36b" title="gerade online">●</span>' : ''}</td><td class="n" style="white-space:nowrap">${hm(r.play)}</td><td class="n sub" style="white-space:nowrap" title="Durchschnitt pro Tag seit Zählbeginn">Ø ${hm(r.play / PT_DAYS)}/Tag</td></tr>`).join('')}</table><div class="sub" style="margin:4px 0 12px">Vom Server-Mod gezählt seit 21.10.2026 (${PT_DAYS.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Tage), live aktualisiert. Ø = Spielzeit ÷ Tage seit Zählbeginn.</div>` : ''}
+${hasP ? `<h2 style="font-size:13px">⏱ Spielzeit</h2><table>${playRank.map((r, i) => `<tr><td style="width:2em" class="sub">${i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.'}</td><td>${esc(r.n)}${onl.has(r.n) ? ' <span style="color:#4cc36b" title="gerade online">●</span>' : ''}</td><td class="n" style="white-space:nowrap">${hm(r.play)}</td><td class="n sub" style="white-space:nowrap" title="Durchschnitt pro Tag seit Zählbeginn">Ø ${hm(r.play / PT_DAYS)}/Tag</td></tr>`).join('')}</table><div class="sub" style="margin:4px 0 12px">Vom Server-Mod gezählt seit ${new Date(PT_START).toLocaleDateString('de-DE')} (${PT_DAYS.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Tage), live aktualisiert. Ø = Spielzeit ÷ Tage seit Zählbeginn.</div>` : ''}
 <table><tr><td class="sub">Spieler</td><td class="n sub">Gebaute Teile</td><td class="n sub">Tode</td>${CR.length ? '<td class="n sub">Hergestellt</td>' : ''}${PN.length ? '<td class="n sub" title="Pins auf dem Kartentisch (☠ = Bosse gefunden)" style="white-space:nowrap">📍 Pins</td>' : ''}${hasP ? '<td class="n sub">⏱ Spielzeit</td>' : ''}${hasT ? '<td class="n sub">Spielzeit</td><td class="n sub">Strecke</td>' : ''}</tr>
 ${rows.map((r) => `<tr><td>${esc(r.n)}</td>${cell(r, 'pieces', fmt(r.pieces))}${cell(r, 'deaths', fmt(r.deaths))}${CR.length ? cell(r, 'made', fmt(r.made)) : ''}${PN.length ? cell(r, 'pins', fmt(r.pins) + (r.boss ? ' · ☠ ' + r.boss : '')) : ''}${hasP ? cell(r, 'play', r.play ? hm(r.play) : '–') : ''}${hasT ? cell(r, 'secs', hm(r.secs)) + cell(r, 'dist', fmt(Math.round(r.dist / 100) / 10) + ' km') : ''}</tr>`).join('')}</table>
 ${CR.length ? `<h2>Hergestellte Gegenstände</h2>${CR.map(([n, k, it]) => `<details><summary>${esc(n)} <span class="sub">· ${fmt(k)}</span></summary><table>${it.slice(0, 40).map(([nm, c]) => `<tr><td>${esc(T(nm))}</td><td class="n">${fmt(c)}</td></tr>`).join('')}</table>${it.length > 40 ? `<div class="sub">… und ${fmt(it.length - 40)} weitere</div>` : ''}</details>`).join('')}<div class="sub" style="margin-top:6px">Nur Gegenstände, die noch in Kisten, Ständern oder am Boden liegen – was Spieler gerade bei sich tragen, steht nicht in der Welt-Datei.</div>` : ''}
@@ -2427,6 +2427,7 @@ ${last.length ? `<h2>Letzte Tode</h2><table>${last.map((d) => `<tr><td>✝ ${esc
       } else if (kind === 'kills' && data.players && typeof data.players === 'object') {
         SRV.kills = data.players; const el = $('.srvKills'); if (el && tab === 'info') el.innerHTML = killsHtml(); else if (tab === 'info' && !el) info();
       } else if (kind === 'playtime' && data.players && typeof data.players === 'object') {
+        SRV.playSince = Number.isFinite(+data.since) && +data.since > 1.6e9 ? +data.since * 1000 : 0;
         SRV.playtime = {}; Object.entries(data.players).slice(0, 500).forEach(([n, v]) => { if (Number.isFinite(+v)) SRV.playtime[String(n).slice(0, 24)] = +v; });
         if (tab === 'info') info();
       } else if (kind === 'creatures' && Array.isArray(data.creatures)) {

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.4
+- Play time: remembers when counting started (`spielzeit-start.txt`, Unix seconds) and sends it as `since` on `…/playtime`, so the map can show average play time per day. Created only on a fresh count; for an older `spielzeit.json` you can write the start date into the file by hand.
+
 ## 0.7.3
 - Live events/invasions: the server's current random or forced event (name, message, position, radius, time) every 5 s on `…/event`, plus a history of the last 40 events (`ereignisse.json`).
 

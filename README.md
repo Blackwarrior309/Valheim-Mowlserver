@@ -20,7 +20,8 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 **25.10.2026**
 - Bestenliste Spielzeit: zusätzlich Ø Spielzeit pro Tag (Gesamtzeit ÷ Tage seit Zählbeginn 21.10.).
-- Nord-Kompendium mit Kistenbestand verknüpft (siehe 24.10.).
+- Server-Mod 0.7.4: merkt sich den Zählbeginn der Spielzeit (spielzeit-start.txt) – Ø/Tag stimmt so auch in anderen Welten.
+- Spielzeit-Anzeige: kein „1 h 60 min“ mehr.
 
 **24.10.2026**
 - Neuer Tab „❄ Hoher Norden“: Crafting-Kompendium mit allen 77 Gegenständen (Waffen, Magie, Schilde, Rüstung, Trinkets, Kochen) – Werte, Rezept, Station, Fundort; Suche, Filter, „hab ich“ abhaken, Rohstoff-Lexikon, mit Bildern zu jedem Gegenstand und der nötigen Stationsstufe (⚒ z. B. „Schmiede 4“).
