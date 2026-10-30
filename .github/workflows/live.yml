@@ -27,7 +27,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: live-karte-2
+  group: live-karte-3
   cancel-in-progress: false
 
 jobs:
