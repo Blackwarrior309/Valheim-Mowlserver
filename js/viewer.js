@@ -125,7 +125,7 @@
       <button class="sbLaunch" style="width:100%;margin-top:8px">💥 Karte zerlegen</button><h2>Legende</h2><div class="sub">● Basis (anklicken = 3D) · ◆ Portal · ▲ Boss/Ort (grau = noch nicht erkundet)<br>Ziehen = verschieben · Mausrad/Pinch = Zoom</div><div class="sub biolg" style="margin-top:6px"></div></div>
   </div>
   <div class="vw-pane" data-p="3d" hidden><canvas class="gl"></canvas><div class="vw-labels"></div>
-    <section class="sbPanel" hidden aria-label="Zerstörungsmenü"><div class="row"><b>💥 Abriss-Spielplatz</b><button class="sbHide" aria-label="Waffenmenü verbergen">✕</button></div><p class="sub">Nur diese Kartenansicht. Reset baut alles wieder auf.</p><div class="row"><button data-weapon="pulse">⚡ Impulsgewehr</button><button data-weapon="bomb">💣 Bombe</button><button data-weapon="rocket" class="on">🚀 Rakete</button></div><label>Sprengkraft <input class="sbPower" type="range" min="0.5" max="2" step="0.25" value="1"></label><p class="sbHint">Auf Bauteile oder Boden klicken / tippen zum Feuern. Ziehen dreht die Kamera.</p><div class="row"><button class="sbChaos">🔥 Alles sprengen</button><button class="sbPause">⏸ Physik anhalten</button><button class="sbReset">↶ Reset</button><button class="sbEnd">Modus beenden</button></div><p class="sbStatus" role="status"></p></section>
+    <section class="sbPanel" hidden aria-label="Zerstörungsmenü"><div class="row"><b>💥 Abriss-Spielplatz</b><button class="sbHide" aria-label="Waffenmenü verbergen">✕</button></div><p class="sub">Nur auf der Karte, nicht im Spiel. Alle Besucher sehen dasselbe – Reset baut für alle wieder auf.</p><div class="row"><button data-weapon="pulse">⚡ Impulsgewehr</button><button data-weapon="bomb">💣 Bombe</button><button data-weapon="rocket" class="on">🚀 Rakete</button></div><label>Sprengkraft <input class="sbPower" type="range" min="0.5" max="2" step="0.25" value="1"></label><p class="sbHint">Auf Bauteile oder Boden klicken / tippen zum Feuern. Ziehen dreht die Kamera.</p><div class="row"><button class="sbChaos">🔥 Alles sprengen</button><button class="sbPause">⏸ Physik anhalten</button><button class="sbReset">↶ Reset</button><button class="sbEnd">Modus beenden</button></div><p class="sbStatus" role="status"></p></section>
     <div class="vw-side s3"><button class="vw-mob" data-min>Menü</button>
       <h2>Gebiet</h2><select class="reg" style="width:100%"></select>
       <button class="sbLaunch" style="width:100%;margin-top:8px">💥 Zerstörungsmodus</button><button class="pri playLaunch" style="width:100%;margin-top:8px" title="Waffenmenü öffnen, auch mit Taste B">⚔ Waffen, Panzer & Jets (B)</button><h2>Ansicht</h2><div class="row"><button data-v="top">Von oben</button><button data-v="obl" class="on">Schräg</button><button data-v="near">Nah</button><button class="flyBtn">✈ Flugmodus (F)</button><button class="walkBtn">🚶 Laufen (G)</button></div><div class="row" style="margin-top:6px"><input class="walkName" type="text" maxlength="24" placeholder="Dein Name für Mitspieler" title="So sehen dich andere, die gerade auch auf dieser Karte laufen" style="flex:1;font:inherit;font-size:13px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg)"></div>
@@ -1038,6 +1038,7 @@
         chestSearch(); placePlans(); drawPlayers(); shadowFresh = false; shadowPasses = 2; invalidate();
         if (!keepCam) views('obl');
         SEL.reset(); TL.onLoad(); prepareOriginals(r); drawRoute3(); drawAreas(); drawChanges();
+        if (typeof BOOM !== 'undefined') boomReplay(); /* Gebietswechsel/Neuladen: Gesprengtes bleibt weg */
       }
       function recolor(mode) {
         colorMode = mode;
@@ -1456,7 +1457,7 @@
       function doorTick() {
         const now=performance.now(); for(const b of DOORS) if(b.door && b.busy) { const elapsed=(now-b.since)/1000;b.angle=g.VWDoors.angle(b.from,b.goal,elapsed); poseDoor(b,b.angle);if(elapsed>=0.45){b.busy=false;b.angle=b.goal;} }
       }
-      const near = (x, z) => GRID.get(gkey(x, z)) || [];
+      const near = (x, z) => (GRID.get(gkey(x, z)) || []).filter((b) => !isGone(b));
       function rayBox(b, o, d, tmax) { // Strahl gegen orientierte Box → Abstand oder null
         lv.copy(o).sub(b.c).applyQuaternion(b.iq); ld.copy(d).applyQuaternion(b.iq);
         let t0 = 0, t1 = tmax;
@@ -1467,6 +1468,7 @@
         }
         return t0;
       }
+      function isGone(b) { const o = b.ownerDoor || b; return !!(o.im && o.im.userData.gone && o.im.userData.gone.has(o.k)); } /* gesprengt: keine Hitbox mehr */
       const DOWN = new THREE.Vector3(0, -1, 0);
       function groundY(x, z, fromY) { // höchste begehbare Fläche unter fromY
         let g = terrainY(x, z); const o = new THREE.Vector3(x, fromY, z);
@@ -1599,7 +1601,7 @@
         const go = () => { if (destroyed) { MP.loading = false; return; } try {
           const c = g.mqtt.connect(url, { clientId: 'vw_' + MP.me, clean: true, connectTimeout: 15000, reconnectPeriod: 4000, keepalive: 30, will: { topic: mpRoom() + '/p/' + MP.me, payload: '', qos: 0, retain: false } });
           MP.cli = c; MP.loading = false;
-          c.on('connect', () => { c.subscribe([mpRoom() + '/p/+', mpRoom() + '/t/' + MP.me, srvTopic() + '/+'], (err) => { if (err) { mpStatus('Abonnement fehlgeschlagen', true); return; } mpStatus('verbunden', false); MP.lastPub = -Infinity; MP.lastMsg = ''; if (walk && !document.hidden) mpPublish(performance.now(), false); }); });
+          c.on('connect', () => { c.subscribe([mpRoom() + '/p/+', mpRoom() + '/t/' + MP.me, srvTopic() + '/+', mpRoom() + '/b/+', mpRoom() + '/reset'], (err) => { if (err) { mpStatus('Abonnement fehlgeschlagen', true); return; } mpStatus('verbunden', false); MP.lastPub = -Infinity; MP.lastMsg = ''; if (walk && !document.hidden) mpPublish(performance.now(), false); }); });
           c.on('reconnect', () => mpStatus('verbinde erneut …', true));
           c.on('offline', () => mpStatus('Verbindung unterbrochen', true));
           c.on('close', () => mpStatus('Verbindung unterbrochen', true));
@@ -1608,8 +1610,25 @@
         if (g.mqtt) go(); else { const sc = document.createElement('script'); sc.src = texBase + 'lib/mqtt.min.js'; sc.onload = go; sc.onerror = () => { MP.loading = false; mpStatus('Bibliothek nicht geladen', true); sc.remove(); }; document.head.appendChild(sc); }
       }
       const COLS = [0x6d4a2b, 0x2f5d8a, 0x7a2e2e, 0x3d6b35, 0x6b4c8a, 0x8a6d2b, 0x2e7a72, 0x555555];
-      function onPeer(topic, msg) {
+      /* Sprengungen für alle: jede Karte hält ihre Liste (retained, Weltkoordinaten); neue Einträge anderer werden live gesprengt, alte beim Beitreten/Gebietswechsel still ausgeblendet */
+      const BOOM = { mine: [], epoch: 0, lists: new Map(), seen: new Map() };
+      const BOOM_MAX = 400; /* shortcut: danach wird nicht mehr geteilt, nur lokal gesprengt – reicht für eine Runde, bei Bedarf Reset */
+      const boomPub = () => { if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/b/' + MP.me, JSON.stringify({ e: BOOM.epoch, b: BOOM.mine }), { qos: 0, retain: true }); };
+      function boomLocal(p, r) { if (BOOM.mine.length >= BOOM_MAX) return; const e = p ? [+(p.x + CX).toFixed(1), +(p.y + WL).toFixed(1), +(CZ - p.z).toFixed(1), +r.toFixed(1)] : [0, 0, 0, 0]; BOOM.mine.push(e); boomPub(); return p ? { point: new THREE.Vector3(e[0] - CX, e[1] - WL, CZ - e[2]), radius: e[3] } : null; }
+      function boomApply(e, live) { if (!destruction) return; const [x, y, z, r] = e; if (!r) { if (live) destruction.armageddon(true); else destruction.hide(null); return; } const p = new THREE.Vector3(x - CX, y - WL, CZ - z); if (live) destruction.explode(p, r, 25, true); else destruction.hide(p, r); }
+      function boomReplay() { if (!destruction) return; BOOM.mine.forEach((e) => boomApply(e, false)); for (const d of BOOM.lists.values()) if (d.e === BOOM.epoch) d.b.forEach((e) => boomApply(e, false)); }
+      function boomReset(epoch) { BOOM.epoch = epoch; BOOM.mine = []; BOOM.seen.clear(); if (destruction) destruction.reset(); boomPub(); boomReplay(); shadowFresh = false; invalidate(); }
+      function onBoom(topic, msg, live) {
+        if (msg.length > 40000) return; let d; try { d = JSON.parse(new TextDecoder().decode(msg)); } catch (e) { return; } if (!d || !Number.isFinite(+d.e)) return;
+        if (topic === mpRoom() + '/reset') { if (+d.e > BOOM.epoch) boomReset(+d.e); return; }
+        const id = topic.slice((mpRoom() + '/b/').length); if (id === MP.me || !Array.isArray(d.b)) return;
+        const b = d.b.filter((e) => Array.isArray(e) && e.length === 4 && e.every((v) => Number.isFinite(v) && Math.abs(v) < 25000) && e[3] >= 0 && e[3] <= 40).slice(0, BOOM_MAX);
+        BOOM.lists.set(id, { e: +d.e, b }); if (+d.e !== BOOM.epoch) return;
+        const from = BOOM.seen.get(id) || 0; b.slice(from).forEach((e) => boomApply(e, live)); BOOM.seen.set(id, b.length);
+      }
+      function onPeer(topic, msg, mq) {
         if (destroyed) return;
+        if (topic.startsWith(mpRoom() + '/b/') || topic === mpRoom() + '/reset') { onBoom(topic, msg, !(mq && mq.retain)); return; }
         if (topic.startsWith(srvTopic() + '/')) { try { if (msg.length < 600000) document.dispatchEvent(new CustomEvent('vwelt-server', { detail: { kind: topic.slice(srvTopic().length + 1), data: JSON.parse(new TextDecoder().decode(msg)) } })); } catch (e) { } return; }   /* Server-Mod: Spieler/Tiere live */
         if (topic === mpRoom() + '/t/' + MP.me) { if (playground && playground.receive(msg)) return; onGrabbed(msg); return; }
         const packet = g.VWPeerProtocol.decode(mpRoom(), topic, msg); if (!packet) return;
@@ -1703,12 +1722,12 @@
       function placeAt(x, z, y) { pos.set(x, y !== undefined ? y : groundY(x, z, 500) , z); vy = 0; }
       function spawn() { // auf den nächsten Boden eines Gebäudes stellen, sonst aufs nächste Land
         let best = null, bd = 1e9;
-        OBB.forEach((b) => { if (!/floor|stair/i.test(b.ty[0]) || b.ty[4] || b.c.y < -0.8) return; const d = Math.hypot(b.c.x - tgt.x, b.c.z - tgt.z); if (d < bd) { bd = d; best = b; } });
+        OBB.forEach((b) => { if (!/floor|stair/i.test(b.ty[0]) || b.ty[4] || b.c.y < -0.8 || isGone(b)) return; const d = Math.hypot(b.c.x - tgt.x, b.c.z - tgt.z); if (d < bd) { bd = d; best = b; } });
         if (best && bd < 120) { pos.set(best.c.x, groundY(best.c.x, best.c.z, best.c.y + 1.2), best.c.z); vy = 0; return; }
         for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
         placeAt(tgt.x, tgt.z);
       }
-      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; } };
+      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; }, get destruction() { return destruction; }, near: (x, z) => near(x, z), get BOOM() { return BOOM; }, THREE };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
         if (!on && carry) { throwIt(carry, 0, 0, 0); carry = null; }
@@ -1734,10 +1753,10 @@
         const origin=pos.clone().add(new THREE.Vector3(0,1.55,0));
         const direction=new THREE.Vector3(Math.sin(wyaw)*Math.cos(wpit),-Math.sin(wpit),Math.cos(wyaw)*Math.cos(wpit));
         let best=null, distance=3;
-        for(const b of DOORS) for(const surface of [b,...(b.frames || [])]) { const hit=rayBox(surface,origin,direction,3); if(hit!==null && hit<distance) {best=b;distance=hit;} }
+        for(const b of DOORS) if(!isGone(b)) for(const surface of [b,...(b.frames || [])]) { const hit=rayBox(surface,origin,direction,3); if(hit!==null && hit<distance) {best=b;distance=hit;} }
         if(!best) return null;
         // Never operate a door/chest through a solid wall or a different door.
-        for(const b of OBB) if(b!==best && b.ownerDoor!==best && !b.pass && !b.portal) { if(b.c.distanceTo(origin)>b.r+3) continue;const hit=rayBox(b,origin,direction,distance);if(hit!==null && hit+0.04<distance)return null; }
+        for(const b of OBB) if(b!==best && b.ownerDoor!==best && !b.pass && !b.portal && !isGone(b)) { if(b.c.distanceTo(origin)>b.r+3) continue;const hit=rayBox(b,origin,direction,distance);if(hit!==null && hit+0.04<distance)return null; }
         return best;
       }
       function portalOf(b) { const wx = b.c.x + CX, wz = CZ - b.c.z; let me = null, md = 6; (S.portals || []).forEach((p) => { const d = Math.hypot(p.x - wx, p.z - wz); if (d < md) { md = d; me = p; } }); return me; }
@@ -1771,7 +1790,7 @@
         if (!inside(reg)) { const A = areas(); let i = A.findIndex((r) => r.id !== 'world' && inside(r)); if (i < 0) i = A.findIndex((r) => inside(r)); if (i < 0) { say('Ziel liegt außerhalb der geladenen Karte'); return; } teleporting = true; try { selectRegion(i); } finally { teleporting = false; } }
         const dx = dest.x - CX, dz = -(dest.z - CZ); const back = new THREE.Vector3(Math.sin(wyaw), 0, Math.cos(wyaw));
         // Höhe: Fuß des Ziel-Portals (Portale im Snapshot haben nur x/z), sonst Gelände
-        let pb = null, pd2 = 8; OBB.forEach((b) => { if (!b.portal) return; const d = Math.hypot(b.c.x - dx, b.c.z - dz); if (d < pd2) { pd2 = d; pb = b; } });
+        let pb = null, pd2 = 8; OBB.forEach((b) => { if (!b.portal || isGone(b)) return; const d = Math.hypot(b.c.x - dx, b.c.z - dz); if (d < pd2) { pd2 = d; pb = b; } });
         const baseY = pb ? pb.c.y - pb.h.y : terrainY(dx, dz);
         const ox = dx - back.x * 2.2, oz = dz - back.z * 2.2; placeAt(ox, oz, 0); pos.y = groundY(ox, oz, baseY + 1.5);
         say('Portal „' + me.tag + '“ → angekommen'); invalidate();
@@ -2001,7 +2020,7 @@
       const sbPanel = $('.sbPanel');
       function destructionReport(s) { $('.sbStatus').textContent = s.destroyed + ' Objekte zerlegt · ' + s.debris + ' Trümmer sichtbar' + (s.projectiles ? ' · ' + s.projectiles + ' Geschosse unterwegs' : '') + (s.queued ? ' · Abriss läuft …' : '') + (s.paused ? ' · PAUSE' : ''); $('.sbPause').textContent = s.paused ? '▶ Physik fortsetzen' : '⏸ Physik anhalten'; }
       if (g.VWDestruction && g.CANNON) destruction = g.VWDestruction.create({THREE, CANNON:g.CANNON, scene,
-        targets: () => pickList.concat(natG ? natG.children.filter(o => o.isInstancedMesh) : []), ground: terrainY, invalidate, status: destructionReport});
+        targets: () => pickList.concat(natG ? natG.children.filter(o => o.isInstancedMesh) : []), ground: terrainY, invalidate, status: destructionReport, onBlast: (p, r) => boomLocal(p, r)});
       function endDestruction() {
         if (destruction) destruction.setEnabled(false); sbPanel.hidden = true; pane.classList.remove('sb-active'); cv.style.cursor = ''; $('.walkBtn').disabled = $('.flyBtn').disabled = false; setShadows(Q.shadows === '1');
       }
@@ -2018,7 +2037,7 @@
       $$('[data-weapon]').forEach(b => b.onclick = () => { destructionWeapon = b.dataset.weapon; $$('[data-weapon]').forEach(v=>v.classList.toggle('on',v===b)); });
       $('.sbHide').onclick = () => { sbPanel.hidden = true; };
       $('.sbEnd').onclick = endDestruction;
-      $('.sbReset').onclick = () => { if (destruction) destruction.reset(); shadowFresh=false;invalidate(); };
+      $('.sbReset').onclick = () => { const e = Math.max(Date.now(), BOOM.epoch + 1); if (MP.cli && MP.cli.connected) MP.cli.publish(mpRoom() + '/reset', JSON.stringify({ e }), { qos: 0, retain: true }); boomReset(e); }; /* Reset gilt für alle */
       $('.sbPause').onclick = () => { if (destruction) destruction.setPaused(!destruction.paused); };
       $('.sbChaos').onclick = () => { if (destruction) destruction.armageddon(); };
       if (g.VWPlayground) playground = g.VWPlayground.create({THREE,scene,pane,canvas:cv,camera:cam,hero:HERO,pos,

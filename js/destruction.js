@@ -3,7 +3,7 @@
 'use strict';
 const LIMITS={debris:320,projectiles:12,effects:18,statics:1800,ground:96};
 const WEAPONS={pulse:{radius:3,power:15,label:'Impulsgewehr'},bomb:{radius:8,power:25,label:'Bombe'},rocket:{radius:11,power:32,label:'Rakete'}};
-function create({THREE:T,CANNON:C,scene,targets,ground,invalidate,status,limits={}}){
+function create({THREE:T,CANNON:C,scene,targets,ground,invalidate,status,onBlast=null,limits={}}){
  const cap={...LIMITS,...limits},world=new C.World({gravity:new C.Vec3(0,-18,0),allowSleep:true});world.broadphase=new C.SAPBroadphase(world);world.solver.iterations=7;world.defaultContactMaterial.friction=.55;world.defaultContactMaterial.restitution=.23;
  const layer=new T.Group();scene.add(layer);
  let enabled=false,paused=false,indexed=false,records=[],grid=new Map(),saved=new Map(),broken=new Set(),bodies=[],shots=[],effects=[],statics=new Map(),tiles=new Map(),queue=[],queueAt=0,disposed=false,lastFire=-Infinity;
@@ -14,8 +14,7 @@ function create({THREE:T,CANNON:C,scene,targets,ground,invalidate,status,limits=
  function index(){
   if(indexed)return;indexed=true;
   for(const im of targets()){
-   let shown=true;for(let o=im;o;o=o.parent)if(o.visible===false){shown=false;break;}if(!shown)continue;
-   if(!im.isInstancedMesh||!im.geometry||!im.visible)continue;
+   if(!im.isInstancedMesh||!im.geometry)continue; /* auch unsichtbare (außer Sicht/Ebene aus) – sonst bricht bei Mitspielern mit anderem Blickwinkel nicht dasselbe */
    if(!im.geometry.boundingBox)im.geometry.computeBoundingBox();const native=im.geometry.boundingBox;if(!native||native.isEmpty())continue;
    for(let k=0;k<im.count;k++){
     im.getMatrixAt(k,scratch);if(Math.abs(scratch.determinant())<1e-12)continue;box.copy(native).applyMatrix4(scratch);
@@ -48,17 +47,19 @@ function create({THREE:T,CANNON:C,scene,targets,ground,invalidate,status,limits=
   }
   for(const dx of [-24,0,24])for(const dz of [-24,0,24])addGround(center.x+dx,center.z+dz);
  }
- function detach(r){
+ function detach(r,still){ // still: nur verschwinden lassen (Nachspielen fremder Sprengungen), ohne Trümmer
   if(broken.has(r))return null;
-  if(bodies.length>=cap.debris)removeBody(bodies.shift());
+  for(let o=r.im;o;o=o.parent)if(o.visible===false){still=true;break;} /* nicht zu sehen: still entfernen, keine Trümmer */
+  if(!still&&bodies.length>=cap.debris)removeBody(bodies.shift());
   const s=shape(r),visual=new T.Group(),owned=[];visual.position.copy(s.center);visual.quaternion.copy(s.quaternion);
   const inverse=new T.Matrix4().compose(s.center,s.quaternion,new T.Vector3(1,1,1)).invert();
-  function mesh(im,matrix){let material=im.material;const tint=new T.Color(1,1,1);if(im.instanceColor){im.getColorAt(r.k,tint);if(tint.r!==1||tint.g!==1||tint.b!==1){material=[].concat(material).map(m=>{const copy=m.clone();copy.color.multiply(tint);copy.onBeforeCompile=m.onBeforeCompile;owned.push(copy);return copy;});}}
+  function mesh(im,matrix){if(still)return;let material=im.material;const tint=new T.Color(1,1,1);if(im.instanceColor){im.getColorAt(r.k,tint);if(tint.r!==1||tint.g!==1||tint.b!==1){material=[].concat(material).map(m=>{const copy=m.clone();copy.color.multiply(tint);copy.onBeforeCompile=m.onBeforeCompile;owned.push(copy);return copy;});}}
    const m=new T.Mesh(im.geometry,material);m.matrixAutoUpdate=false;m.matrix.copy(inverse.clone().multiply(matrix));m.castShadow=false;visual.add(m);
   }
   mesh(r.im,s.matrix);save(r.im);r.im.setMatrixAt(r.k,zero);r.im.instanceMatrix.needsUpdate=true;
   if(s.frameMatrix){const frame=r.im.userData.frame;mesh(frame,s.frameMatrix);save(frame);frame.setMatrixAt(r.k,zero);frame.instanceMatrix.needsUpdate=true;}
-  broken.add(r);if(statics.has(r)){world.removeBody(statics.get(r));statics.delete(r);}
+  broken.add(r);(r.im.userData.gone||(r.im.userData.gone=new Set())).add(r.k);if(statics.has(r)){world.removeBody(statics.get(r));statics.delete(r);}
+  if(still)return null;
   const heavy=/stone|marble|iron|metal|rock/.test(r.im.userData.cat||'');const mass=Math.max(.4,Math.min(45,s.half.x*s.half.y*s.half.z*8*(heavy?4:1.5)));
   const body=new C.Body({mass,shape:new C.Box(new C.Vec3(s.half.x,s.half.y,s.half.z)),linearDamping:.15,angularDamping:.22,allowSleep:true,sleepSpeedLimit:.3,sleepTimeLimit:1.5});body.position.copy(s.center);body.quaternion.copy(s.quaternion);world.addBody(body);layer.add(visual);const item={body,visual,owned};bodies.push(item);addGround(s.center.x,s.center.z);return item;
  }
@@ -69,7 +70,7 @@ function create({THREE:T,CANNON:C,scene,targets,ground,invalidate,status,limits=
   const positions=new Float32Array(48*3),velocity=new Float32Array(48*3);for(let i=0;i<48;i++){const n=new T.Vector3(Math.random()-.5,Math.random()*.8,Math.random()-.5).normalize().multiplyScalar(radius*(.5+Math.random()));positions.set([point.x,point.y,point.z],i*3);velocity.set(n.toArray(),i*3);}
   const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.BufferAttribute(positions,3));const material=new T.PointsMaterial({color:0xffbc54,size:.35,transparent:true,opacity:1,depthWrite:false});const visual=new T.Points(geometry,material);visual.frustumCulled=false;layer.add(visual);const flash=new T.Mesh(sphere,new T.MeshBasicMaterial({color:0xff7a21,transparent:true,opacity:.7,depthWrite:false,blending:T.AdditiveBlending}));flash.position.copy(point);flash.scale.setScalar(radius*.2);layer.add(flash);effects.push({visual,geometry,material,positions,velocity,flash,radius,age:0});
  }
- function explode(point,radius,power){if(!enabled||disposed)return;index();const candidates=nearby(point,radius);for(const r of candidates)detach(r);rebuildStatics(point);for(const b of bodies)if(b.body.position.distanceTo(new C.Vec3(point.x,point.y,point.z))<radius*2)impulse(b.body,point,radius,power);burst(point,radius);invalidate();report();}
+ function explode(point,radius,power,remote){if(disposed)return;if(!remote&&onBlast){const q=onBlast(point,radius);if(q&&q.point){point=q.point;radius=q.radius;}} /* gerundete, geteilte Werte auch lokal nutzen → bei allen bricht dasselbe */index();const candidates=nearby(point,radius);for(const r of candidates)detach(r);rebuildStatics(point);for(const b of bodies)if(b.body.position.distanceTo(new C.Vec3(point.x,point.y,point.z))<radius*2)impulse(b.body,point,radius,power);burst(point,radius);invalidate();report();}
  function removeShot(s){if(s.body)world.removeBody(s.body);layer.remove(s.visual);}
  function fire(origin,target,weapon='rocket',scale=1,now=performance.now()){
   if(!enabled||paused||disposed||now-lastFire<180)return false;lastFire=now;const spec=WEAPONS[weapon]||WEAPONS.rocket;scale=Math.max(.5,Math.min(2,scale));
@@ -80,16 +81,17 @@ function create({THREE:T,CANNON:C,scene,targets,ground,invalidate,status,limits=
   else {const rocket=new T.Mesh(rocketGeo,rocketMat),nose=new T.Mesh(coneGeo,metalMat);nose.position.y=.7;visual.add(rocket,nose);visual.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),target.clone().sub(origin).normalize());duration=Math.max(.2,Math.min(4,origin.distanceTo(target)/65));}
   visual.position.copy(origin);layer.add(visual);shots.push({visual,body,origin:origin.clone(),target:target.clone(),age:0,duration,weapon,radius:spec.radius*scale,power:spec.power*scale});invalidate();report();return true;
  }
+ function hide(point,radius){if(disposed)return;index();for(const r of point?nearby(point,radius):records)detach(r,true);invalidate();report();}
  function tick(dt){
-  if(disposed||!enabled||paused)return;dt=Math.max(0,Math.min(.08,dt));if(!dt)return;
+  if(disposed||paused)return;dt=Math.max(0,Math.min(.08,dt));if(!dt)return;
   if(queueAt<queue.length){for(let i=0;i<20&&queueAt<queue.length;i++){const r=queue[queueAt++],b=detach(r);if(b)impulse(b.body,r.center,12,30);}if(queueAt>=queue.length){queue=[];queueAt=0;}report();}
   if(bodies.length||shots.length){for(const item of bodies)if(item.body.sleepState!==C.Body.SLEEPING)addGround(item.body.position.x,item.body.position.z);world.step(1/60,dt,5);for(const item of bodies){item.visual.position.copy(item.body.position);item.visual.quaternion.copy(item.body.quaternion);}}
   for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.age+=dt;if(s.body)s.visual.position.copy(s.body.position);else s.visual.position.lerpVectors(s.origin,s.target,Math.min(1,s.age/s.duration));if(s.age>=s.duration){const point=s.visual.position.clone();removeShot(s);shots.splice(i,1);explode(point,s.radius,s.power);}}
   for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.age+=dt;if(e.age>1.6){removeEffect(e);effects.splice(i,1);continue;}for(let j=0;j<e.positions.length;j+=3){e.velocity[j+1]-=8*dt;for(let k=0;k<3;k++)e.positions[j+k]+=e.velocity[j+k]*dt;}e.geometry.attributes.position.needsUpdate=true;e.material.opacity=1-e.age/1.6;e.material.size=.35+e.age;e.material.color.setHex(e.age<.3?0xffbc54:0x85817b);e.flash.visible=e.age<.5;e.flash.scale.setScalar(e.radius*(.2+e.age*2));e.flash.material.opacity=Math.max(0,.7*(1-e.age/.5));}
   if(bodies.some(b=>b.body.sleepState!==C.Body.SLEEPING)||shots.length||effects.length||queue.length)invalidate();
  }
- function reset(){queue=[];queueAt=0;for(const item of bodies)removeBody(item);bodies=[];for(const s of shots)removeShot(s);shots=[];for(const e of effects)removeEffect(e);effects=[];for(const b of statics.values())world.removeBody(b);statics.clear();for(const b of tiles.values())world.removeBody(b);tiles.clear();for(const [im,matrices]of saved){im.instanceMatrix.array.set(matrices);im.instanceMatrix.needsUpdate=true;}saved.clear();broken.clear();records=[];grid.clear();indexed=false;paused=false;invalidate();report();}
- return {get active(){return enabled;},get paused(){return paused;},setEnabled(value){if(!value)reset();enabled=!!value;report();},setPaused(value){paused=!!value;report();},fire,tick,reset,explode,armageddon(){if(!enabled)return;index();queue=records.filter(r=>!broken.has(r));queueAt=0;invalidate();report();},stats:()=>({destroyed:broken.size,debris:bodies.length,projectiles:shots.length,effects:effects.length,statics:statics.size,ground:tiles.size,worldBodies:world.bodies.length}),dispose(){if(disposed)return;reset();disposed=true;enabled=false;scene.remove(layer);sphere.dispose();rocketGeo.dispose();coneGeo.dispose();rocketMat.dispose();metalMat.dispose();}};
+ function reset(){queue=[];queueAt=0;for(const item of bodies)removeBody(item);bodies=[];for(const s of shots)removeShot(s);shots=[];for(const e of effects)removeEffect(e);effects=[];for(const b of statics.values())world.removeBody(b);statics.clear();for(const b of tiles.values())world.removeBody(b);tiles.clear();for(const [im,matrices]of saved){im.instanceMatrix.array.set(matrices);im.instanceMatrix.needsUpdate=true;delete im.userData.gone;}saved.clear();broken.clear();records=[];grid.clear();indexed=false;paused=false;invalidate();report();}
+ return {get active(){return enabled;},get paused(){return paused;},setEnabled(value){enabled=!!value;report();},setPaused(value){paused=!!value;report();},fire,tick,reset,explode,hide,armageddon(remote){if(disposed)return;if(!remote&&onBlast)onBlast(null,0);index();queue=records.filter(r=>!broken.has(r));queueAt=0;invalidate();report();},stats:()=>({destroyed:broken.size,debris:bodies.length,projectiles:shots.length,effects:effects.length,statics:statics.size,ground:tiles.size,worldBodies:world.bodies.length}),dispose(){if(disposed)return;reset();disposed=true;enabled=false;scene.remove(layer);sphere.dispose();rocketGeo.dispose();coneGeo.dispose();rocketMat.dispose();metalMat.dispose();}};
 }
 const api={create,WEAPONS,LIMITS};if(typeof module!=='undefined'&&module.exports)module.exports=api;else g.VWDestruction=api;
 })(typeof window!=='undefined'?window:globalThis);

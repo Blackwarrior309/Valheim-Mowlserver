@@ -18,6 +18,10 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 ## Changelog
 
+**30.10.2026**
+- Sprengen/Kampf online: Gesprengtes ist für alle Mitspieler synchron weg (auch für Nachzügler und nach Gebietswechsel, Reset gilt für alle) und hat keine Hitbox mehr – man läuft und schießt durch, Türen/Portale dort reagieren nicht mehr.
+- Fix: Teile außerhalb des Blickfelds wurden beim Sprengen übersprungen – dadurch blieb bei Mitspielern mit anderem Blickwinkel stehen, was bei dir kaputt war.
+
 **25.10.2026**
 - Bestenliste Spielzeit: zusätzlich Ø Spielzeit pro Tag (Gesamtzeit ÷ Tage seit Zählbeginn 21.10.).
 - Server-Mod 0.7.4: merkt sich den Zählbeginn der Spielzeit (spielzeit-start.txt) – Ø/Tag stimmt so auch in anderen Welten.
