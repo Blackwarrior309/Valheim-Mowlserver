@@ -1,0 +1,23 @@
+# Hängenden Lauf hart abbrechen (z. B. „waiting for github-pages approval“), wenn „Cancel workflow run“ nicht geht.
+# Actions → „Lauf abbrechen (erzwingen)“ → Run workflow → Lauf-Nummer aus der Adresse eintragen (…/actions/runs/<Nummer>).
+name: Lauf abbrechen (erzwingen)
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Lauf-Nummer (mehrere mit Leerzeichen)'
+        required: true
+permissions:
+  actions: write
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          IDS: ${{ inputs.run_id }}
+        run: |
+          for id in $IDS; do
+            [[ "$id" =~ ^[0-9]+$ ]] || { echo "::error::Keine Zahl: $id"; exit 1; }
+            gh api -X POST "repos/${{ github.repository }}/actions/runs/$id/force-cancel" && echo "Abgebrochen: $id"
+          done
