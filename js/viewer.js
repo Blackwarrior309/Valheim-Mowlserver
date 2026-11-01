@@ -1009,7 +1009,7 @@
           for (const [name, entry] of Object.entries(r.natureModels)) {
             const model = originals.get(name), a = entry.instances;
             if (!model) { const fallback = N[entry.kind] || (N[entry.kind] = []); for (const v of a) fallback.push(v); continue; }
-            const step = bigArea ? ({ low: 4, mid: 2, high: 1 }[Q.nature] || 1) : (Q.nature === 'low' ? 2 : 1);
+            const step = bigArea ? ({ low: 8, mid: 4, high: 2 }[Q.nature] || 2) : (Q.nature === 'low' ? 2 : 1);
             const im = new THREE.InstancedMesh(model.geometry, model.materials, Math.ceil(a.length / 5 / step));
             let instance = 0;
             for (let i = 0; i < a.length; i += 5 * step) {
@@ -1020,7 +1020,7 @@
             im.userData.original = true; im.castShadow = !bigArea; im.receiveShadow = true; natG.add(im);
           }
         }
-        const NS = bigArea ? { low: 4, mid: 2, high: 1 }[Q.nature] : { low: 2, mid: 1, high: 1 }[Q.nature] || 1;
+        const NS = bigArea ? { low: 8, mid: 4, high: 2 }[Q.nature] : { low: 2, mid: 1, high: 1 }[Q.nature] || 1;
         const list = (keys, f) => { const out = []; keys.forEach(([k, s]) => { const a = N[k] || []; for (let i = 0, c = 0; i < a.length; i += 5, c++) if (c % NS === 0) out.push([a[i], a[i + 1], a[i + 2], a[i + 3], a[i + 4], s]); }); return out; };
         function inst(geo, mat, arr, fn) { if (!arr.length) return; const im = new THREE.InstancedMesh(geo, mat, arr.length); im.castShadow = !bigArea; arr.forEach((p, k) => { fn(p); im.setMatrixAt(k, m4); }); natG.add(im); }
         const at = (p, dy, sx, sy, sz, ry) => { pv.set(p[0] - CX, p[1] - WL + dy, -(p[2] - CZ)); eu.set(0, ry || 0, 0); q.setFromEuler(eu); sv.set(sx, sy, sz); m4.compose(pv, q, sv); };
@@ -1732,7 +1732,7 @@
         for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
         placeAt(tgt.x, tgt.z);
       }
-      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; }, get destruction() { return destruction; }, near: (x, z) => near(x, z), get BOOM() { return BOOM; }, THREE, get info() { const i = ren.info; let ims = 0, inst = 0, tri = 0, orig = 0; scene.traverse((o) => { if (o.isInstancedMesh && o.visible) { ims++; inst += o.count; const n = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; tri += n * o.count; if (o.userData.original) orig++; } }); return { calls: i.render.calls, rtri: i.render.triangles, geos: i.memory.geometries, tex: i.memory.textures, ims, inst, tri: Math.round(tri), orig, prog: i.programs.length }; } };
+      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; }, get destruction() { return destruction; }, near: (x, z) => near(x, z), get BOOM() { return BOOM; }, THREE };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
         if (!on && carry) { throwIt(carry, 0, 0, 0); carry = null; }
@@ -2056,7 +2056,7 @@
       if (playground) g.VWPlayground.bindInput({listen,canvas:cv,target:g,document,playground});
       if (opts.history) TL.init(opts.history);
 
-      function start() { if (destroyed) return; mpStart(); if (!reg && areas().length) selectRegion(0); resize(); invalidate(); if (!running) { running = true; last = performance.now(); animationId = requestAnimationFrame(frame); } }
+      function start() { if (destroyed) return; mpStart(); if (!reg && areas().length) selectRegion(S.world3d && S.regions.length ? 1 : 0); /* erst eine Basis – die ganze Welt ist fürs Handy zu schwer (Knopf „Ganze Welt“ bleibt) */ resize(); invalidate(); if (!running) { running = true; last = performance.now(); animationId = requestAnimationFrame(frame); } }
       function stop() { running = false; g.cancelAnimationFrame(animationId); frames.delete(animationId); }
       // Basis-Auswahl
       const sel = $('.reg');

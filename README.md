@@ -19,6 +19,7 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 ## Changelog
 
 **01.11.2026**
+- 3D startet mit der Hauptbasis statt der ganzen Welt (die ganze Welt mit ~130.000 Bäumen ließ Handys einfrieren; Knopf „Ganze Welt in 3D“ bleibt, dort jetzt halb so viele Bäume).
 - 3D: Valheim-Grafik in riesigen Basen (Hauptbasis ~7 Mio. Dreiecke) fror ein – jetzt höchstens 2 Mio. Dreiecke pro Basis, die häufigsten Teile (z. B. Steinwände) als einfache Formen.
 - Invasionen: alte Raids nur noch 24 h auf der Karte, gleiche Raids nicht doppelt. Server-Mod 0.7.5 meldet nur noch Raids, die wirklich laufen (vorher auch geplante ohne Spieler in der Nähe).
 
