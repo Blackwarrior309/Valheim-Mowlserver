@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.5
+- Events: only report an event while it is really running (`m_active`); a scheduled event with no player nearby no longer shows as an invasion. The same event, briefly paused, is logged once (30-min window).
+
 ## 0.7.4
 - Play time: remembers when counting started (`spielzeit-start.txt`, Unix seconds) and sends it as `since` on `…/playtime`, so the map can show average play time per day. Created only on a fresh count; for an older `spielzeit.json` you can write the start date into the file by hand.
 

@@ -24,7 +24,7 @@ namespace ValheimWeltLive
     {
         public const string Guid = "de.valheimweltviewer.live";
         public const string Name = "Valheim Welt Live";
-        public const string Version = "0.7.4";
+        public const string Version = "0.7.5";
         static bool loggedFile;
 
         ConfigEntry<bool> cfgHttp, cfgBindAll, cfgWriteFile, cfgStrip, cfgTracks, cfgDeaths, cfgDetails, cfgFastGzip, cfgPerfLog;
@@ -426,13 +426,16 @@ namespace ValheimWeltLive
         // ---------------- Ereignisse / Invasionen ----------------
         // Das Spiel führt auf dem Server ein laufendes Zufallsereignis (Angriff, Invasion …) mit Ort, Radius und Dauer; erzwungene Ereignisse separat.
         static readonly FieldInfo F_FORCED = typeof(RandEventSystem).GetField("m_forcedEvent", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-        readonly List<string> eventHist = new List<string>(); string lastEventKey; bool eventsLoaded;
+        static readonly FieldInfo F_EVACTIVE = typeof(RandomEvent).GetField("m_active", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+        readonly List<string> eventHist = new List<string>(); string lastEventKey; long lastEventAt; bool eventsLoaded;
         string CollectEvent(long now)
         {
             var res = RandEventSystem.instance; RandomEvent ev = null;
             if (!eventsLoaded) { eventsLoaded = true; try { string f = Path.Combine(DataDir(), "ereignisse.json"); if (File.Exists(f)) { var txt = File.ReadAllText(f).Trim(); if (txt.StartsWith("[") && txt.Length > 2) eventHist.AddRange(txt.Substring(1, txt.Length - 2).Split(new[] { "},{" }, StringSplitOptions.None).Select((x) => "{" + x.Trim('{', '}') + "}")); } } catch { } }
             try { if (res != null) ev = res.GetCurrentRandomEvent(); } catch { }
             try { if (ev == null && res != null) ev = F_FORCED?.GetValue(res) as RandomEvent; } catch { }
+            // Geplant ≠ läuft: m_randomEvent bleibt gesetzt, auch wenn kein Spieler in der Nähe ist und nichts spawnt – nur m_active zählt
+            try { if (ev != null && F_EVACTIVE != null && !(bool)F_EVACTIVE.GetValue(ev)) ev = null; } catch { }
             var sb = new StringBuilder("{\"t\":" + now);
             if (ev != null)
             {
@@ -441,7 +444,8 @@ namespace ValheimWeltLive
                   .Append(",\"x\":").Append(F(ev.m_pos.x)).Append(",\"z\":").Append(F(ev.m_pos.z)).Append(",\"r\":").Append(F(ev.m_eventRange))
                   .Append(",\"time\":").Append(F(ev.m_time)).Append(",\"dur\":").Append(F(ev.m_duration));
                 string key = ev.m_name + "@" + Mathf.RoundToInt(ev.m_pos.x / 50f) + "," + Mathf.RoundToInt(ev.m_pos.z / 50f);
-                if (key != lastEventKey)
+                bool fresh = key != lastEventKey || now - lastEventAt > 1800000; lastEventAt = now;   // dasselbe Ereignis (kurz unterbrochen) nur einmal in den Verlauf
+                if (fresh)
                 {
                     lastEventKey = key; Logger.LogInfo($"Ereignis: {ev.m_name} ({msg}) bei x {Mathf.RoundToInt(ev.m_pos.x)} / z {Mathf.RoundToInt(ev.m_pos.z)}");
                     eventHist.Add("{\"at\":" + now + ",\"name\":" + Json(ev.m_name ?? "") + ",\"msg\":" + Json(msg) + ",\"x\":" + Mathf.RoundToInt(ev.m_pos.x) + ",\"z\":" + Mathf.RoundToInt(ev.m_pos.z) + "}");
@@ -449,7 +453,7 @@ namespace ValheimWeltLive
                     try { Directory.CreateDirectory(DataDir()); File.WriteAllText(Path.Combine(DataDir(), "ereignisse.json"), "[" + string.Join(",", eventHist.ToArray()) + "]"); } catch { }
                 }
             }
-            else { sb.Append(",\"active\":false"); lastEventKey = null; }
+            else sb.Append(",\"active\":false");
             return sb.Append(",\"hist\":[").Append(string.Join(",", eventHist.ToArray())).Append("]}").ToString();
         }
 

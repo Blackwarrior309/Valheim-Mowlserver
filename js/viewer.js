@@ -508,7 +508,7 @@
             if (view.s > 0.25) { const nm = pinName(p); const t = (nm ? nm + ' · ' : '') + (p.by || ''); if (t) { ctx.font = '11px system-ui,sans-serif'; ctx.strokeText(t, x, y + 13); ctx.fillStyle = '#fff3c9'; ctx.fillText(t, x, y + 13); } } ctx.globalAlpha = 1; }); ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui,sans-serif'; }
         if (ML.portals) S.portals.forEach((p) => { const [x, y] = toS(p.x, p.z); ctx.fillStyle = '#b48cff'; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore(); if (view.s > 0.6 && p.tag) { ctx.fillStyle = '#e6dbff'; ctx.fillText(p.tag, x, y - 7); } });
         if (ML.events && SRV.event) { const E = SRV.event, now = Date.now(); ctx.save(); ctx.textAlign = 'center';
-          (E.hist || []).forEach((h) => { if (!Number.isFinite(h.x)) return; if (E.active && Math.hypot(h.x - E.x, h.z - E.z) < 60 && now - h.at < 3600e3) return; const [x, y] = toS(h.x, h.z); ctx.fillStyle = 'rgba(255,61,110,.55)'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          const seenH = []; (E.hist || []).slice().reverse().forEach((h) => { if (!Number.isFinite(h.x) || now - h.at > 864e5) return; /* nur letzte 24 h; gleiches Ereignis am selben Ort (bis 1 h) nur einmal */ if (seenH.some((o) => o.name === h.name && Math.hypot(o.x - h.x, o.z - h.z) < 100 && Math.abs(o.at - h.at) < 3600e3)) return; seenH.push(h); if (E.active && Math.hypot(h.x - E.x, h.z - E.z) < 60 && now - h.at < 3600e3) return; const [x, y] = toS(h.x, h.z); ctx.fillStyle = 'rgba(255,61,110,.55)'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             if (view.s > 0.3) { const d = new Date(h.at), t = (h.msg || h.name) + ' · ' + d.toLocaleString(LOC(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); ctx.font = '10.5px system-ui,sans-serif'; ctx.lineWidth = 3; ctx.strokeText(t, x, y - 9); ctx.fillStyle = '#ffd0dc'; ctx.fillText(t, x, y - 9); } });
           if (E.active && now - (SRV.eventAt || 0) < 30000) { const [x, y] = toS(E.x, E.z), r = Math.max(14, (E.r || 60) * view.s), pulse = 0.5 + 0.5 * Math.sin(now / 300);
             ctx.fillStyle = `rgba(255,61,110,${0.12 + 0.12 * pulse})`; ctx.strokeStyle = '#ff3d6e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -790,7 +790,7 @@
         const before = names.filter((n) => originals.get(n)).length;
         originals.prepare(names).then((count) => {
           if (revision !== originalRevision || Q.detail !== 'valheim' || reg !== r) return;
-          status.textContent = `${count} von ${names.length} Objekttypen mit Originalgrafik. Fehlende Modelle nutzen Natur-Grafik. Gelände und Effekte bleiben vereinfacht.`;
+          status.textContent = `${count} von ${names.length} Objekttypen mit Originalgrafik. Fehlende Modelle nutzen Natur-Grafik. Gelände und Effekte bleiben vereinfacht.`; setTimeout(() => { if (reg === r && r.simplified) status.textContent += ` Große Basis: ${r.simplified} häufige Bauteil-Typen als einfache Formen, damit die Ansicht flüssig bleibt.`; }, 0);
           if (count > before) reloadKeep();
         }).catch(() => {
           if (revision === originalRevision) status.textContent = 'Originalgrafik konnte nicht geladen werden. Natur-Grafik wird verwendet.';
@@ -971,10 +971,15 @@
         terrain = new THREE.Mesh(tg, tmat); terrain.receiveShadow = true; content.add(terrain);
         // Bauteile: je Kategorie und Form ein InstancedMesh (detailliert: Texturen + echte Formen)
         const detailed = pmode !== 'simple';
+        /* Dreieck-Budget für Originalgrafik: riesige Basen (Hauptbasis ~7 Mio. Dreiecke) bringen die Grafikkarte zum Stehen → die teuersten Bauteil-Typen als einfache Formen */
+        const SIMPLE = new Set(); if (Q.detail === 'valheim' && originals) { const TRI_BUDGET = 2e6; /* shortcut: fester Wert für Mittelklasse-GPUs, bei Bedarf an Qualitätsstufe koppeln */ const per = {}; let sum = 0;
+          for (const a of Object.values(r.pieces)) for (let o = 0; o < a.length; o += 6) { const nm = r.types[a[o + 4]][0], m = originals.get(nm); if (!m) continue; const t = m.door ? (m.door.leaf.index.count + m.door.frame.index.count) / 3 : (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3; per[nm] = (per[nm] || 0) + t; sum += t; }
+          for (const [nm, t] of Object.entries(per).sort((x, y) => y[1] - x[1])) { if (sum <= TRI_BUDGET) break; SIMPLE.add(nm); sum -= t; } }
+        r.simplified = SIMPLE.size;
         for (const [cat, arr] of Object.entries(r.pieces)) {
           const n = arr.length / 6; if (!n) continue;
           const groups = {};
-          for (let k = 0; k < n; k++) { const o = k * 6; const ty = r.types[arr[o + 4]]; const shape = Q.detail === 'valheim' && originals && originals.get(ty[0]) ? 'original:' + ty[0] : detailed ? shapeOf(ty[0]) : 'box'; const sk = shape + '@' + Math.floor(arr[o] / 128) + ',' + Math.floor(arr[o + 2] / 128); (groups[sk] || (groups[sk] = [])).push(o); }
+          for (let k = 0; k < n; k++) { const o = k * 6; const ty = r.types[arr[o + 4]]; const shape = Q.detail === 'valheim' && originals && originals.get(ty[0]) && !SIMPLE.has(ty[0]) ? 'original:' + ty[0] : detailed ? shapeOf(ty[0]) : 'box'; const sk = shape + '@' + Math.floor(arr[o] / 128) + ',' + Math.floor(arr[o + 2] / 128); (groups[sk] || (groups[sk] = [])).push(o); }
           for (const [sk, idxs] of Object.entries(groups)) {
             const shape = sk.split('@')[0], original = shape.startsWith('original:') && originals.get(shape.slice(9));
             const im = new THREE.InstancedMesh(original ? (original.door ? original.door.leaf : original.geometry) : SHAPES[shape], original ? original.materials : pieceMat(cat, pmode), idxs.length); im.castShadow = true; im.receiveShadow = true;
@@ -1727,7 +1732,7 @@
         for (let r = 0; r < 300; r += 2) for (let a = 0; a < 6.28; a += 0.4) { const x = tgt.x + Math.cos(a) * r, z = tgt.z + Math.sin(a) * r; if (terrainY(x, z) > 0.3) { placeAt(x, z); return; } }
         placeAt(tgt.x, tgt.z);
       }
-      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; }, get destruction() { return destruction; }, near: (x, z) => near(x, z), get BOOM() { return BOOM; }, THREE };
+      if (/[?&]debug/.test(location.search)) g.__walk = { MP: () => MP, groundY: (x, z, y) => groundY(x, z, y), get pos() { return pos; }, get OBB() { return OBB; }, target: () => target(), get pitch() { return wpit; }, set pitch(v) { wpit = v; }, interact: () => interact(), placeAt: (x, z, y) => placeAt(x, z, y), peerScreen: () => { const r = cv.getBoundingClientRect(); return [...MP.peers.values()].map((P) => { const v = P.h.g.position.clone(); v.y += 1.1; v.project(cam); return { n: P.n, vis: P.h.g.visible, x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }); }, get yaw() { return wyaw; }, set yaw(v) { wyaw = v; }, get destruction() { return destruction; }, near: (x, z) => near(x, z), get BOOM() { return BOOM; }, THREE, get info() { const i = ren.info; let ims = 0, inst = 0, tri = 0, orig = 0; scene.traverse((o) => { if (o.isInstancedMesh && o.visible) { ims++; inst += o.count; const n = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; tri += n * o.count; if (o.userData.original) orig++; } }); return { calls: i.render.calls, rtri: i.render.triangles, geos: i.memory.geometries, tex: i.memory.textures, ims, inst, tri: Math.round(tri), orig, prog: i.programs.length }; } };
       function toggleWalk(on) {
         if (on === undefined) on = !walk; if (on === walk) return;
         if (!on && carry) { throwIt(carry, 0, 0, 0); carry = null; }

@@ -18,6 +18,10 @@ Kistensuche und gemeinsame Bauprojekte: [Kartenwerkzeuge](docs/MAP-WORKSPACE.md)
 
 ## Changelog
 
+**01.11.2026**
+- 3D: Valheim-Grafik in riesigen Basen (Hauptbasis ~7 Mio. Dreiecke) fror ein – jetzt höchstens 2 Mio. Dreiecke pro Basis, die häufigsten Teile (z. B. Steinwände) als einfache Formen.
+- Invasionen: alte Raids nur noch 24 h auf der Karte, gleiche Raids nicht doppelt. Server-Mod 0.7.5 meldet nur noch Raids, die wirklich laufen (vorher auch geplante ohne Spieler in der Nähe).
+
 **30.10.2026**
 - Sprengen/Kampf online: Gesprengtes ist für alle Mitspieler synchron weg (auch für Nachzügler und nach Gebietswechsel, Reset gilt für alle) und hat keine Hitbox mehr – man läuft und schießt durch, Türen/Portale dort reagieren nicht mehr.
 - Fix: Teile außerhalb des Blickfelds wurden beim Sprengen übersprungen – dadurch blieb bei Mitspielern mit anderem Blickwinkel stehen, was bei dir kaputt war.
