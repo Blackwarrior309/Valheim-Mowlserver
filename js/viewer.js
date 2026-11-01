@@ -1053,6 +1053,7 @@
           for (let k = 0; k < n; k++) { const o = k * 6; tmp.setHex(mode === 'own' ? OWNC[arr[o + 5] % OWNC.length] : curMode === 'natur' ? (NAT_TINT[cat] || 0xffffff) : CAT[cat] ? CAT[cat][0] : 0xb4a58a); if (mode !== 'own') { const j = ((arr[o] * 7.3 + arr[o + 2] * 3.1 + arr[o + 1] * 5.7) % 1 + 1) % 1; tmp.offsetHSL(0, 0, (j - 0.5) * 0.07); } im.setColorAt(k, tmp); }
           if (im.userData.original && mode !== 'own') for (let k = 0; k < n; k++) im.setColorAt(k, tmp.setHex(0xffffff));
           im.instanceColor.needsUpdate = true;
+          const fr = im.userData.frame; if (fr) { for (let k = 0; k < n; k++) fr.setColorAt(k, tmp.setHex(0xffffff)); fr.instanceColor.needsUpdate = true; } /* Türrahmen teilt Material mit dem Türblatt: ohne eigene Farben stürzt three.js r128 beim Zeichnen ab (Bild steht) */
         }
         tintChanges(); SEL.paint();
         invalidate();
